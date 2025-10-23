@@ -1,0 +1,72 @@
+@import './tokens';
+
+// Theme Variables
+// ===============
+
+:root {
+  // Colors
+  --color-brand-primary: #{$color-brand-primary};
+  --color-brand-secondary: #{$color-brand-secondary};
+  --color-brand-accent: #{$color-brand-accent};
+  
+  --color-surface: #{$color-surface};
+  --color-surface-raised: #{$color-surface-raised};
+  --color-surface-sunken: #{$color-surface-sunken};
+  
+  --color-text-base: #{$color-text-base};
+  --color-text-muted: #{$color-text-muted};
+  --color-text-inverse: #{$color-text-inverse};
+  
+  --color-success: #{$color-success};
+  --color-warning: #{$color-warning};
+  --color-danger: #{$color-danger};
+  --color-info: #{$color-info};
+  
+  // Typography
+  --font-family-sans: #{$font-family-sans};
+  --font-family-mono: #{$font-family-mono};
+  
+  // Spacing
+  --spacing-xs: #{$spacing-xs};
+  --spacing-sm: #{$spacing-sm};
+  --spacing-md: #{$spacing-md};
+  --spacing-lg: #{$spacing-lg};
+  --spacing-xl: #{$spacing-xl};
+  --spacing-2xl: #{$spacing-2xl};
+  --spacing-3xl: #{$spacing-3xl};
+  
+  // Border Radius
+  --border-radius-sm: #{$border-radius-sm};
+  --border-radius-md: #{$border-radius-md};
+  --border-radius-lg: #{$border-radius-lg};
+  --border-radius-xl: #{$border-radius-xl};
+  --border-radius-xl2: #{$border-radius-xl2};
+  
+  // Shadows
+  --shadow-card: #{$shadow-card};
+  
+  // Transitions
+  --transition-fast: #{$transition-fast};
+  --transition-normal: #{$transition-normal};
+  --transition-slow: #{$transition-slow};
+}
+
+// Light Theme
+[data-theme="light"] {
+  --color-brand-primary: #{$color-brand-primary};
+  --color-brand-secondary: #{$color-brand-secondary};
+  --color-brand-accent: #{$color-brand-accent};
+  
+  --color-surface: #{$color-text-inverse};
+  --color-surface-raised: #{$color-text-base};
+  --color-surface-sunken: #{$color-text-muted};
+  
+  --color-text-base: #{$color-surface};
+  --color-text-muted: #{$color-surface-raised};
+  --color-text-inverse: #{$color-text-base};
+  
+  --color-success: #{$color-success};
+  --color-warning: #{$color-warning};
+  --color-danger: #{$color-danger};
+  --color-info: #{$color-info};
+}
