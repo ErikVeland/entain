@@ -6,24 +6,30 @@
         <span v-else-if="categoryIcon === 'greyhound'" class="text-lg">🐕</span>
         <span v-else-if="categoryIcon === 'harness'" class="text-lg">🛞</span>
       </div>
-      <div class="font-bold uppercase text-text-base">
+      <div class="font-bold uppercase text-text-base" :class="{ 'opacity-50': isExpired }">
         {{ meetingName }} R{{ raceNumber }}
       </div>
     </div>
     
     <div class="flex items-center">
       <div 
-        v-if="isLive" 
+        v-if="isLive && !isExpired" 
         class="px-2 py-1 rounded text-xs font-bold bg-danger text-text-inverse flex items-center"
       >
         <span class="mr-1">●</span>
         LIVE
       </div>
       <div 
-        v-else-if="isStartingSoon"
+        v-else-if="isStartingSoon && !isExpired"
         class="px-2 py-1 rounded text-xs font-bold bg-warning text-text-inverse"
       >
         {{ countdownDisplay }}
+      </div>
+      <div 
+        v-else-if="isExpired"
+        class="px-2 py-1 rounded text-xs font-bold text-text-muted"
+      >
+        Race over
       </div>
       <div 
         v-else
@@ -45,6 +51,7 @@ const props = defineProps<{
   raceNumber: number
   categoryId: string
   startTime: number
+  isExpired?: boolean
 }>()
 
 const categoryIcon = computed(() => {
@@ -65,8 +72,17 @@ const { formattedTime, isStartingSoon, isInProgress } = useCountdown(props.start
 const isLive = computed(() => isInProgress.value)
 
 const countdownDisplay = computed(() => {
+  if (props.isExpired) {
+    return 'Race over'
+  }
+  
   if (isInProgress.value) {
     return 'In progress'
+  }
+  
+  // Handle case where formattedTime might be undefined
+  if (!formattedTime.value) {
+    return '0s'
   }
   
   // Convert seconds to minutes and seconds format

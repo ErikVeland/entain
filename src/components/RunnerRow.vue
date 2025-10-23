@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center py-2 border-b border-surface last:border-b-0">
+  <div class="flex items-center py-2 border-b border-surface last:border-b-0" :class="{ 'opacity-50 pointer-events-none': isExpired }">
     <!-- Silk color icon -->
     <div class="w-4 h-4 rounded-sm mr-3 flex-shrink-0" :class="runner.silkColor"></div>
     
@@ -19,8 +19,11 @@
     <!-- Odds button -->
     <div class="ml-2">
       <button 
+        @click="addToBetslip"
         class="px-3 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center"
         :class="oddsButtonClass"
+        :disabled="isExpired"
+        :aria-label="`Add ${runner.name} at ${runner.odds} to betslip`"
       >
         {{ runner.odds }}
         <span v-if="runner.oddsTrend === 'up'" class="ml-1 text-success">▲</span>
@@ -46,10 +49,19 @@ interface Runner {
 
 const props = defineProps<{
   runner: Runner
+  isExpired?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'add-to-betslip', runner: Runner): void
 }>()
 
 const oddsButtonClass = computed(() => {
-  const baseClasses = 'bg-surface text-text-base'
+  const baseClasses = 'bg-surface text-text-base hover:bg-brand-primary hover:text-text-inverse'
+  
+  if (props.isExpired) {
+    return `${baseClasses} opacity-50 cursor-not-allowed`
+  }
   
   if (props.runner.oddsTrend === 'up') {
     return `${baseClasses} bg-success bg-opacity-20`
@@ -59,4 +71,10 @@ const oddsButtonClass = computed(() => {
   
   return baseClasses
 })
+
+const addToBetslip = () => {
+  if (!props.isExpired) {
+    emit('add-to-betslip', props.runner)
+  }
+}
 </script>

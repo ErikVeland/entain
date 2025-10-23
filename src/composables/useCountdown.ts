@@ -16,6 +16,11 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
   const isStartingSoon = ref(false)
   const isInProgress = ref(false)
   
+  // Validate input
+  if (typeof startTimeMs !== 'number' || isNaN(startTimeMs)) {
+    startTimeMs = Date.now()
+  }
+  
   // Calculate initial values
   const now = Date.now()
   const timeDiff = startTimeMs - now
@@ -42,6 +47,12 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
   const intervalId = setInterval(() => {
     const now = Date.now()
     const timeDiff = startTimeMs - now
+    
+    // Validate timeDiff
+    if (typeof timeDiff !== 'number' || isNaN(timeDiff)) {
+      formattedTime.value = '00:00'
+      return
+    }
     
     // If race has already started or is about to start
     if (timeDiff <= 0) {

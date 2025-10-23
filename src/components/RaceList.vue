@@ -43,12 +43,20 @@
         aria-atomic="true"
       >
         <div 
-          v-for="(race, index) in visibleRaces" 
+          v-for="(race, index) in visibleRacesWithTransition" 
           :key="race.id"
-          class="w-1/3 flex-shrink-0 px-2"
+          class="w-1/3 flex-shrink-0 px-2 transition-all duration-1000 ease-in-out"
+          :class="{
+            'opacity-0 transform translate-x-4': expiringRaces.has(race.id),
+            'opacity-100': !expiringRaces.has(race.id)
+          }"
           :aria-hidden="index !== currentIndex"
         >
-          <RaceColumn :race="race" :is-active="index === currentIndex" />
+          <RaceColumn 
+            :race="race" 
+            :is-active="index === currentIndex" 
+            :is-expired="expiringRaces.has(race.id)"
+          />
         </div>
       </div>
       
@@ -87,7 +95,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRacesStore } from '../stores/races'
 import RaceColumn from './RaceColumn.vue'
 
@@ -95,20 +103,46 @@ const store = useRacesStore()
 const currentIndex = ref(0)
 const carouselContainer = ref<HTMLElement | null>(null)
 const retryButton = ref<HTMLButtonElement | null>(null)
+const expiringRaces = ref<Set<string>>(new Set())
 
 // Show only 3 races at a time
 const visibleRaces = computed(() => {
   return store.nextFive.slice(0, Math.min(store.nextFive.length, 3))
 })
 
+// Add transition state to races
+const visibleRacesWithTransition = computed(() => {
+  return visibleRaces.value
+})
+
 const retryFetch = () => {
   store.fetchRaces()
 }
 
-// Reset index when races change
-watch(() => store.nextFive, () => {
-  currentIndex.value = 0
-})
+// Track expiring races
+const previousRaces = ref<string[]>([])
+watch(() => store.nextFive, (newRaces, oldRaces) => {
+  const currentRaceIds = newRaces.map(r => r.id)
+  
+  // Find races that were removed
+  const removedRaceIds = previousRaces.value.filter(id => !currentRaceIds.includes(id))
+  
+  // Add removed races to expiring set
+  removedRaceIds.forEach(id => expiringRaces.value.add(id))
+  
+  // Clear expired races after animation
+  if (removedRaceIds.length > 0) {
+    setTimeout(() => {
+      expiringRaces.value.clear()
+    }, 1000)
+    
+    // Reset currentIndex if needed
+    currentIndex.value = 0
+  }
+  
+  // Update previous races
+  previousRaces.value = currentRaceIds
+}, { deep: true })
 
 // Go to a specific race
 const goToRace = (index: number) => {
@@ -148,40 +182,16 @@ const handleCarouselKeyDown = (event: KeyboardEvent) => {
   }
 }
 
-// Auto-advance carousel
-let carouselInterval: number | null = null
-
-// Start auto-advance
-const startCarousel = () => {
-  if (carouselInterval) {
-    clearInterval(carouselInterval)
-  }
-  
-  carouselInterval = window.setInterval(() => {
-    if (visibleRaces.value.length > 1) {
-      currentIndex.value = (currentIndex.value + 1) % visibleRaces.value.length
-    }
-  }, 10000) // Change every 10 seconds
-}
-
-// Stop auto-advance
-const stopCarousel = () => {
-  if (carouselInterval) {
-    clearInterval(carouselInterval)
-    carouselInterval = null
-  }
-}
-
-// Start carousel when component mounts
-startCarousel()
-
 // Clean up interval when component unmounts
 import { onUnmounted, onMounted } from 'vue'
 onUnmounted(() => {
-  stopCarousel()
+  // No more auto-rotation
 })
 
 onMounted(() => {
+  // Initialize previous races
+  previousRaces.value = store.nextFive.map(r => r.id)
+  
   // Focus the retry button if it exists and there's an error
   if (store.loadState === 'error' && retryButton.value) {
     retryButton.value.focus()

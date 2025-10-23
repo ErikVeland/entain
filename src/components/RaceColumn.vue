@@ -1,13 +1,14 @@
 <template>
   <div 
     class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden transition-all duration-300"
-    :class="{ 'ring-2 ring-brand-primary': isActive }"
+    :class="{ 'ring-2 ring-brand-primary': isActive, 'opacity-50 pointer-events-none': isExpired }"
   >
     <RaceHeader 
       :meeting-name="race.meeting_name"
       :race-number="race.race_number"
       :category-id="race.category_id"
       :start-time="race.advertised_start_ms"
+      :is-expired="isExpired"
     />
     
     <div class="p-3">
@@ -16,6 +17,8 @@
           v-for="(runner, index) in runners"
           :key="index"
           :runner="runner"
+          :is-expired="isExpired"
+          @add-to-betslip="handleAddToBetslip"
         />
       </div>
     </div>
@@ -23,10 +26,11 @@
     <BetPlacer 
       :race-id="race.id"
       :runners="runners"
+      v-if="!isExpired"
     />
     
     <RaceResults 
-      v-if="raceResult"
+      v-if="raceResult && !isExpired"
       :race-id="race.id"
       :runners="runners"
       :race-result="raceResult"
@@ -37,6 +41,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { type RaceSummary } from '../stores/races'
+import { useBetsStore } from '../stores/bets'
 import RaceHeader from './RaceHeader.vue'
 import RunnerRow from './RunnerRow.vue'
 import BetPlacer from './BetPlacer.vue'
@@ -45,7 +50,10 @@ import RaceResults from './RaceResults.vue'
 const props = defineProps<{
   race: RaceSummary
   isActive?: boolean
+  isExpired?: boolean
 }>()
+
+const betsStore = useBetsStore()
 
 // Mock runners data - in a real implementation, this would come from the API
 const runners = computed(() => {
@@ -109,3 +117,14 @@ setTimeout(() => {
     ]
   }
 }, 30000) // Simulate race finishing after 30 seconds
+
+const handleAddToBetslip = (runner: any) => {
+  if (!props.isExpired && betsStore.showGame) {
+    // In a real implementation, we would add the runner to the betslip
+    console.log(`Adding ${runner.name} at ${runner.odds} to betslip for race ${props.race.id}`)
+    
+    // For now, let's just show an alert
+    alert(`Added ${runner.name} at ${runner.odds} to your betslip!`)
+  }
+}
+</script>
