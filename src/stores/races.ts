@@ -102,16 +102,23 @@ export const useRacesStore = defineStore('races', {
     /**
      * Slice of the next five races.
      */
-    nextFive(): RaceSummary[] {
-      // @ts-ignore - this references another getter
-      return (this.activeRaces as RaceSummary[]).slice(0, 5)
+    nextFive(state): RaceSummary[] {
+      return state.races
+        .filter(r => state.selectedCategories.has(r.category_id))
+        .filter(r => !isExpired(r, now()))
+        .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+        .slice(0, 5)
     },
     /**
      * Group active races by meeting name for the meetings view.
      */
-    racesByMeeting(): Record<string, RaceSummary[]> {
-      // @ts-ignore - this references another getter
-      const races = this.activeRaces as RaceSummary[]
+    racesByMeeting(state): Record<string, RaceSummary[]> {
+      const cutoffNow = now()
+      const races = state.races
+        .filter(r => state.selectedCategories.has(r.category_id))
+        .filter(r => !isExpired(r, cutoffNow))
+        .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+      
       const grouped: Record<string, RaceSummary[]> = {}
       
       for (const race of races) {
@@ -144,13 +151,34 @@ export const useRacesStore = defineStore('races', {
         })
 
         if (!res.ok) {
-          throw new Error(`HTTP ${res.status}`)
+          let errorMsg = `Failed to fetch races: HTTP ${res.status}`
+          switch (res.status) {
+            case 404:
+              errorMsg = 'Races data not found (404)'
+              break
+            case 500:
+              errorMsg = 'Server error occurred while fetching races (500)'
+              break
+            case 503:
+              errorMsg = 'Races service temporarily unavailable (503)'
+              break
+            case 429:
+              errorMsg = 'Too many requests. Please try again later (429)'
+              break
+            default:
+              if (res.status >= 500) {
+                errorMsg = `Server error occurred while fetching races (${res.status})`
+              } else if (res.status >= 400) {
+                errorMsg = `Client error occurred while fetching races (${res.status})`
+              }
+          }
+          throw new Error(errorMsg)
         }
 
         const json = (await res.json()) as NedsApiResponse
 
         if (!json || json.status !== 200 || !json.data) {
-          throw new Error(json?.message || 'Unexpected API response')
+          throw new Error(json?.message || 'Unexpected API response format')
         }
 
         const items: RaceSummary[] = json.data.next_to_go_ids
@@ -179,6 +207,7 @@ export const useRacesStore = defineStore('races', {
         const msg = err instanceof Error ? err.message : String(err)
         this.errorMessage = msg
         this.loadState = 'error'
+        console.error('Error fetching races:', err)
       }
     },
 
