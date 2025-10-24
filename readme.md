@@ -75,7 +75,10 @@ src/
 ### State Management
 
  The Pinia store in src/stores/races.ts manages:
-	 •	Races fetched from the API
+	 •	Races fetched from the API (GET https://api.neds.com.au/rest/v1/racing/?method=nextraces&count=10; Content-type: application/json)
+      - Greyhound racing: category_id: '9daef0d7-bf3c-4f50-921d-8e818c60fe61'
+      - Harness racing: category_id: '161d9be2-e909-4326-8c2c-35ed71fb460b'
+      - Horse racing: category_id: '4a2788f8-e825-4d36-9894-efd4baf1cfae'
 	 •	Active category filter
 	 •	Loading and error states
 	 •	Derived getters for active and expired races

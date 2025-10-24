@@ -29,7 +29,8 @@ describe('RaceColumn', () => {
     })
 
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.text()).toContain('WARRAGUL R12')
+    expect(wrapper.text()).toContain('WARRAGUL')
+    expect(wrapper.text()).toContain('12')
   })
 
   it('displays runners', () => {

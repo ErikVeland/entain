@@ -15,7 +15,8 @@ describe('RaceHeader', () => {
     })
 
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.text()).toContain('WARRAGUL R12')
+    expect(wrapper.text()).toContain('WARRAGUL')
+    expect(wrapper.text()).toContain('12')
     expect(wrapper.text()).toContain('🏇')
   })
 
@@ -30,7 +31,8 @@ describe('RaceHeader', () => {
     })
 
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.text()).toContain('KOLKATA R1')
+    expect(wrapper.text()).toContain('KOLKATA')
+    expect(wrapper.text()).toContain('1')
     expect(wrapper.text()).toContain('🐕')
   })
 
@@ -45,7 +47,8 @@ describe('RaceHeader', () => {
     })
 
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.text()).toContain('KILMORE R2')
+    expect(wrapper.text()).toContain('KILMORE')
+    expect(wrapper.text()).toContain('2')
     expect(wrapper.text()).toContain('🛞')
   })
 

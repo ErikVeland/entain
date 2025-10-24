@@ -1,9 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import RunnerRow from '../RunnerRow.vue'
 
 // Mock runner data
 const mockRunner = {
+  id: 'runner1',
   number: 1,
   name: 'Thunder Bay',
   weight: '58kg',
@@ -14,10 +16,18 @@ const mockRunner = {
 }
 
 describe('RunnerRow', () => {
+  beforeEach(() => {
+    // Create a new pinia instance and make it active
+    setActivePinia(createPinia())
+  })
+
   it('renders properly with runner data', () => {
     const wrapper = mount(RunnerRow, {
       props: {
-        runner: mockRunner
+        runner: mockRunner,
+        raceId: 'race1',
+        raceName: 'Test Race',
+        raceNumber: 1
       }
     })
 
@@ -34,7 +44,10 @@ describe('RunnerRow', () => {
         runner: {
           ...mockRunner,
           oddsTrend: 'up'
-        }
+        },
+        raceId: 'race1',
+        raceName: 'Test Race',
+        raceNumber: 1
       }
     })
 
@@ -48,7 +61,10 @@ describe('RunnerRow', () => {
         runner: {
           ...mockRunner,
           oddsTrend: 'down'
-        }
+        },
+        raceId: 'race1',
+        raceName: 'Test Race',
+        raceNumber: 1
       }
     })
 
@@ -62,7 +78,10 @@ describe('RunnerRow', () => {
         runner: {
           ...mockRunner,
           oddsTrend: 'none'
-        }
+        },
+        raceId: 'race1',
+        raceName: 'Test Race',
+        raceNumber: 1
       }
     })
 
