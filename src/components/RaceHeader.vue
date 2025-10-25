@@ -153,8 +153,8 @@ onUnmounted(() => {
       <span v-else-if="categoryIcon === 'harness'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🛞</span>
     </div>
     
-    <!-- Race number cap (square using height as guide) -->
-    <div class="absolute top-0 left-0 bg-brand-primary text-text-inverse w-10 h-10 flex items-center justify-center font-bold text-sm z-10 rounded-tl-xl2">
+    <!-- Race number cap (smaller circular) -->
+    <div class="absolute top-1/2 left-2 transform -translate-y-1/2 bg-brand-primary text-text-inverse w-6 h-6 flex items-center justify-center font-bold text-sm z-10 rounded-full">
       {{ raceNumber }}
     </div>
     
@@ -165,9 +165,9 @@ onUnmounted(() => {
       <span v-else-if="categoryIcon === 'harness'">🛞</span>
     </div>
     
-    <!-- Meeting name with ellipsis -->
+    <!-- Meeting name with ellipsis - properly spaced -->
     <div 
-      class="relative z-10 font-bold uppercase text-text-base flex-grow ml-12 min-w-0" 
+      class="relative z-10 font-bold uppercase text-text-base flex-grow text-left min-w-0 ml-8 mr-2" 
       :class="{ 'opacity-50': isExpired }"
       :title="meetingName"
     >
@@ -178,6 +178,7 @@ onUnmounted(() => {
       <div 
         v-if="isInProgress && !isExpired" 
         class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-brand-primary"
+        style="margin-right: 3px;"
       >
         <span class="mr-1">●</span>
         <span class="hidden sm:inline">LIVE</span>
@@ -186,14 +187,15 @@ onUnmounted(() => {
       <div 
         v-else-if="isExpired"
         class="px-3 py-1 rounded-full text-xs font-bold text-text-muted border-2 border-brand-primary"
+        style="margin-right: 3px;"
       >
         Over
       </div>
       <div 
         v-else
-        class="relative h-6 rounded-full overflow-hidden border-2 border-brand-primary flex items-center"
+        class="relative h-6 border-2 border-brand-primary flex items-center rounded-full overflow-hidden"
         :class="{ 'bg-danger': isFlashingRed }"
-        style="width: 64px;"
+        style="width: 64px; margin-right: 3px;"
       >
         <!-- Progress bar background -->
         <div class="absolute inset-0 bg-surface-raised"></div>

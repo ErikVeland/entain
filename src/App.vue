@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-surface text-text-base transition-colors duration-200">
+  <div class="min-h-screen bg-surface text-text-base transition-colors duration-200 flex flex-col">
     <!-- News Ticker -->
     <NewsTicker />
     
@@ -57,20 +57,6 @@
             </button>
           </div>
           
-          <!-- Combined Simulation toggle -->
-          <button 
-            @click="toggleSimulation"
-            class="px-3 py-1 text-sm rounded-md transition-colors flex items-center"
-            :class="isSimulationMode
-              ? 'bg-brand-primary text-text-inverse' 
-              : 'bg-surface-raised text-text-muted hover:bg-surface-sunken'"
-            :aria-pressed="isSimulationMode"
-            :aria-label="isSimulationMode ? 'Simulation mode on' : 'Simulation mode off'"
-          >
-            <span>Simulation</span>
-            <span class="ml-1 font-bold">{{ isSimulationMode ? 'ON' : 'OFF' }}</span>
-          </button>
-          
           <!-- Debug toggle -->
           <button 
             @click="toggleDebug"
@@ -121,91 +107,50 @@
           </div>
         </div>
       </div>
-      
-      <!-- Search and Advanced Filters -->
-      <div class="mt-4 flex flex-col md:flex-row md:items-center md:space-x-4 space-y-4 md:space-y-0">
-        <div class="relative flex-1">
-          <input
-            v-model="localSearchQuery"
-            @input="updateSearchQuery"
-            type="text"
-            :placeholder="$t('races.searchPlaceholder')"
-            class="w-full px-4 py-2 bg-surface-sunken text-text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
-            :aria-label="$t('races.searchPlaceholder')"
-          />
-          <span class="absolute right-3 top-2.5 text-text-muted">🔍</span>
-        </div>
-        
-        <div class="flex space-x-2">
-          <select
-            v-model="localTimeFilter"
-            @change="updateTimeFilter"
-            class="px-3 py-2 bg-surface-sunken text-text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
-            :aria-label="$t('races.sortBy')"
-          >
-            <option value="all">{{ $t('races.allTimes') }}</option>
-            <option value="next-hour">{{ $t('races.nextHour') }}</option>
-            <option value="next-2-hours">{{ $t('races.next2Hours') }}</option>
-            <option value="next-4-hours">{{ $t('races.next4Hours') }}</option>
-          </select>
-          
-          <select
-            v-model="localSortOrder"
-            @change="updateSortOrder"
-            class="px-3 py-2 bg-surface-sunken text-text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
-            :aria-label="$t('races.sortBy')"
-          >
-            <option value="time-asc">{{ $t('races.timeSoonest') }}</option>
-            <option value="time-desc">{{ $t('races.timeLatest') }}</option>
-            <option value="name-asc">{{ $t('races.nameAZ') }}</option>
-            <option value="name-desc">{{ $t('races.nameZA') }}</option>
-          </select>
-        </div>
-      </div>
     </header>
 
-    <main id="main-content" class="container mx-auto py-8 px-4 sm:px-6 lg:px-8">
-      <!-- Category filter with icons -->
-      <div class="flex flex-wrap gap-3 mb-8" role="group" :aria-label="$t('categories.selectAll')">
-        <button
-          v-for="category in categoryFilters"
-          :key="category.id"
-          @click="handleCategoryToggle(category.id)"
-          class="px-6 py-3 rounded-xl2 font-medium transition-all duration-300 flex items-center focus:outline-none focus:ring-2 focus:ring-brand-primary transform hover:scale-105 min-w-[120px] justify-between"
-          :class="[
-            category.active 
-              ? 'bg-brand-primary text-text-inverse shadow-card' 
-              : 'bg-surface-raised text-text-base hover:bg-surface-sunken'
-          ]"
-          :aria-pressed="category.active"
-          :title="`${category.active ? $t('categories.selectAll') : $t('categories.selectAll')} ${$t(`categories.${category.name.toLowerCase()}`)} ${$t('categories.races')}`"
-        >
-          <div class="flex items-center">
-            <!-- Category icon -->
-            <span v-if="category.name === 'Horse'" class="text-lg mr-2">🏇</span>
-            <span v-else-if="category.name === 'Greyhound'" class="text-lg mr-2">🐕</span>
-            <span v-else-if="category.name === 'Harness'" class="text-lg mr-2">🛞</span>
-            
-            <span>{{ $t(`categories.${category.name.toLowerCase()}`) }}</span>
+    <main id="main-content" class="container mx-auto py-8 px-4 sm:px-6 lg:px-8 flex-grow">
+      <!-- Stunning Race Container -->
+      <div class="bg-surface-raised rounded-3xl shadow-2xl overflow-hidden">
+        <!-- Header with decorative elements -->
+        <div class="bg-gradient-to-r from-brand-primary to-harness p-5 rounded-t-3xl">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-text-inverse flex items-center">
+                <span class="mr-2">🏇</span>
+                <span v-if="currentView === 'races'">{{ $t('views.nextFive') }}</span>
+                <span v-else>{{ $t('views.meetings') }}</span>
+                <!-- Show live updates only in simulation mode -->
+                <span v-if="isSimulationMode" class="ml-2 text-base font-normal opacity-90">/ Live Racing</span>
+              </h2>
+              <!-- Show live updates text only in simulation mode -->
+              <p v-if="isSimulationMode" class="text-text-inverse opacity-80 text-sm mt-1">{{ $t('races.liveUpdates') }}</p>
+            </div>
+            <!-- Simulation toggle button in the Next 5 Races header -->
+            <button 
+              @click="toggleSimulation"
+              class="mt-4 md:mt-0 px-4 py-2 bg-text-inverse text-brand-primary rounded-lg font-medium hover:bg-opacity-90 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-text-inverse"
+              :aria-pressed="isSimulationMode"
+              :aria-label="isSimulationMode ? 'Switch to API mode' : 'Start simulation mode'"
+            >
+              <span v-if="isSimulationMode">API Mode</span>
+              <span v-else>Start Simulation</span>
+            </button>
           </div>
-          
-          <!-- Emoji tickbox -->
-          <span 
-            class="text-lg ml-2"
-            :class="{ 'animate-bounce-in': category.active }"
-          >
-            {{ category.active ? '✅' : '⭕' }}
-          </span>
-        </button>
-      </div>
-      
-      <div class="mt-8">
-        <RaceList 
-          v-if="currentView === 'races'" 
-          id="race-list" 
-          @open-betslip="handleOpenBetslip"
-        />
-        <MeetingsView v-else id="meetings-view" />
+        </div>
+        
+        <!-- Control Bar -->
+        <ControlBar />
+        
+        <!-- Race Content -->
+        <div class="p-6">
+          <RaceList 
+            v-if="currentView === 'races'" 
+            id="race-list" 
+            @open-betslip="handleOpenBetslip"
+          />
+          <MeetingsView v-else id="meetings-view" />
+        </div>
       </div>
     </main>
 
@@ -216,8 +161,12 @@
       @update:isOpen="isBetslipOpen = $event"
     />
 
-    <footer class="py-6 px-4 sm:px-6 lg:px-8 text-center text-text-muted text-sm">
-      <p>{{ $t('app.footer') }}</p>
+    <footer class="py-6 px-4 sm:px-6 lg:px-8 text-center text-text-muted text-sm border-t border-surface-sunken bg-surface-raised">
+      <p>Racehub by <a href="https://veland.au" class="text-brand-primary hover:underline">Erik Veland</a> &copy; {{ new Date().getFullYear() }}</p>
+      <p class="mt-1">
+        Racing data provided by Neds API
+        <span v-if="isSimulationMode">. Non-race data simulated.</span>
+      </p>
     </footer>
   </div>
 </template>
@@ -233,6 +182,8 @@ import NewsTicker from './components/NewsTicker.vue'
 import DebugPanel from './components/DebugPanel.vue'
 import BalanceWidget from './components/BalanceWidget.vue'
 import BetslipDrawer from './components/BetslipDrawer.vue'
+import ControlBar from './components/ControlBar.vue'
+import GameModeDialog from './components/GameModeDialog.vue'
 
 const { locale, t } = useI18n()
 const store = useRacesStore()
@@ -255,11 +206,6 @@ const currentLocale = ref('en')
 
 // Betslip handling
 const isBetslipOpen = ref(false)
-
-// Local state for form controls (to enable debouncing)
-const localSearchQuery = ref(store.searchQuery)
-const localTimeFilter = ref(store.timeFilter)
-const localSortOrder = ref(store.sortOrder)
 
 // Debug state
 const showDebug = ref(false)
@@ -305,27 +251,6 @@ const changeLanguage = () => {
   localStorage.setItem('locale', currentLocale.value)
 }
 
-// Update store when local search query changes (with debounce)
-let searchDebounce: number | null = null
-const updateSearchQuery = () => {
-  if (searchDebounce) {
-    clearTimeout(searchDebounce)
-  }
-  searchDebounce = window.setTimeout(() => {
-    store.setSearchQuery(localSearchQuery.value)
-  }, 300)
-}
-
-// Update store when time filter changes
-const updateTimeFilter = () => {
-  store.setTimeFilter(localTimeFilter.value as any)
-}
-
-// Update store when sort order changes
-const updateSortOrder = () => {
-  store.setSortOrder(localSortOrder.value as any)
-}
-
 // Initialize theme and language
 onMounted(() => {
   // Theme initialization
@@ -352,29 +277,6 @@ onMounted(() => {
     locale.value = savedLocale
   }
 })
-
-// Category filters
-const categoryFilters = computed(() => [
-  {
-    id: CATEGORY_IDS.HORSE,
-    name: 'Horse',
-    active: store.selectedCategories.has(CATEGORY_IDS.HORSE)
-  },
-  {
-    id: CATEGORY_IDS.GREYHOUND,
-    name: 'Greyhound',
-    active: store.selectedCategories.has(CATEGORY_IDS.GREYHOUND)
-  },
-  {
-    id: CATEGORY_IDS.HARNESS,
-    name: 'Harness',
-    active: store.selectedCategories.has(CATEGORY_IDS.HARNESS)
-  }
-])
-
-const handleCategoryToggle = (categoryId: string) => {
-  store.toggleCategory(categoryId)
-}
 
 // Handle opening the betslip
 const handleOpenBetslip = (payload: { race: any; runner: any }) => {
@@ -425,8 +327,5 @@ onMounted(() => {
 // Clean up
 onUnmounted(() => {
   store.stopLoops()
-  if (searchDebounce) {
-    clearTimeout(searchDebounce)
-  }
 })
 </script>
