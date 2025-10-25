@@ -61,13 +61,13 @@
   --color-brand-secondary: #0F172A; // slate-900
   --color-brand-accent: #FACC15; // yellow-400
   
-  --color-surface: #111827; // gray-900 (was text-inverse)
-  --color-surface-raised: #F8FAFC; // slate-50 (was text-base)
-  --color-surface-sunken: #94A3B8; // slate-400 (was text-muted)
+  --color-surface: #F8FAFC; // slate-50 (light background)
+  --color-surface-raised: #FFFFFF; // white (raised elements)
+  --color-surface-sunken: #E2E8F0; // slate-200 (sunken elements)
   
-  --color-text-base: #0B1220; // deep background (was surface)
-  --color-text-muted: #111827; // gray-900 (was surface-raised)
-  --color-text-inverse: #F8FAFC; // slate-50 (was text-base)
+  --color-text-base: #0B1220; // deep background (dark text)
+  --color-text-muted: #64748B; // slate-500 (muted text)
+  --color-text-inverse: #F8FAFC; // slate-50 (light text)
   
   --color-success: #16A34A;
   --color-warning: #F59E0B;
@@ -82,25 +82,25 @@
 
 // High Contrast Theme
 [data-theme="high-contrast"] {
-  --color-brand-primary: #000000;
+  --color-brand-primary: #FF6B00; // Vibrant orange for better contrast
   --color-brand-secondary: #000000;
-  --color-brand-accent: #000000;
+  --color-brand-accent: #FFD700; // Bright yellow
   
   --color-surface: #ffffff;
-  --color-surface-raised: #f0f0f0;
-  --color-surface-sunken: #e0e0e0;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f0f0f0;
   
   --color-text-base: #000000;
-  --color-text-muted: #333333;
+  --color-text-muted: #444444;
   --color-text-inverse: #ffffff;
   
-  --color-success: #006600;
-  --color-warning: #993300;
-  --color-danger: #990000;
-  --color-info: #003399;
+  --color-success: #008000; // Standard green
+  --color-warning: #FF8C00; // Bright orange
+  --color-danger: #FF0000; // Pure red
+  --color-info: #0000FF; // Pure blue
   
   // Race type colors
-  --color-horse: #000000; // Black
+  --color-horse: #FF6B00; // Vibrant orange
   --color-greyhound: #808080; // Gray
-  --color-harness: #990000; // Dark red (more red than previous)
+  --color-harness: #FF0000; // Pure red
 }

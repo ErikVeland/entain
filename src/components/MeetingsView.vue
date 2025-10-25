@@ -44,8 +44,7 @@
           class="w-full px-6 py-4 flex justify-between items-center bg-surface-sunken hover:bg-opacity-80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
           :aria-expanded="expandedMeetings.has(meetingName)"
           :aria-controls="`meeting-${meetingName}`"
-          @keydown="handleMeetingKeyDown($event, meetingName, index)"
-          :ref="el => meetingButtons.value[index] = el as HTMLElement"
+          @keydown="handleMeetingKeyDown($event, meetingName)"
           :title="meetingName"
         >
           <h2 class="text-xl font-bold text-text-base truncate">{{ meetingName }}</h2>
@@ -97,30 +96,12 @@ const toggleMeeting = (meetingName: string) => {
   }
 }
 
-const meetingButtons = ref<HTMLElement[]>([])
-
-const handleMeetingKeyDown = (event: KeyboardEvent, meetingName: string, index: number) => {
+const handleMeetingKeyDown = (event: KeyboardEvent, meetingName: string) => {
   switch (event.key) {
     case 'Enter':
     case ' ':
       event.preventDefault()
       toggleMeeting(meetingName)
-      break
-    case 'ArrowDown':
-      event.preventDefault()
-      // Focus next meeting button if exists
-      const nextIndex = index + 1
-      if (nextIndex < meetingButtons.value.length) {
-        meetingButtons.value[nextIndex]?.focus()
-      }
-      break
-    case 'ArrowUp':
-      event.preventDefault()
-      // Focus previous meeting button if exists
-      const prevIndex = index - 1
-      if (prevIndex >= 0) {
-        meetingButtons.value[prevIndex]?.focus()
-      }
       break
   }
 }
@@ -131,11 +112,22 @@ const retryFetch = () => {
 
 // Expand the first meeting by default
 onMounted(() => {
-  const meetings = Object.keys(store.racesByMeeting)
-  if (meetings.length > 0) {
+  // Use nextTick to ensure the store data is available
+  setTimeout(() => {
+    const meetings = Object.keys(store.racesByMeeting)
+    if (meetings.length > 0) {
+      expandedMeetings.value.add(meetings[0])
+    }
+  }, 0)
+})
+
+// Watch for changes in racesByMeeting and expand the first meeting
+watch(() => store.racesByMeeting, (newRacesByMeeting) => {
+  const meetings = Object.keys(newRacesByMeeting)
+  if (meetings.length > 0 && expandedMeetings.value.size === 0) {
     expandedMeetings.value.add(meetings[0])
   }
-})
+}, { immediate: true, deep: true })
 
 // Focus the retry button when error state changes
 watch(() => store.loadState, (newState) => {

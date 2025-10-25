@@ -158,13 +158,6 @@ onUnmounted(() => {
       {{ raceNumber }}
     </div>
     
-    <!-- Background category icon (header only) -->
-    <div class="absolute top-1 right-2 opacity-30 text-2xl z-0 pointer-events-none select-none">
-      <span v-if="categoryIcon === 'horse'">🏇</span>
-      <span v-else-if="categoryIcon === 'greyhound'">🐕</span>
-      <span v-else-if="categoryIcon === 'harness'">🛞</span>
-    </div>
-    
     <!-- Meeting name with ellipsis - properly spaced -->
     <div 
       class="relative z-10 font-bold uppercase text-text-base flex-grow text-left min-w-0 ml-8 mr-2" 
@@ -178,7 +171,7 @@ onUnmounted(() => {
       <div 
         v-if="isInProgress && !isExpired" 
         class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-brand-primary"
-        style="margin-right: 3px;"
+        style="margin-right: 0; transform: translateX(3px);"
       >
         <span class="mr-1">●</span>
         <span class="hidden sm:inline">LIVE</span>
@@ -187,7 +180,7 @@ onUnmounted(() => {
       <div 
         v-else-if="isExpired"
         class="px-3 py-1 rounded-full text-xs font-bold text-text-muted border-2 border-brand-primary"
-        style="margin-right: 3px;"
+        style="margin-right: 0; transform: translateX(3px);"
       >
         Over
       </div>
@@ -195,7 +188,7 @@ onUnmounted(() => {
         v-else
         class="relative h-6 border-2 border-brand-primary flex items-center rounded-full overflow-hidden"
         :class="{ 'bg-danger': isFlashingRed }"
-        style="width: 64px; margin-right: 3px;"
+        style="width: 64px; margin-right: 0; transform: translateX(3px);"
       >
         <!-- Progress bar background -->
         <div class="absolute inset-0 bg-surface-raised"></div>

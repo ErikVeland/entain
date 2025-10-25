@@ -33,8 +33,8 @@
           <h1 class="text-2xl font-bold text-brand-primary">🏁 RACEHUB</h1>
         </div>
         <div class="mt-4 md:mt-0 flex items-center space-x-2">
-          <!-- View toggle - only show in simulation mode -->
-          <div v-if="isSimulationMode" class="flex bg-surface-raised rounded-lg p-1">
+          <!-- View toggle -->
+          <div class="flex bg-surface-raised rounded-lg p-1">
             <button 
               @click="currentView = 'races'"
               class="px-3 py-1 text-sm rounded-md transition-colors"
@@ -57,17 +57,15 @@
             </button>
           </div>
           
-          <!-- Debug toggle -->
+          <!-- Debug toggle with bug icon -->
           <button 
             @click="toggleDebug"
-            class="px-3 py-1 text-sm rounded-md transition-colors"
-            :class="showDebug
-              ? 'bg-brand-primary text-text-inverse' 
-              : 'bg-surface-raised text-text-muted hover:bg-surface-sunken'"
+            class="p-2 rounded-full bg-surface-raised hover:bg-surface-sunken transition-colors"
+            :class="showDebug ? 'text-brand-primary' : 'text-text-muted'"
             :aria-pressed="showDebug"
             :aria-label="showDebug ? 'Hide debug panel' : 'Show debug panel'"
           >
-            Debug {{ showDebug ? 'ON' : 'OFF' }}
+            <span class="text-xl">🐛</span>
           </button>
           
           <!-- Balance widget -->
@@ -93,17 +91,19 @@
               <span class="text-xl">🎨</span>
             </button>
             
-            <!-- Language toggle -->
-            <select
-              v-model="currentLocale"
-              @change="changeLanguage"
-              class="p-2 rounded-full bg-surface-raised hover:bg-surface-sunken transition-colors ml-1 text-text-base"
-              :aria-label="'Change language'"
-            >
-              <option value="en">EN</option>
-              <option value="es">ES</option>
-              <option value="fr">FR</option>
-            </select>
+            <!-- Language toggle with flags -->
+            <div class="relative ml-2">
+              <select
+                v-model="currentLocale"
+                @change="changeLanguage"
+                class="appearance-none p-2 rounded-full bg-surface-raised hover:bg-surface-sunken transition-colors text-text-base pr-8 border-0"
+                :aria-label="'Change language'"
+              >
+                <option value="en">🇦🇺</option>
+                <option value="es">🇪🇸</option>
+                <option value="fr">🇫🇷</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -117,7 +117,7 @@
           <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
               <h2 class="text-xl font-bold text-text-inverse flex items-center">
-                <span class="mr-2">🏇</span>
+                <span class="mr-2 text-3xl">🏇</span>
                 <span v-if="currentView === 'races'">{{ $t('views.nextFive') }}</span>
                 <span v-else>{{ $t('views.meetings') }}</span>
                 <!-- Show live updates only in simulation mode -->
@@ -126,13 +126,14 @@
               <!-- Show live updates text only in simulation mode -->
               <p v-if="isSimulationMode" class="text-text-inverse opacity-80 text-sm mt-1">{{ $t('races.liveUpdates') }}</p>
             </div>
-            <!-- Simulation toggle button in the Next 5 Races header -->
+            <!-- Simulation toggle button with enhanced glass effect -->
             <button 
               @click="toggleSimulation"
-              class="mt-4 md:mt-0 px-4 py-2 bg-text-inverse text-brand-primary rounded-lg font-medium hover:bg-opacity-90 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-text-inverse"
+              class="mt-4 md:mt-0 px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary backdrop-blur-md bg-brand-primary bg-opacity-20 border border-brand-primary border-opacity-30 flex items-center justify-center hover:bg-opacity-30 hover:border-opacity-40"
               :aria-pressed="isSimulationMode"
               :aria-label="isSimulationMode ? 'Switch to API mode' : 'Start simulation mode'"
             >
+              <span v-if="!isSimulationMode" class="mr-2">▶️</span>
               <span v-if="isSimulationMode">API Mode</span>
               <span v-else>Start Simulation</span>
             </button>
@@ -226,6 +227,10 @@ const toggleSimulation = () => {
 
 const toggleTheme = () => {
   isDarkMode.value = !isDarkMode.value
+  // If we're in high contrast mode, toggle that first
+  if (isHighContrast.value) {
+    isHighContrast.value = false
+  }
   updateThemeAttribute()
 }
 
@@ -251,7 +256,25 @@ const changeLanguage = () => {
   localStorage.setItem('locale', currentLocale.value)
 }
 
-// Initialize theme and language
+// Handle opening the betslip
+const handleOpenBetslip = (payload: { race: any; runner: any }) => {
+  // Open the betslip drawer
+  isBetslipOpen.value = true
+  
+  // Add selection to betslip
+  setTimeout(() => {
+    // Dispatch a custom event that the betslip drawer can listen to
+    const event = new CustomEvent('add-to-betslip', { 
+      detail: { 
+        race: payload.race, 
+        runner: payload.runner 
+      } 
+    })
+    window.dispatchEvent(event)
+  }, 100)
+}
+
+// Start polling and ticking intervals
 onMounted(() => {
   // Theme initialization
   const savedTheme = localStorage.getItem('theme')
@@ -275,44 +298,6 @@ onMounted(() => {
   if (savedLocale && ['en', 'es', 'fr'].includes(savedLocale)) {
     currentLocale.value = savedLocale
     locale.value = savedLocale
-  }
-})
-
-// Handle opening the betslip
-const handleOpenBetslip = (payload: { race: any; runner: any }) => {
-  // Open the betslip drawer
-  isBetslipOpen.value = true
-  
-  // Add selection to betslip
-  setTimeout(() => {
-    // Dispatch a custom event that the betslip drawer can listen to
-    const event = new CustomEvent('add-to-betslip', { 
-      detail: { 
-        race: payload.race, 
-        runner: payload.runner 
-      } 
-    })
-    window.dispatchEvent(event)
-  }, 100)
-}
-
-// Start polling and ticking intervals
-onMounted(() => {
-  // Apply theme immediately to prevent flash
-  const savedTheme = localStorage.getItem('theme')
-  if (savedTheme) {
-    if (savedTheme === 'high-contrast') {
-      isHighContrast.value = true
-      document.documentElement.setAttribute('data-theme', 'high-contrast')
-    } else {
-      isDarkMode.value = savedTheme === 'dark'
-      document.documentElement.setAttribute('data-theme', savedTheme)
-    }
-  } else {
-    // Check system preference
-    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
-    isDarkMode.value = systemPrefersDark
-    document.documentElement.setAttribute('data-theme', systemPrefersDark ? 'dark' : 'light')
   }
   
   // Listen for game mode dialog request

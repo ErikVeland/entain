@@ -1,34 +1,34 @@
 <template>
   <div class="bg-surface-raised shadow-card p-4 mb-6 transition-all duration-300">
-    <!-- Main control bar -->
-    <div class="flex flex-col lg:flex-row lg:items-center gap-2">
-      <!-- Left section: Search and Category filters -->
-      <div class="flex flex-1 flex-col sm:flex-row gap-4">
-        <!-- Search section -->
-        <div class="relative flex-1 max-w-md">
-          <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span class="text-text-muted text-sm">🔍</span>
-          </div>
-          <input
-            v-model="localSearchQuery"
-            @input="updateSearchQuery"
-            type="text"
-            :placeholder="$t('races.searchPlaceholder')"
-            class="w-full pl-10 pr-8 py-2 bg-surface text-text-base rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-200"
-            :aria-label="$t('races.searchPlaceholder')"
-          />
-          <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
-            <span v-if="localSearchQuery" @click="clearSearch" class="text-text-muted cursor-pointer hover:text-brand-primary transition-colors text-sm">✕</span>
-          </div>
+    <!-- Main control bar with simplified flex layout -->
+    <div class="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between flex-wrap w-full">
+      <!-- Search section -->
+      <div class="relative flex-1 min-w-[200px]">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <span class="text-text-muted text-sm">🔍</span>
         </div>
-        
+        <input
+          v-model="localSearchQuery"
+          @input="updateSearchQuery"
+          type="text"
+          :placeholder="$t('races.searchPlaceholder')"
+          class="w-full pl-10 pr-8 py-2 bg-surface text-text-base rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-200"
+          :aria-label="$t('races.searchPlaceholder')"
+        />
+        <div class="absolute inset-y-0 right-0 pr-3 flex items-center">
+          <span v-if="localSearchQuery" @click="clearSearch" class="text-text-muted cursor-pointer hover:text-brand-primary transition-colors text-sm">✕</span>
+        </div>
+      </div>
+      
+      <!-- Filter and control sections with equal spacing -->
+      <div class="flex flex-wrap gap-3 items-center">
         <!-- Compact Category filters -->
         <div class="flex flex-wrap gap-2">
           <button
             v-for="category in categories"
             :key="category.id"
             @click="toggleCategory(category.id)"
-            class="px-3 py-1.5 rounded-lg font-medium transition-all duration-200 flex items-center focus:outline-none focus:ring-2 focus:ring-brand-primary text-sm min-w-[80px] justify-between"
+            class="px-3 py-1 rounded-lg font-medium transition-all duration-200 flex items-center focus:outline-none focus:ring-2 focus:ring-brand-primary text-sm min-w-[80px] justify-between"
             :class="[
               category.active 
                 ? 'text-text-inverse shadow-sm' 
@@ -68,10 +68,7 @@
             </span>
           </button>
         </div>
-      </div>
-      
-      <!-- Right section: Controls -->
-      <div class="flex flex-wrap gap-2">
+        
         <!-- Time filter -->
         <div class="relative">
           <select
