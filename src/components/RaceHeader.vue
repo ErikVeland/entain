@@ -196,11 +196,11 @@ onUnmounted(() => {
         style="width: 64px;"
       >
         <!-- Progress bar background -->
-        <div class="absolute inset-0 bg-surface-raised rounded-full"></div>
+        <div class="absolute inset-0 bg-surface-raised"></div>
         
-        <!-- Progress fill -->
+        <!-- Progress fill (straight edges) -->
         <div 
-          class="absolute inset-0 bg-brand-primary transition-all duration-1000 ease-linear rounded-full"
+          class="absolute inset-0 bg-brand-primary transition-all duration-1000 ease-linear"
           :style="{ width: progressPercentage + '%' }"
         ></div>
         

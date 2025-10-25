@@ -1,6 +1,6 @@
 <template>
   <div 
-    class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden transition-all duration-500 animate-bounce-in flex flex-col h-full"
+    class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden transition-all duration-500 animate-bounce-in flex flex-col h-full relative"
     :class="{ 
       'ring-2 ring-brand-primary': isActive, 
       'opacity-50 pointer-events-none': isExpired,
@@ -11,6 +11,16 @@
     :aria-label="`Race ${race.race_number} at ${race.meeting_name}`"
     role="region"
   >
+    <!-- Full card background with subtle race-type color overlay (10% opacity) -->
+    <div 
+      class="absolute inset-0 rounded-xl2 pointer-events-none select-none opacity-10"
+      :class="{
+        'bg-horse': race.category_id === CATEGORY_IDS.HORSE,
+        'bg-greyhound': race.category_id === CATEGORY_IDS.GREYHOUND,
+        'bg-harness': race.category_id === CATEGORY_IDS.HARNESS
+      }"
+    ></div>
+    
     <!-- Full card background category icon -->
     <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
       <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🏇</span>
@@ -27,7 +37,7 @@
       :race-id="race.id"
     />
     
-    <div class="p-3 flex-grow">
+    <div class="p-3 flex-grow relative z-10">
       <div class="space-y-2">
         <!-- We need to convert the odds to string for RunnerRow -->
         <RunnerRow 
@@ -51,7 +61,7 @@
     </div>
     
     <!-- Odds Trend Chart with dropdown curtain -->
-    <div class="px-3 pb-3" v-if="betsStore.showGame && !isExpired">
+    <div class="px-3 pb-3 relative z-10" v-if="betsStore.showGame && !isExpired">
       <div class="border-t border-surface pt-3">
         <button 
           @click="toggleOddsChart"

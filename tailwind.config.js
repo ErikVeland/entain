@@ -31,7 +31,7 @@ module.exports = {
 				// Race type colors
 				horse: '#F97316',     // Orange (same as brand-primary)
 				greyhound: '#C0C0C0', // Coppery silver
-				harness: '#EA580C'    // Orangey red
+				harness: '#DC2626'    // Red (more red than orangey red)
 			},
 			fontFamily: {
 				sans: ['Inter', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji', 'sans-serif'],

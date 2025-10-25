@@ -24,7 +24,7 @@
   // Race type colors
   --color-horse: #F97316; // Orange (same as brand-primary)
   --color-greyhound: #C0C0C0; // Coppery silver
-  --color-harness: #EA580C; // Orangey red
+  --color-harness: #DC2626; // Red (more red than orangey red)
   
   // Typography
   --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
@@ -77,7 +77,7 @@
   // Race type colors
   --color-horse: #F97316; // Orange (same as brand-primary)
   --color-greyhound: #C0C0C0; // Coppery silver
-  --color-harness: #EA580C; // Orangey red
+  --color-harness: #DC2626; // Red (more red than orangey red)
 }
 
 // High Contrast Theme
@@ -102,5 +102,5 @@
   // Race type colors
   --color-horse: #000000; // Black
   --color-greyhound: #808080; // Gray
-  --color-harness: #990000; // Dark red
+  --color-harness: #990000; // Dark red (more red than previous)
 }
