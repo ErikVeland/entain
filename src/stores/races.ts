@@ -44,6 +44,15 @@ interface NedsApiResponse {
 type LoadState = 'idle' | 'loading' | 'ready' | 'error'
 
 /**
+ * Cache entry structure
+ */
+interface CacheEntry {
+  data: RaceSummary[]
+  timestamp: number
+  ttl: number // time to live in milliseconds
+}
+
+/**
  * Utility: current epoch ms
  */
 const now = () => Date.now()
@@ -83,6 +92,13 @@ export const useRacesStore = defineStore('races', {
     ]),
     loadState: 'idle' as LoadState,
     errorMessage: '' as string,
+    // Search and filter state
+    searchQuery: '' as string,
+    timeFilter: 'all' as 'all' | 'next-hour' | 'next-2-hours' | 'next-4-hours',
+    sortOrder: 'time-asc' as 'time-asc' | 'time-desc' | 'name-asc' | 'name-desc',
+    // Caching
+    cache: new Map<string, CacheEntry>(),
+    cacheTTL: 30000, // 30 seconds cache TTL
     // Internal timers
     _tickHandle: null as number | null,
     _pollHandle: null as number | null
@@ -94,34 +110,67 @@ export const useRacesStore = defineStore('races', {
      */
     activeRaces(state): RaceSummary[] {
       const cutoffNow = now()
-      return state.races
+      let filtered = state.races
         .filter(r => state.selectedCategories.has(r.category_id))
         .filter(r => !isExpired(r, cutoffNow))
-        .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+      
+      // Apply search filter
+      if (state.searchQuery) {
+        const query = state.searchQuery.toLowerCase()
+        filtered = filtered.filter(r => 
+          r.meeting_name.toLowerCase().includes(query) ||
+          r.race_number.toString().includes(query)
+        )
+      }
+      
+      // Apply time filter
+      const currentTime = now()
+      switch (state.timeFilter) {
+        case 'next-hour':
+          filtered = filtered.filter(r => r.advertised_start_ms <= currentTime + 3600000)
+          break
+        case 'next-2-hours':
+          filtered = filtered.filter(r => r.advertised_start_ms <= currentTime + 7200000)
+          break
+        case 'next-4-hours':
+          filtered = filtered.filter(r => r.advertised_start_ms <= currentTime + 14400000)
+          break
+      }
+      
+      // Apply sorting
+      switch (state.sortOrder) {
+        case 'time-asc':
+          filtered.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+          break
+        case 'time-desc':
+          filtered.sort((a, b) => b.advertised_start_ms - a.advertised_start_ms)
+          break
+        case 'name-asc':
+          filtered.sort((a, b) => a.meeting_name.localeCompare(b.meeting_name))
+          break
+        case 'name-desc':
+          filtered.sort((a, b) => b.meeting_name.localeCompare(a.meeting_name))
+          break
+      }
+      
+      return filtered
     },
     /**
      * Slice of the next five races.
      */
     nextFive(state): RaceSummary[] {
-      return state.races
-        .filter(r => state.selectedCategories.has(r.category_id))
-        .filter(r => !isExpired(r, now()))
-        .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
-        .slice(0, 5)
+      return this.activeRaces.slice(0, 5)
     },
     /**
      * Group active races by meeting name for the meetings view.
      */
     racesByMeeting(state): Record<string, RaceSummary[]> {
       const cutoffNow = now()
-      const races = state.races
-        .filter(r => state.selectedCategories.has(r.category_id))
-        .filter(r => !isExpired(r, cutoffNow))
-        .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+      let filtered = this.activeRaces
       
       const grouped: Record<string, RaceSummary[]> = {}
       
-      for (const race of races) {
+      for (const race of filtered) {
         if (!grouped[race.meeting_name]) {
           grouped[race.meeting_name] = []
         }
@@ -141,9 +190,22 @@ export const useRacesStore = defineStore('races', {
      * Fetch races from the Neds endpoint, normalize, and merge.
      * Keeps a bounded list (e.g., last 50) to avoid unbounded growth.
      */
-    async fetchRaces(): Promise<void> {
+    async fetchRaces(retryCount = 0): Promise<void> {
       this.loadState = this.loadState === 'idle' ? 'loading' : this.loadState
       this.errorMessage = ''
+      
+      // Check cache first
+      const cacheKey = 'races'
+      const cached = this.cache.get(cacheKey)
+      const currentTime = now()
+      
+      if (cached && (currentTime - cached.timestamp) < cached.ttl) {
+        // Use cached data
+        this.races = cached.data
+        this.loadState = 'ready'
+        return
+      }
+      
       try {
         const res = await fetch('https://api.neds.com.au/rest/v1/racing/?method=nextraces&count=10', {
           headers: { 'Content-Type': 'application/json' },
@@ -202,9 +264,28 @@ export const useRacesStore = defineStore('races', {
           .filter(r => !isExpired(r, t))
           .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
           .slice(0, 50) // bound
+          
+        // Cache the results
+        this.cache.set(cacheKey, {
+          data: this.races,
+          timestamp: currentTime,
+          ttl: this.cacheTTL
+        })
+        
         this.loadState = 'ready'
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
+        
+        // Implement retry mechanism for transient errors
+        if (retryCount < 3 && (msg.includes('500') || msg.includes('503') || msg.includes('network') || msg.includes('fetch'))) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = Math.pow(2, retryCount) * 1000
+          setTimeout(() => {
+            this.fetchRaces(retryCount + 1)
+          }, delay)
+          return
+        }
+        
         this.errorMessage = msg
         this.loadState = 'error'
         console.error('Error fetching races:', err)
@@ -223,6 +304,41 @@ export const useRacesStore = defineStore('races', {
     },
 
     /**
+     * Set search query for filtering races.
+     */
+    setSearchQuery(query: string): void {
+      this.searchQuery = query
+    },
+
+    /**
+     * Set time filter for races.
+     */
+    setTimeFilter(filter: 'all' | 'next-hour' | 'next-2-hours' | 'next-4-hours'): void {
+      this.timeFilter = filter
+    },
+
+    /**
+     * Set sort order for races.
+     */
+    setSortOrder(order: 'time-asc' | 'time-desc' | 'name-asc' | 'name-desc'): void {
+      this.sortOrder = order
+    },
+
+    /**
+     * Clear the cache.
+     */
+    clearCache(): void {
+      this.cache.clear()
+    },
+
+    /**
+     * Set cache TTL (in milliseconds).
+     */
+    setCacheTTL(ttl: number): void {
+      this.cacheTTL = ttl
+    },
+
+    /**
      * Ensure no expired races remain in state.
      */
     pruneExpired(): void {
@@ -235,6 +351,9 @@ export const useRacesStore = defineStore('races', {
         // Keep sorted when pruning affects order
         this.races.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
       }
+      
+      // Clear cache when pruning
+      this.clearCache()
     },
 
     /**
@@ -290,6 +409,10 @@ export const useRacesStore = defineStore('races', {
         CATEGORY_IDS.GREYHOUND,
         CATEGORY_IDS.HARNESS
       ])
+      this.searchQuery = ''
+      this.timeFilter = 'all'
+      this.sortOrder = 'time-asc'
+      this.cache.clear()
       this.loadState = 'idle'
       this.errorMessage = ''
     }

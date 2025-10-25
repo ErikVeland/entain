@@ -51,24 +51,39 @@ const userWon = computed(() => {
   if (!props.raceResult || pendingBets.value.length === 0) return false
   
   const winnerId = props.raceResult.placings[0]
-  return pendingBets.value.some(bet => bet.runnerId === winnerId)
+  return pendingBets.value.some(bet => {
+    if (bet.leg) {
+      return bet.leg.selectionRunnerId === winnerId
+    } else if (bet.legs && bet.legs.length > 0) {
+      return bet.legs[0].selectionRunnerId === winnerId
+    }
+    return false
+  })
 })
 
 const winnings = computed(() => {
   if (!props.raceResult || !userWon.value) return 0
   
   const winnerId = props.raceResult.placings[0]
-  const winningBet = pendingBets.value.find(bet => bet.runnerId === winnerId)
+  const winningBet = pendingBets.value.find(bet => {
+    if (bet.leg) {
+      return bet.leg.selectionRunnerId === winnerId
+    } else if (bet.legs && bet.legs.length > 0) {
+      return bet.legs[0].selectionRunnerId === winnerId
+    }
+    return false
+  })
   
   if (!winningBet) return 0
   
-  if (winningBet.odds === 'SP') {
-    return winningBet.amount * 3 // Default 3x for SP
-  } else if (typeof winningBet.odds === 'number') {
-    return winningBet.amount * winningBet.odds
+  let odds = 1
+  if (winningBet.leg) {
+    odds = winningBet.leg.oddsDecimalAtPlacement
+  } else if (winningBet.legs && winningBet.legs.length > 0) {
+    odds = winningBet.legs[0].oddsDecimalAtPlacement
   }
   
-  return 0
+  return winningBet.stake * odds
 })
 
 const getRunnerName = (runnerId: string) => {
@@ -84,5 +99,14 @@ const getRunnerNumber = (runnerId: string) => {
 const isWinner = (runnerId: string) => {
   if (!props.raceResult) return false
   return props.raceResult.placings[0] === runnerId
+}
+
+const getRunnerIdFromBet = (bet: any) => {
+  if (bet.leg) {
+    return bet.leg.selectionRunnerId
+  } else if (bet.legs && bet.legs.length > 0) {
+    return bet.legs[0].selectionRunnerId
+  }
+  return ''
 }
 </script>

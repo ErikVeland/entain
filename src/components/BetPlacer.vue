@@ -53,8 +53,8 @@
         class="flex justify-between items-center bg-surface-raised rounded p-2 mb-2"
       >
         <div>
-          <div class="text-text-base text-sm">{{ getRunnerName(bet.runnerId) }}</div>
-          <div class="text-text-muted text-xs">${{ bet.amount }} @ {{ formatOdds(bet.odds) }}</div>
+          <div class="text-text-base text-sm">{{ getRunnerName(getRunnerIdFromBet(bet)) }}</div>
+          <div class="text-text-muted text-xs">${{ bet.stake }} @ {{ formatOdds(getOddsFromBet(bet)) }}</div>
         </div>
         <button 
           @click="cancelBet(bet.id)"
@@ -107,6 +107,24 @@ const formatOdds = (odds: number | 'SP') => {
 const getRunnerName = (runnerId: string) => {
   const runner = props.runners.find(r => r.id === runnerId)
   return runner ? runner.name : 'Unknown Runner'
+}
+
+const getRunnerIdFromBet = (bet: any) => {
+  if (bet.leg) {
+    return bet.leg.selectionRunnerId
+  } else if (bet.legs && bet.legs.length > 0) {
+    return bet.legs[0].selectionRunnerId
+  }
+  return ''
+}
+
+const getOddsFromBet = (bet: any) => {
+  if (bet.leg) {
+    return bet.leg.oddsDecimalAtPlacement
+  } else if (bet.legs && bet.legs.length > 0) {
+    return bet.legs[0].oddsDecimalAtPlacement
+  }
+  return 1
 }
 
 const placeBet = () => {

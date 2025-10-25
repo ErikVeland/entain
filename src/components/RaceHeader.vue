@@ -14,10 +14,17 @@
     <div class="flex items-center">
       <div 
         v-if="isLive && !isExpired" 
-        class="px-2 py-1 rounded text-xs font-bold bg-danger text-text-inverse flex items-center"
+        class="px-2 py-1 rounded text-xs font-bold text-text-inverse flex items-center"
+        :class="categoryLiveClass"
       >
         <span class="mr-1">●</span>
         LIVE
+      </div>
+      <div 
+        v-else-if="isFinished && !isExpired"
+        class="px-2 py-1 rounded text-xs font-bold bg-surface-raised text-text-base"
+      >
+        Finished
       </div>
       <div 
         v-else-if="isStartingSoon && !isExpired"
@@ -52,6 +59,8 @@ const props = defineProps<{
   categoryId: string
   startTime: number
   isExpired?: boolean
+  isLive?: boolean
+  isFinished?: boolean
 }>()
 
 const categoryIcon = computed(() => {
@@ -67,9 +76,25 @@ const categoryIcon = computed(() => {
   }
 })
 
+// Category-specific live classes
+const categoryLiveClass = computed(() => {
+  switch (props.categoryId) {
+    case CATEGORY_IDS.HORSE:
+      return 'bg-orange-500' // Horse racing orange
+    case CATEGORY_IDS.GREYHOUND:
+      return 'bg-amber-700' // Greyhound silvery copper
+    case CATEGORY_IDS.HARNESS:
+      return 'bg-orange-600' // Harness orangy red
+    default:
+      return 'bg-danger'
+  }
+})
+
 const { formattedTime, isStartingSoon, isInProgress } = useCountdown(props.startTime)
 
-const isLive = computed(() => isInProgress.value)
+const isLive = computed(() => props.isLive || isInProgress.value)
+
+const isFinished = computed(() => props.isFinished)
 
 const countdownDisplay = computed(() => {
   if (props.isExpired) {

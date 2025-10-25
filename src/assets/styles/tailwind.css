@@ -1,10 +1,10 @@
+@import './_tokens.scss';
+@import './_theme.scss';
+@import './_utilities.scss';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import './tokens';
-@import './theme';
-@import './utilities';
 
 @layer base {
   body {

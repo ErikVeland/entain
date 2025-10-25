@@ -116,7 +116,7 @@ describe('RaceList', () => {
     expect(wrapper.findAllComponents({ name: 'RaceColumn' }).length).toBe(3)
   })
 
-  it('shows navigation dots for carousel', () => {
+  it('renders races in a grid layout', () => {
     const wrapper = mount(RaceList, {
       global: {
         plugins: [
@@ -160,7 +160,7 @@ describe('RaceList', () => {
       }
     })
 
-    // Check that navigation dots are rendered
-    expect(wrapper.find('.flex.justify-center').exists()).toBe(true)
+    // Check that races are rendered in a grid layout
+    expect(wrapper.find('.grid').exists()).toBe(true)
   })
 })

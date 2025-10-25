@@ -12,7 +12,7 @@
         {{ runner.jockey }} {{ runner.weight }}
       </div>
       <div class="text-sm text-text-muted" v-if="runner.bestTime">
-        Best Time: {{ runner.bestTime }}
+        {{ $t('game.bestTime') }}: {{ runner.bestTime }}
       </div>
     </div>
     
@@ -23,7 +23,7 @@
         class="px-3 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center"
         :class="oddsButtonClass"
         :disabled="isExpired"
-        :aria-label="`Add ${runner.name} at ${runner.odds} to betslip`"
+        :aria-label="`${$t('game.addToBetslip')} ${runner.name} ${$t('game.at')} ${runner.odds}`"
       >
         {{ runner.odds }}
         <span v-if="runner.oddsTrend === 'up'" class="ml-1 text-success">▲</span>
@@ -35,8 +35,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 interface Runner {
+  id: string
   number: number
   name: string
   weight: string
@@ -57,7 +61,7 @@ const emit = defineEmits<{
 }>()
 
 const oddsButtonClass = computed(() => {
-  const baseClasses = 'bg-surface text-text-base hover:bg-brand-primary hover:text-text-inverse'
+  const baseClasses = 'bg-surface text-text-base hover:bg-brand-primary hover:text-text-inverse cursor-pointer'
   
   if (props.isExpired) {
     return `${baseClasses} opacity-50 cursor-not-allowed`

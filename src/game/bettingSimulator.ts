@@ -177,6 +177,21 @@ export class BettingEngine {
 		return Array.from(this.bets.values()).sort((a, b) => a.placedAtMs - b.placedAtMs)
 	}
 
+	getPendingBetsForRace(raceId: string): Bet[] {
+		const betIds = this.raceToPendingBets.get(raceId)
+		if (!betIds) return []
+		
+		const pendingBets: Bet[] = []
+		for (const betId of betIds) {
+			const bet = this.bets.get(betId)
+			if (bet && bet.status === 'PENDING') {
+				pendingBets.push(bet)
+			}
+		}
+		
+		return pendingBets.sort((a, b) => a.placedAtMs - b.placedAtMs)
+	}
+
 	/* ---------------------------- Bet Placement --------------------------- */
 
 	placeSingleWin(rq: RaceQuote, runnerId: string, stake: number, betId: string): SingleBet {
@@ -190,6 +205,33 @@ export class BettingEngine {
 	placeSingleEachWay(rq: RaceQuote, runnerId: string, stake: number, betId: string): SingleBet {
 		// EACH_WAY: stake is total stake (split 50/50 into WIN and PLACE components)
 		return this.placeSingle(rq, runnerId, stake, betId, 'EACH_WAY')
+	}
+
+	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP'): string {
+		// Create a minimal RaceQuote for the bet
+		const rq: RaceQuote = {
+			raceId: raceId,
+			meetingName: 'Unknown Meeting',
+			raceNumber: 1,
+			categoryId: '4a2788f8-e825-4d36-9894-efd4baf1cfae', // Default to horse racing
+			advertisedStartMs: Date.now() + 300000, // 5 minutes from now
+			runners: [
+				{
+					runnerId: runnerId,
+					number: 1,
+					name: 'Selected Runner',
+					decimalOdds: odds === 'SP' ? null : odds
+				}
+			]
+		}
+
+		// Generate a unique bet ID
+		const betId = `bet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+
+		// Place a WIN bet
+		this.placeSingleWin(rq, runnerId, stake, betId)
+
+		return betId
 	}
 
 	placeMulti(legs: Array<{ rq: RaceQuote; runnerId: string }>, stake: number, betId: string): MultiBet {
@@ -281,6 +323,12 @@ export class BettingEngine {
 		bet.status = 'VOID'
 		this.postSettle(bet, { payout: bet.stake, profitLoss: 0, result: 'VOID', breakdown: 'Cancelled pre-start' })
 		return true
+	}
+
+	cancelBet(betId: string): boolean {
+		const now = Date.now()
+		// Use a future time to allow cancellation
+		return this.tryCancel(betId, now, now + 3600000) // Allow cancellation for 1 hour
 	}
 
 	/* ----------------------------- Settlement ----------------------------- */

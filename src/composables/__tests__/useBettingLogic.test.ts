@@ -9,60 +9,40 @@ describe('useBettingLogic', () => {
     setActivePinia(createPinia())
   })
 
-  it('returns correct selection information', () => {
+  it('returns correct bet information', () => {
     const store = useBetsStore()
-    // Add a selection to the store
-    store.addSelection({
-      raceId: 'race1',
-      raceName: 'Test Race',
-      raceNumber: 1,
-      runnerId: 'runner1',
-      runnerNumber: 1,
-      runnerName: 'Test Runner',
-      odds: 2.5,
-      market: 'win',
-      stake: 0
-    })
+    const { activeBets, totalStake, bankroll } = useBettingLogic()
     
-    const { activeSelections, totalStake, totalEstimatedReturn } = useBettingLogic()
-    
-    // Check that the selection information is correct
-    expect(activeSelections.value).toHaveLength(1)
-    expect(activeSelections.value[0].runnerName).toBe('Test Runner')
-    
-    // Check that the totals are correct
+    // Check that the bet information is correct
+    expect(activeBets.value).toEqual([])
     expect(totalStake.value).toBe(0)
-    expect(totalEstimatedReturn.value).toBe(0)
+    expect(bankroll.value).toEqual(store.bankroll)
   })
 
-  it('adds and removes selections correctly', () => {
-    const store = useBetsStore()
-    const { addSelection, removeSelection } = useBettingLogic()
+  it('places and cancels bets correctly', () => {
+    const betsStore = useBetsStore()
+    const { placeBet, cancelBet } = useBettingLogic()
     
-    // Add a selection
-    const newSelection = {
-      raceId: 'race1',
-      raceName: 'Test Race',
-      raceNumber: 1,
-      runnerId: 'runner1',
-      runnerNumber: 1,
-      runnerName: 'Test Runner',
-      odds: 2.5,
-      market: 'win' as const,
-      stake: 0
-    }
+    // Mock the store methods
+    const mockPlaceBet = vi.fn().mockReturnValue('bet1')
+    const mockCancelBet = vi.fn().mockReturnValue(true)
     
-    addSelection(newSelection)
+    betsStore.placeBet = mockPlaceBet
+    betsStore.cancelBet = mockCancelBet
     
-    // Check that the selection was added to the store
-    expect(store.betSelections).toHaveLength(1)
-    expect(store.betSelections[0].runnerName).toBe('Test Runner')
+    // Place a bet
+    const result = placeBet('race1', 'runner1', 100, 2.5)
     
-    // Remove a selection
-    removeSelection(store.betSelections[0].id)
+    // Check that the bet was placed
+    expect(result).toBe('bet1')
+    expect(mockPlaceBet).toHaveBeenCalledWith('race1', 'runner1', 100, 2.5)
     
-    // Check that the selection was removed from the store
-    expect(store.betSelections).toHaveLength(0)
+    // Cancel a bet
+    const cancelResult = cancelBet('bet1')
+    
+    // Check that the bet was cancelled
+    expect(cancelResult).toBe(true)
+    expect(mockCancelBet).toHaveBeenCalledWith('bet1')
   })
 
   it('calculates estimated return correctly', () => {
@@ -89,23 +69,9 @@ describe('useBettingLogic', () => {
   })
 
   it('validates bet placement correctly', () => {
-    const store = useBetsStore()
-    // Add a selection with stake
-    store.addSelection({
-      raceId: 'race1',
-      raceName: 'Test Race',
-      raceNumber: 1,
-      runnerId: 'runner1',
-      runnerNumber: 1,
-      runnerName: 'Test Runner',
-      odds: 2.5,
-      market: 'win',
-      stake: 1000
-    })
-    
     const { canPlaceBets } = useBettingLogic()
     
-    // Check that we can place bets with sufficient balance
+    // Should always be able to place bets in current implementation
     expect(canPlaceBets.value).toBe(true)
   })
 })

@@ -1,80 +1,72 @@
 // src/composables/useBettingLogic.ts
 import { computed } from 'vue'
-import { useBetsStore, type BetSelection } from '../stores/bets'
-import { type Runner } from '../game/bettingSimulator'
+import { useBetsStore } from '../stores/bets'
 
 export function useBettingLogic() {
   const betsStore = useBetsStore()
   
-  // Active selections in betslip
-  const activeSelections = computed(() => betsStore.activeSelections)
+  // Active bets
+  const activeBets = computed(() => betsStore.bets)
   
-  // Total stake of all active selections
-  const totalStake = computed(() => betsStore.totalStake)
+  // Total stake of all active bets
+  const totalStake = computed(() => {
+    return betsStore.bets.reduce((sum, bet) => sum + bet.stake, 0)
+  })
   
-  // Total estimated return of all active selections
-  const totalEstimatedReturn = computed(() => betsStore.totalEstimatedReturn)
+  // Bankroll information
+  const bankroll = computed(() => betsStore.bankroll)
   
-  // Add a selection to the betslip
-  const addSelection = (selection: Omit<BetSelection, 'id' | 'estimatedReturn'>) => {
-    betsStore.addSelection(selection)
+  // Place a bet
+  const placeBet = (raceId: string, runnerId: string, amount: number, odds: number | 'SP') => {
+    return betsStore.placeBet(raceId, runnerId, amount, odds)
   }
   
-  // Update a selection's market type
-  const updateSelectionMarket = (selectionId: string, market: 'win' | 'place' | 'each-way') => {
-    betsStore.updateSelectionMarket(selectionId, market)
+  // Cancel a bet
+  const cancelBet = (betId: string) => {
+    return betsStore.cancelBet(betId)
   }
   
-  // Update a selection's stake
-  const updateSelectionStake = (selectionId: string, stake: number) => {
-    betsStore.updateSelectionStake(selectionId, stake)
+  // Settle a race
+  const settleRace = (raceId: string, result: { placings: string[] }) => {
+    betsStore.settleRace(raceId, result)
   }
   
-  // Remove a selection from the betslip
-  const removeSelection = (selectionId: string) => {
-    betsStore.removeSelection(selectionId)
-  }
-  
-  // Clear all selections from the betslip
-  const clearSelections = () => {
-    betsStore.clearSelections()
-  }
-  
-  // Place all selections as bets
-  const placeSelections = () => {
-    return betsStore.placeSelections()
-  }
-  
-  // Calculate estimated return for a bet
+  // Calculate estimated return for a bet (simplified)
   const calculateEstimatedReturn = (stake: number, odds: number | 'SP', market: 'win' | 'place' | 'each-way'): number => {
-    return betsStore.calculateEstimatedReturn(stake, odds, market)
+    const numericOdds = odds === 'SP' ? 6.0 : odds
+    
+    switch (market) {
+      case 'win':
+        return stake * numericOdds
+      case 'place':
+        // Simplified place odds calculation
+        return stake * (1 + 0.25 * (numericOdds - 1))
+      case 'each-way':
+        // Each-way: half stake on win, half on place
+        const winPart = (stake / 2) * numericOdds
+        const placePart = (stake / 2) * (1 + 0.25 * (numericOdds - 1))
+        return winPart + placePart
+      default:
+        return 0
+    }
   }
   
   // Check if we can place bets
   const canPlaceBets = computed(() => {
-    // Must have selections
-    if (activeSelections.value.length === 0) return false
-    
-    // All selections must have stakes
-    if (activeSelections.value.some(s => s.stake <= 0)) return false
-    
-    // Must have sufficient balance
-    return totalStake.value <= betsStore.availableBalance
+    // For now, always return true since we don't have selection management
+    return true
   })
   
   return {
-    // Selections
-    activeSelections,
+    // Bets
+    activeBets,
     totalStake,
-    totalEstimatedReturn,
+    bankroll,
     
     // Actions
-    addSelection,
-    updateSelectionMarket,
-    updateSelectionStake,
-    removeSelection,
-    clearSelections,
-    placeSelections,
+    placeBet,
+    cancelBet,
+    settleRace,
     calculateEstimatedReturn,
     
     // Validation

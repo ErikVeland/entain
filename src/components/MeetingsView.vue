@@ -1,6 +1,6 @@
 <template>
   <div>
-    <div v-if="store.loadState === 'loading' && Object.keys(store.racesByMeeting).length === 0" class="space-y-4">
+    <div v-if="store.loadState === 'loading'" class="space-y-4">
       <!-- Skeleton loaders for meetings view -->
       <div 
         v-for="i in 3" 
@@ -21,7 +21,8 @@
       <div class="text-text-muted mb-4">{{ store.errorMessage }}</div>
       <button 
         @click="retryFetch"
-        class="px-4 py-2 bg-brand-primary text-text-inverse rounded-lg hover:bg-opacity-90 transition-opacity"
+        class="px-4 py-2 bg-brand-primary text-text-inverse rounded-lg hover:bg-opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-brand-primary"
+        ref="retryButton"
       >
         Try Again
       </button>
@@ -34,15 +35,17 @@
 
     <div v-else class="space-y-6">
       <div 
-        v-for="(races, meetingName) in store.racesByMeeting" 
+        v-for="(races, meetingName, index) in store.racesByMeeting" 
         :key="meetingName"
         class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden transition-all duration-300"
       >
         <button
           @click="toggleMeeting(meetingName)"
-          class="w-full px-6 py-4 flex justify-between items-center bg-surface-sunken hover:bg-opacity-80 transition-colors"
+          class="w-full px-6 py-4 flex justify-between items-center bg-surface-sunken hover:bg-opacity-80 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
           :aria-expanded="expandedMeetings.has(meetingName)"
           :aria-controls="`meeting-${meetingName}`"
+          @keydown="handleMeetingKeyDown($event, meetingName, index)"
+          :ref="el => meetingButtons.value[index] = el as HTMLElement"
         >
           <h2 class="text-xl font-bold text-text-base">{{ meetingName }}</h2>
           <div class="flex items-center">
@@ -77,18 +80,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRacesStore } from '../stores/races'
 import RaceColumn from './RaceColumn.vue'
 
 const store = useRacesStore()
 const expandedMeetings = ref<Set<string>>(new Set())
+const retryButton = ref<HTMLButtonElement | null>(null)
 
 const toggleMeeting = (meetingName: string) => {
   if (expandedMeetings.value.has(meetingName)) {
     expandedMeetings.value.delete(meetingName)
   } else {
     expandedMeetings.value.add(meetingName)
+  }
+}
+
+const meetingButtons = ref<HTMLElement[]>([])
+
+const handleMeetingKeyDown = (event: KeyboardEvent, meetingName: string, index: number) => {
+  switch (event.key) {
+    case 'Enter':
+    case ' ':
+      event.preventDefault()
+      toggleMeeting(meetingName)
+      break
+    case 'ArrowDown':
+      event.preventDefault()
+      // Focus next meeting button if exists
+      const nextIndex = index + 1
+      if (nextIndex < meetingButtons.value.length) {
+        meetingButtons.value[nextIndex]?.focus()
+      }
+      break
+    case 'ArrowUp':
+      event.preventDefault()
+      // Focus previous meeting button if exists
+      const prevIndex = index - 1
+      if (prevIndex >= 0) {
+        meetingButtons.value[prevIndex]?.focus()
+      }
+      break
   }
 }
 
@@ -101,6 +133,15 @@ onMounted(() => {
   const meetings = Object.keys(store.racesByMeeting)
   if (meetings.length > 0) {
     expandedMeetings.value.add(meetings[0])
+  }
+})
+
+// Focus the retry button when error state changes
+watch(() => store.loadState, (newState) => {
+  if (newState === 'error' && retryButton.value) {
+    setTimeout(() => {
+      retryButton.value?.focus()
+    }, 100)
   }
 })
 </script>
