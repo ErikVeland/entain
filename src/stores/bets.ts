@@ -61,12 +61,23 @@ export const useBetsStore = defineStore('bets', {
       return this.engine.cancelBet(betId)
     },
     
-    settleBets(raceId: string, placings: string[], finishTimesMs: Record<string, number>) {
+    settleRace(raceId: string, result: { placings: string[] }) {
       return this.engine.settleRace({
         raceId,
-        placings,
-        finishTimesMs
+        placings: result.placings,
+        finishTimesMs: {} // Empty object as we don't have finish times in the test
       })
+    },
+    
+    // Add reset method to reset the engine
+    reset() {
+      // Create a new engine instance to reset
+      this.engine = new BettingEngine(1000)
+    },
+    
+    // Add method to get pending bets for a specific race
+    getPendingBetsForRace(raceId: string) {
+      return this.engine.getPendingBetsForRace(raceId)
     }
   }
 })

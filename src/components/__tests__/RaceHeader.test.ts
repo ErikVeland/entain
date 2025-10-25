@@ -10,7 +10,8 @@ describe('RaceHeader', () => {
         meetingName: 'WARRAGUL',
         raceNumber: 12,
         categoryId: CATEGORY_IDS.HORSE,
-        startTime: Date.now() + 120000 // 2 minutes in the future
+        startTime: Date.now() + 120000, // 2 minutes in the future
+        raceId: 'race-1'
       }
     })
 
@@ -26,7 +27,8 @@ describe('RaceHeader', () => {
         meetingName: 'KOLKATA',
         raceNumber: 1,
         categoryId: CATEGORY_IDS.GREYHOUND,
-        startTime: Date.now() + 120000 // 2 minutes in the future
+        startTime: Date.now() + 120000, // 2 minutes in the future
+        raceId: 'race-2'
       }
     })
 
@@ -42,7 +44,8 @@ describe('RaceHeader', () => {
         meetingName: 'KILMORE',
         raceNumber: 2,
         categoryId: CATEGORY_IDS.HARNESS,
-        startTime: Date.now() + 120000 // 2 minutes in the future
+        startTime: Date.now() + 120000, // 2 minutes in the future
+        raceId: 'race-3'
       }
     })
 
@@ -58,10 +61,12 @@ describe('RaceHeader', () => {
         meetingName: 'WARRAGUL',
         raceNumber: 12,
         categoryId: CATEGORY_IDS.HORSE,
-        startTime: Date.now() + 120000 // 2 minutes in the future
+        startTime: Date.now() + 120000, // 2 minutes in the future
+        raceId: 'race-4'
       }
     })
 
-    expect(wrapper.text()).toMatch(/\d+m \d+s/)
+    // The countdown should display in MM:SS format
+    expect(wrapper.text()).toMatch(/\d{2}:\d{2}/)
   })
 })

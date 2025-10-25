@@ -65,6 +65,11 @@ const retryButton = ref<HTMLButtonElement | null>(null)
 const expiringRaces = ref<Set<string>>(new Set())
 const newRaces = ref<Set<string>>(new Set())
 
+// Define emit
+const emit = defineEmits<{
+  (e: 'open-betslip', payload: { race: any; runner: any }): void
+}>()
+
 // Show all 5 races in a grid
 const visibleRaces = computed(() => {
   const races = store.nextFive.slice(0, 5); // Show all 5 races

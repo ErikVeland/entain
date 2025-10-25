@@ -27,7 +27,11 @@ module.exports = {
 				success: '#16A34A',
 				warning: '#F59E0B',
 				danger: '#DC2626',
-				info: '#2563EB'
+				info: '#2563EB',
+				// Race type colors
+				horse: '#F97316',     // Orange (same as brand-primary)
+				greyhound: '#C0C0C0', // Coppery silver
+				harness: '#EA580C'    // Orangey red
 			},
 			fontFamily: {
 				sans: ['Inter', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji', 'sans-serif'],
@@ -188,6 +192,13 @@ module.exports = {
 		'ring-brand-primary',
 		'border-surface',
 		'border-surface-raised',
-		'border-surface-sunken'
+		'border-surface-sunken',
+		// Race type colors
+		'bg-horse',
+		'bg-greyhound',
+		'bg-harness',
+		'text-horse',
+		'text-greyhound',
+		'text-harness'
 	]
 }

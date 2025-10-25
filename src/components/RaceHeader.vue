@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
+import { useCountdown } from '../composables/useCountdown'
 import { CATEGORY_IDS } from '../stores/races'
 
 const props = defineProps<{
@@ -8,8 +9,7 @@ const props = defineProps<{
   categoryId: string
   startTime: number
   isExpired?: boolean
-  isLive?: boolean
-  isFinished?: boolean
+  raceId: string
 }>()
 
 const categoryIcon = computed(() => {
@@ -25,43 +25,24 @@ const categoryIcon = computed(() => {
   }
 })
 
-// Calculate time remaining and progress
-const timeRemaining = ref(0)
-const totalTime = ref(0)
+// Use the composable for countdown
+const { formattedTime, isStartingSoon, isInProgress } = useCountdown(props.startTime)
+
+// Flashing state for countdown
 const isFlashing = ref(false)
 const isFlashingRed = ref(false)
 const flashInterval = ref<number | null>(null)
-const intervalId = ref<number | null>(null)
 
-const updateCountdown = () => {
-  const now = Date.now()
-  const diff = props.startTime - now
-  
-  console.log('Countdown update - now:', now, 'start time:', props.startTime, 'diff:', diff)
-  
-  if (diff <= 0) {
-    timeRemaining.value = 0
+// Start flashing when countdown is low
+watch(isStartingSoon, (startingSoon) => {
+  if (startingSoon && !isFlashing.value) {
+    isFlashing.value = true
+    startFlashing()
+  } else if (!startingSoon) {
     isFlashing.value = false
-    isFlashingRed.value = false
-    stopFlashing()
-    return
-  }
-  
-  timeRemaining.value = diff
-  totalTime.value = diff // Use actual time until race start
-  
-  // Flash if less than 10 seconds remaining
-  if (diff <= 10000 && diff > 0) {
-    if (!isFlashing.value) {
-      isFlashing.value = true
-      startFlashing()
-    }
-  } else {
-    isFlashing.value = false
-    isFlashingRed.value = false
     stopFlashing()
   }
-}
+})
 
 const startFlashing = () => {
   if (flashInterval.value) return
@@ -81,12 +62,37 @@ const stopFlashing = () => {
 }
 
 const progressPercentage = computed(() => {
-  if (props.isExpired || timeRemaining.value <= 0) {
+  if (props.isExpired || isInProgress.value) {
     return 0
   }
   
-  // Calculate percentage (inverted because we're counting down)
-  const percentage = (timeRemaining.value / totalTime.value) * 100
+  // Parse the formatted time to get minutes and seconds
+  const timeStr = formattedTime.value
+  if (!timeStr || timeStr === 'NaN:NaN' || timeStr === 'Starting soon') {
+    return 0
+  }
+  
+  // Parse MM:SS format
+  const parts = timeStr.split(':')
+  if (parts.length !== 2) {
+    return 0
+  }
+  
+  const minutes = parseInt(parts[0], 10)
+  const seconds = parseInt(parts[1], 10)
+  
+  if (isNaN(minutes) || isNaN(seconds)) {
+    return 0
+  }
+  
+  // Calculate total seconds remaining
+  const totalSeconds = minutes * 60 + seconds
+  
+  // For progress bar, we want it to count down from 60 seconds (1 minute) to 0
+  // If more than 60 seconds remain, show full progress bar
+  const displaySeconds = Math.min(totalSeconds, 60) // Cap at 60 seconds for display
+  const percentage = (displaySeconds / 60) * 100 // Calculate percentage of 60 seconds
+  
   return Math.max(0, Math.min(100, percentage))
 })
 
@@ -112,54 +118,25 @@ const getLetterStyle = (index: number) => {
   return { opacity: 1, color: 'white', transition: 'color 0.3s ease' }
 }
 
-const isLive = computed(() => {
-  const now = Date.now()
-  const diff = props.startTime - now
-  return diff <= 0 && diff > -60000
-})
-
 const countdownDisplay = computed(() => {
   if (props.isExpired) {
-    return 'Race over'
+    return 'Over'
   }
   
-  const now = Date.now()
-  const diff = props.startTime - now
-  
-  console.log('Countdown display - diff:', diff)
-  
-  if (diff <= 0) {
-    return 'In progress'
+  if (isInProgress.value) {
+    return 'LIVE'
   }
   
-  // Convert milliseconds to minutes and seconds
-  const totalSeconds = Math.ceil(diff / 1000)
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`
+  // Handle case where formattedTime might be undefined or invalid
+  if (!formattedTime.value || formattedTime.value === 'NaN:NaN') {
+    return '00:00'
   }
-  return `${seconds}s`
-})
-
-// Start the countdown interval
-onMounted(() => {
-  console.log('RaceHeader mounted, starting countdown interval')
-  updateCountdown() // Initial update
-  intervalId.value = window.setInterval(() => {
-    console.log('Countdown interval tick')
-    updateCountdown()
-  }, 100) as unknown as number
+  
+  return formattedTime.value
 })
 
 // Clean up intervals
 onUnmounted(() => {
-  console.log('RaceHeader unmounted, cleaning up intervals')
-  if (intervalId.value) {
-    clearInterval(intervalId.value)
-    intervalId.value = null
-  }
   if (flashInterval.value) {
     clearInterval(flashInterval.value)
     flashInterval.value = null
@@ -170,59 +147,65 @@ onUnmounted(() => {
 <template>
   <div class="bg-surface-sunken px-3 py-2 flex items-center justify-between relative rounded-t-xl2 overflow-hidden">
     <!-- Background category icon (full card) -->
-    <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden">
-      <span v-if="categoryIcon === 'horse'" class="text-[120px] block absolute bottom-0 right-0">🏇</span>
-      <span v-else-if="categoryIcon === 'greyhound'" class="text-[120px] block absolute bottom-0 right-0">🐕</span>
-      <span v-else-if="categoryIcon === 'harness'" class="text-[120px] block absolute bottom-0 right-0">🛞</span>
+    <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
+      <span v-if="categoryIcon === 'horse'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🏇</span>
+      <span v-else-if="categoryIcon === 'greyhound'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🐕</span>
+      <span v-else-if="categoryIcon === 'harness'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🛞</span>
     </div>
     
     <!-- Race number cap (square using height as guide) -->
-    <div class="absolute top-0 left-0 bg-brand-primary text-text-inverse w-10 h-10 flex items-center justify-center font-bold text-sm z-10">
+    <div class="absolute top-0 left-0 bg-brand-primary text-text-inverse w-10 h-10 flex items-center justify-center font-bold text-sm z-10 rounded-tl-xl2">
       {{ raceNumber }}
     </div>
     
     <!-- Background category icon (header only) -->
-    <div class="absolute top-1 right-2 opacity-30 text-2xl z-0">
+    <div class="absolute top-1 right-2 opacity-30 text-2xl z-0 pointer-events-none select-none">
       <span v-if="categoryIcon === 'horse'">🏇</span>
       <span v-else-if="categoryIcon === 'greyhound'">🐕</span>
       <span v-else-if="categoryIcon === 'harness'">🛞</span>
     </div>
     
     <!-- Meeting name with ellipsis -->
-    <div class="relative z-10 font-bold uppercase text-text-base flex-grow ml-8 min-w-0" :class="{ 'opacity-50': isExpired }">
+    <div 
+      class="relative z-10 font-bold uppercase text-text-base flex-grow ml-12 min-w-0" 
+      :class="{ 'opacity-50': isExpired }"
+      :title="meetingName"
+    >
       <div class="truncate">{{ meetingName }}</div>
     </div>
     
     <div class="relative z-10 flex items-center">
       <div 
-        v-if="isLive && !isExpired" 
-        class="px-2 py-1 rounded text-xs font-bold bg-danger text-text-inverse flex items-center"
+        v-if="isInProgress && !isExpired" 
+        class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-brand-primary"
       >
         <span class="mr-1">●</span>
-        LIVE
+        <span class="hidden sm:inline">LIVE</span>
+        <span class="sm:hidden">●</span>
       </div>
       <div 
         v-else-if="isExpired"
-        class="px-2 py-1 rounded text-xs font-bold text-text-muted"
+        class="px-3 py-1 rounded-full text-xs font-bold text-text-muted border-2 border-brand-primary"
       >
-        Race over
+        Over
       </div>
       <div 
         v-else
-        class="relative w-16 h-6 rounded-md overflow-hidden"
+        class="relative h-6 rounded-full overflow-hidden border-2 border-brand-primary flex items-center"
         :class="{ 'bg-danger': isFlashingRed }"
+        style="width: 64px;"
       >
         <!-- Progress bar background -->
-        <div class="absolute inset-0 bg-surface-raised"></div>
+        <div class="absolute inset-0 bg-surface-raised rounded-full"></div>
         
         <!-- Progress fill -->
         <div 
-          class="absolute inset-0 bg-brand-primary transition-all duration-1000 ease-linear"
+          class="absolute inset-0 bg-brand-primary transition-all duration-1000 ease-linear rounded-full"
           :style="{ width: progressPercentage + '%' }"
         ></div>
         
         <!-- Countdown text with letter-by-letter fade -->
-        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold">
+        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold whitespace-nowrap">
           <span 
             v-for="(char, index) in countdownDisplay" 
             :key="index"

@@ -27,17 +27,14 @@
     <!-- Betslip Drawer -->
     <BetslipDrawer ref="betslipDrawer" />
     
-    <!-- News Ticker -->
-    <NewsTicker />
-    
     <header class="bg-surface-raised shadow-card py-6 px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between">
         <div class="flex items-center">
           <h1 class="text-2xl font-bold text-brand-primary">🏁 RACEHUB</h1>
         </div>
         <div class="mt-4 md:mt-0 flex items-center space-x-2">
-          <!-- View toggle -->
-          <div class="flex bg-surface-raised rounded-lg p-1">
+          <!-- View toggle - only show in simulation mode -->
+          <div v-if="isSimulationMode" class="flex bg-surface-raised rounded-lg p-1">
             <button 
               @click="currentView = 'races'"
               class="px-3 py-1 text-sm rounded-md transition-colors"
@@ -242,18 +239,11 @@ const store = useRacesStore()
 const betsStore = useBetsStore()
 const betslipDrawer = ref<InstanceType<typeof BetslipDrawer> | null>(null)
 const showGameModeDialog = ref(false)
+const currentView = ref<'races' | 'meetings'>('races')
 
 // Event handlers
 const handleGameModeDialog = () => {
-  console.log('Game mode dialog requested');
   showGameModeDialog.value = true;
-};
-
-const handleOpenBetslip = () => {
-  console.log('Betslip open requested');
-  if (betslipDrawer.value) {
-    betslipDrawer.value.toggleDrawer();
-  }
 };
 
 // Theme handling
@@ -388,16 +378,10 @@ const handleCategoryToggle = (categoryId: string) => {
 
 // Handle opening the betslip
 const handleOpenBetslip = (payload: { race: any; runner: any }) => {
-  // Add the selection to the betslip
-  // We need to access the betslip drawer ref to add the selection
-  console.log('Adding to betslip:', payload)
-  
   // Open the betslip drawer
   isBetslipOpen.value = true
   
-  // Add selection to betslip (we'll need to access the drawer component methods)
-  // For now, we'll emit a global event or use a store
-  // This would typically be handled by accessing the drawer component ref
+  // Add selection to betslip
   setTimeout(() => {
     // Dispatch a custom event that the betslip drawer can listen to
     const event = new CustomEvent('add-to-betslip', { 
@@ -412,12 +396,16 @@ const handleOpenBetslip = (payload: { race: any; runner: any }) => {
 
 // Start polling and ticking intervals
 onMounted(() => {
-  console.log('App mounted');
-  
+  // Apply theme immediately to prevent flash
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme) {
-    isDarkMode.value = savedTheme === 'dark'
-    document.documentElement.setAttribute('data-theme', savedTheme)
+    if (savedTheme === 'high-contrast') {
+      isHighContrast.value = true
+      document.documentElement.setAttribute('data-theme', 'high-contrast')
+    } else {
+      isDarkMode.value = savedTheme === 'dark'
+      document.documentElement.setAttribute('data-theme', savedTheme)
+    }
   } else {
     // Check system preference
     const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
@@ -428,29 +416,10 @@ onMounted(() => {
   // Listen for game mode dialog request
   window.addEventListener('show-game-mode-dialog', handleGameModeDialog);
   
-  // Listen for betslip open requests
-  window.addEventListener('open-betslip', handleOpenBetslip);
-  
   // Start polling and ticking intervals
   store.startLoops()
   // Initial fetch
   store.fetchRaces()
-  
-  // Log store state for debugging
-  console.log('Store initialized:', store);
-  console.log('Store races:', store.races);
-  
-  // Add a simple interval to log the store state
-  setInterval(() => {
-    console.log('Store state update:', {
-      races: store.races,
-      loadState: store.loadState,
-      selectedCategories: Array.from(store.selectedCategories),
-      nextFive: store.nextFive,
-      racesLength: store.races.length,
-      nextFiveLength: store.nextFive.length
-    });
-  }, 2000);
 })
 
 // Clean up

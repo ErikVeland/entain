@@ -1,78 +1,58 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { createPinia, setActivePinia } from 'pinia'
 import CategoryFilter from '../CategoryFilter.vue'
+import { useRacesStore, CATEGORY_IDS } from '../../stores/races'
 
 describe('CategoryFilter', () => {
-  const mockCategories = [
-    {
-      id: '1',
-      name: 'Horse',
-      active: true
-    },
-    {
-      id: '2',
-      name: 'Greyhound',
-      active: false
-    },
-    {
-      id: '3',
-      name: 'Harness',
-      active: true
-    }
-  ]
+  beforeEach(() => {
+    // Create a new pinia instance and make it active
+    setActivePinia(createPinia())
+  })
 
   it('renders all category buttons', () => {
-    const wrapper = mount(CategoryFilter, {
-      props: {
-        categories: mockCategories
-      }
-    })
-
-    const buttons = wrapper.findAll('button')
-    expect(buttons.length).toBe(3)
+    const wrapper = mount(CategoryFilter)
     
+    // Check that all three category buttons are rendered
+    expect(wrapper.findAll('button')).toHaveLength(3)
+    
+    // Check that the buttons contain the correct text
+    const buttons = wrapper.findAll('button')
     expect(buttons[0].text()).toContain('Horse')
     expect(buttons[1].text()).toContain('Greyhound')
     expect(buttons[2].text()).toContain('Harness')
   })
 
-  it('applies active class to active categories', () => {
-    const wrapper = mount(CategoryFilter, {
-      props: {
-        categories: mockCategories
-      }
-    })
-
-    const buttons = wrapper.findAll('button')
-    expect(buttons[0].classes()).toContain('bg-brand-primary')
-    expect(buttons[1].classes()).not.toContain('bg-brand-primary')
-    expect(buttons[2].classes()).toContain('bg-brand-primary')
-  })
-
-  it('emits toggle-category event when button is clicked', async () => {
-    const wrapper = mount(CategoryFilter, {
-      props: {
-        categories: mockCategories
-      }
-    })
-
-    const buttons = wrapper.findAll('button')
-    await buttons[1].trigger('click')
+  it('shows correct icons for each category', () => {
+    const wrapper = mount(CategoryFilter)
     
-    expect(wrapper.emitted('toggle-category')).toBeTruthy()
-    expect(wrapper.emitted('toggle-category')![0]).toEqual(['2'])
+    // Check that the buttons contain the correct icons
+    const buttons = wrapper.findAll('button')
+    expect(buttons[0].text()).toContain('🏇')
+    expect(buttons[1].text()).toContain('🐕')
+    expect(buttons[2].text()).toContain('🛞')
   })
 
-  it('sets aria-pressed attribute correctly', () => {
-    const wrapper = mount(CategoryFilter, {
-      props: {
-        categories: mockCategories
-      }
-    })
-
-    const buttons = wrapper.findAll('button')
-    expect(buttons[0].attributes('aria-pressed')).toBe('true')
-    expect(buttons[1].attributes('aria-pressed')).toBe('false')
-    expect(buttons[2].attributes('aria-pressed')).toBe('true')
+  it('toggles category selection', async () => {
+    const wrapper = mount(CategoryFilter)
+    const store = useRacesStore()
+    
+    // Initially all categories should be selected (based on store initialization)
+    expect(store.selectedCategories.has(CATEGORY_IDS.HORSE)).toBe(true)
+    expect(store.selectedCategories.has(CATEGORY_IDS.GREYHOUND)).toBe(true)
+    expect(store.selectedCategories.has(CATEGORY_IDS.HARNESS)).toBe(true)
+    
+    // Find the Horse button and click it to deselect
+    const horseButton = wrapper.findAll('button').at(0)
+    await horseButton.trigger('click')
+    
+    // Check that the horse category is now deselected
+    expect(store.selectedCategories.has(CATEGORY_IDS.HORSE)).toBe(false)
+    
+    // Click the same button again to select
+    await horseButton.trigger('click')
+    
+    // Check that the horse category is now selected
+    expect(store.selectedCategories.has(CATEGORY_IDS.HORSE)).toBe(true)
   })
 })

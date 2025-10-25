@@ -46,8 +46,9 @@
           :aria-controls="`meeting-${meetingName}`"
           @keydown="handleMeetingKeyDown($event, meetingName, index)"
           :ref="el => meetingButtons.value[index] = el as HTMLElement"
+          :title="meetingName"
         >
-          <h2 class="text-xl font-bold text-text-base">{{ meetingName }}</h2>
+          <h2 class="text-xl font-bold text-text-base truncate">{{ meetingName }}</h2>
           <div class="flex items-center">
             <span class="text-text-muted mr-2">{{ races.length }} race{{ races.length !== 1 ? 's' : '' }}</span>
             <span 

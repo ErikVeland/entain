@@ -1,17 +1,3 @@
-<script setup lang="ts">
-import { computed } from 'vue'
-import { type RaceSummary, CATEGORY_IDS } from '../stores/races'
-import RaceHeader from './RaceHeader.vue'
-
-const props = defineProps<{
-  race: RaceSummary
-  isActive?: boolean
-  isExpired?: boolean
-}>()
-
-// No simulation or mock data needed - just display API data
-</script>
-
 <template>
   <div 
     class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden transition-all duration-500 animate-bounce-in flex flex-col h-full"
@@ -26,10 +12,10 @@ const props = defineProps<{
     role="region"
   >
     <!-- Full card background category icon -->
-    <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden">
-      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-0 right-0">🏇</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-0 right-0">🐕</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-0 right-0">🛞</span>
+    <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
+      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🏇</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🐕</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🛞</span>
     </div>
     
     <RaceHeader 
@@ -39,8 +25,6 @@ const props = defineProps<{
       :start-time="race.advertised_start_ms"
       :is-expired="isExpired"
       :race-id="race.id"
-      :is-live="raceLive"
-      :is-finished="raceFinished"
     />
     
     <div class="p-3 flex-grow">
@@ -50,8 +34,10 @@ const props = defineProps<{
           v-for="(runner, index) in runnersForDisplay"
           :key="index"
           :runner="runner"
+          :race-id="race.id"
+          :race-name="race.meeting_name"
+          :race-number="race.race_number"
           :is-expired="isExpired"
-          @add-to-betslip="handleAddToBetslip"
           :tabindex="0"
         />
         <!-- Show a message when no runners are available (not in simulation mode) -->
@@ -91,7 +77,7 @@ const props = defineProps<{
 
 <script setup lang="ts">
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
-import { type RaceSummary } from '../stores/races'
+import { type RaceSummary, CATEGORY_IDS } from '../stores/races'
 import { useBetsStore } from '../stores/bets'
 import { useOddsSimulation, type SimulatedRunner } from '../composables/useOddsSimulation'
 import { useRaceSimulation } from '../composables/useRaceSimulation'
@@ -258,7 +244,7 @@ const runnersForDisplay = computed(() => {
     ...runner,
     odds: runner.odds === 'SP' ? 'SP' : runner.odds.toString(),
     // For non-simulation mode, we always show 'none' trend
-    oddsTrend: !betsStore.showGame || !betsStore.useSimulatedData ? 'none' : runner.oddsTrend
+    oddsTrend: (!betsStore.showGame || !betsStore.useSimulatedData) ? 'none' : runner.oddsTrend
   }))
 })
 

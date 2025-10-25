@@ -22,7 +22,7 @@ describe('useCountdown', () => {
     expect(isInProgress.value).toBe(false)
   })
 
-  it('shows "Starting soon" when time is less than 1 minute', () => {
+  it('shows shortened time when less than 1 minute', () => {
     const futureTime = new Date('2023-01-01T12:00:45Z').getTime() // 45 seconds in the future
     const { formattedTime, isStartingSoon, isInProgress } = useCountdown(futureTime)
 
@@ -32,20 +32,20 @@ describe('useCountdown', () => {
     expect(isInProgress.value).toBe(false)
   })
 
-  it('shows "In progress" when race started less than 1 minute ago', () => {
+  it('shows "Soon" when race starts soon', () => {
     const pastTime = new Date('2023-01-01T11:59:30Z').getTime() // 30 seconds ago
     const { formattedTime, isStartingSoon, isInProgress } = useCountdown(pastTime)
 
-    expect(formattedTime.value).toBe('Starting soon')
+    expect(formattedTime.value).toBe('Soon')
     expect(isStartingSoon.value).toBe(true)
     expect(isInProgress.value).toBe(false)
   })
 
-  it('shows "In progress" when race started more than 1 minute ago', () => {
+  it('shows "LIVE" when race is in progress', () => {
     const pastTime = new Date('2023-01-01T11:58:30Z').getTime() // 90 seconds ago
     const { formattedTime, isStartingSoon, isInProgress } = useCountdown(pastTime)
 
-    expect(formattedTime.value).toBe('In progress')
+    expect(formattedTime.value).toBe('LIVE')
     expect(isStartingSoon.value).toBe(false)
     expect(isInProgress.value).toBe(true)
   })

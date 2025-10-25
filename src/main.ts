@@ -3,12 +3,14 @@ import { createPinia } from 'pinia'
 import App from './App.vue'
 import i18n from './i18n'
 
+// Import theme initialization CSS first to prevent FOUC
+import './assets/styles/theme-init.css'
+import './assets/styles/tailwind.css'
+
 // Add some debugging
 console.log('Creating app...');
 
 try {
-  import('./assets/styles/tailwind.css')
-  
   const app = createApp(App)
   const pinia = createPinia()
   

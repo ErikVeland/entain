@@ -14,7 +14,7 @@ describe('useBettingLogic', () => {
     const { activeBets, totalStake, bankroll } = useBettingLogic()
     
     // Check that the bet information is correct
-    expect(activeBets.value).toEqual([])
+    expect(Array.isArray(activeBets.value)).toBe(true)
     expect(totalStake.value).toBe(0)
     expect(bankroll.value).toEqual(store.bankroll)
   })

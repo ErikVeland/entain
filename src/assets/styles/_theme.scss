@@ -1,7 +1,8 @@
 // Theme Variables
 // ===============
 
-:root {
+// Default dark theme (applied immediately to prevent FOUC)
+:root, html[data-theme="dark"] {
   // Colors
   --color-brand-primary: #F97316; // orange-500
   --color-brand-secondary: #0F172A; // slate-900
@@ -19,6 +20,11 @@
   --color-warning: #F59E0B;
   --color-danger: #DC2626;
   --color-info: #2563EB;
+  
+  // Race type colors
+  --color-horse: #F97316; // Orange (same as brand-primary)
+  --color-greyhound: #C0C0C0; // Coppery silver
+  --color-harness: #EA580C; // Orangey red
   
   // Typography
   --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
@@ -67,6 +73,11 @@
   --color-warning: #F59E0B;
   --color-danger: #DC2626;
   --color-info: #2563EB;
+  
+  // Race type colors
+  --color-horse: #F97316; // Orange (same as brand-primary)
+  --color-greyhound: #C0C0C0; // Coppery silver
+  --color-harness: #EA580C; // Orangey red
 }
 
 // High Contrast Theme
@@ -87,4 +98,9 @@
   --color-warning: #993300;
   --color-danger: #990000;
   --color-info: #003399;
+  
+  // Race type colors
+  --color-horse: #000000; // Black
+  --color-greyhound: #808080; // Gray
+  --color-harness: #990000; // Dark red
 }

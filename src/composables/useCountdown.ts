@@ -30,11 +30,11 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
     if (timeDiff <= -60000) {
       // Race started more than 1 minute ago, should be removed
       isInProgress.value = true
-      formattedTime.value = 'In progress'
+      formattedTime.value = 'LIVE'
     } else {
       // Race is about to start or just started
       isStartingSoon.value = true
-      formattedTime.value = 'Starting soon'
+      formattedTime.value = 'Soon'
     }
   } else {
     // Format the time as MM:SS
@@ -59,13 +59,13 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
       if (timeDiff <= -60000) {
         // Race started more than 1 minute ago
         isInProgress.value = true
-        formattedTime.value = 'In progress'
+        formattedTime.value = 'LIVE'
         // Stop the interval as the race should be removed
         stop()
       } else {
         // Race is about to start or just started
         isStartingSoon.value = true
-        formattedTime.value = 'Starting soon'
+        formattedTime.value = 'Soon'
       }
     } else {
       // Format the time as MM:SS

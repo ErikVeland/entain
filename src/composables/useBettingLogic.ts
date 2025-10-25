@@ -6,11 +6,11 @@ export function useBettingLogic() {
   const betsStore = useBetsStore()
   
   // Active bets
-  const activeBets = computed(() => betsStore.bets)
+  const activeBets = computed(() => betsStore.engine.listBets())
   
   // Total stake of all active bets
   const totalStake = computed(() => {
-    return betsStore.bets.reduce((sum, bet) => sum + bet.stake, 0)
+    return betsStore.engine.listBets().reduce((sum, bet) => sum + bet.stake, 0)
   })
   
   // Bankroll information

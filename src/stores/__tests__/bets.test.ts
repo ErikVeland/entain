@@ -50,14 +50,18 @@ describe('useBetsStore', () => {
     const store = useBetsStore()
     
     // Mock the engine's settleRace method
-    const mockSettleRace = vi.fn()
+    const mockSettleRace = vi.fn().mockReturnValue([])
     store.engine.settleRace = mockSettleRace
     
     // Settle a race
-    store.settleRace('race1', { placings: ['runner1', 'runner2'] })
+    const result = store.settleRace('race1', { placings: ['runner1', 'runner2'] })
     
     // Check that the race was settled
-    expect(mockSettleRace).toHaveBeenCalledWith('race1', { placings: ['runner1', 'runner2'] })
+    expect(mockSettleRace).toHaveBeenCalledWith({
+      raceId: 'race1',
+      placings: ['runner1', 'runner2'],
+      finishTimesMs: {}
+    })
   })
 
   it('can toggle game mode', () => {
@@ -78,14 +82,13 @@ describe('useBetsStore', () => {
   it('can reset the engine', () => {
     const store = useBetsStore()
     
-    // Mock the engine's reset method
-    const mockReset = vi.fn()
-    store.engine.reset = mockReset
+    const initialEngine = store.engine
     
     // Reset the engine
     store.reset()
     
-    // Check that the engine was reset
-    expect(mockReset).toHaveBeenCalled()
+    // Check that the engine was reset (should be a new instance)
+    expect(store.engine).not.toBe(initialEngine)
+    expect(store.engine.getBankroll().balance).toBe(1000)
   })
 })
