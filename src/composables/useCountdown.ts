@@ -17,8 +17,8 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
   const isInProgress = ref(false)
   
   // Validate input
-  if (typeof startTimeMs !== 'number' || isNaN(startTimeMs)) {
-    startTimeMs = Date.now()
+  if (typeof startTimeMs !== 'number' || isNaN(startTimeMs) || startTimeMs <= 0) {
+    startTimeMs = Date.now() + 60000 // Default to 1 minute in the future if invalid
   }
   
   // Calculate initial values
@@ -60,7 +60,8 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
         // Race started more than 1 minute ago
         isInProgress.value = true
         formattedTime.value = 'In progress'
-        stop() // Stop the interval as the race should be removed
+        // Stop the interval as the race should be removed
+        stop()
       } else {
         // Race is about to start or just started
         isStartingSoon.value = true
@@ -68,9 +69,15 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
       }
     } else {
       // Format the time as MM:SS
-      const minutes = Math.floor(timeDiff / 60000)
-      const seconds = Math.floor((timeDiff % 60000) / 1000)
-      formattedTime.value = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      const minutes = Math.max(0, Math.floor(timeDiff / 60000))
+      const seconds = Math.max(0, Math.floor((timeDiff % 60000) / 1000))
+      
+      // Prevent negative values
+      if (minutes >= 0 && seconds >= 0) {
+        formattedTime.value = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
+      } else {
+        formattedTime.value = '00:00'
+      }
       
       // If time is less than 1 minute, show "Starting soon"
       if (minutes === 0 && seconds < 60) {

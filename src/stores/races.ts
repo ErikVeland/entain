@@ -159,7 +159,22 @@ export const useRacesStore = defineStore('races', {
      * Slice of the next five races.
      */
     nextFive(state): RaceSummary[] {
-      return this.activeRaces.slice(0, 5)
+      const cutoffNow = now()
+      const activeRaces = state.races
+        .filter(r => state.selectedCategories.has(r.category_id))
+        .filter(r => !isExpired(r, cutoffNow))
+        .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+      
+      // If we have fewer than 5 races, fetch more
+      if (activeRaces.length < 5) {
+        // Trigger a fetch in the background
+        setTimeout(() => {
+          this.fetchRaces()
+        }, 100)
+      }
+      
+      console.log('Next five races:', activeRaces.slice(0, 5))
+      return activeRaces.slice(0, 5)
     },
     /**
      * Group active races by meeting name for the meetings view.
@@ -248,6 +263,8 @@ export const useRacesStore = defineStore('races', {
           .filter(Boolean)
           .map(normalizeRace)
 
+        console.log('Fetched races:', items);
+
         // Merge unique by id (prefer newest attributes)
         const map = new Map<string, RaceSummary>()
         for (const existing of this.races) {
@@ -273,6 +290,8 @@ export const useRacesStore = defineStore('races', {
         })
         
         this.loadState = 'ready'
+        
+        console.log('Updated races state:', this.races);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
         
@@ -347,6 +366,15 @@ export const useRacesStore = defineStore('races', {
       const before = this.races.length
       this.races = this.races.filter(r => !isExpired(r, t))
       const after = this.races.length
+      
+      // If we removed races and now have fewer than 5, fetch more
+      if (before > after && after < 5) {
+        // Trigger a fetch in the background
+        setTimeout(() => {
+          this.fetchRaces()
+        }, 100)
+      }
+      
       if (after !== before) {
         // Keep sorted when pruning affects order
         this.races.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)

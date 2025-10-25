@@ -17,6 +17,19 @@
       {{ $t('accessibility.skipToMeetings') }}
     </a>
     
+    <!-- Game Mode Dialog -->
+    <GameModeDialog 
+      :is-open="showGameModeDialog"
+      @close="showGameModeDialog = false"
+      @confirm="showGameModeDialog = false"
+    />
+    
+    <!-- Betslip Drawer -->
+    <BetslipDrawer ref="betslipDrawer" />
+    
+    <!-- News Ticker -->
+    <NewsTicker />
+    
     <header class="bg-surface-raised shadow-card py-6 px-4 sm:px-6 lg:px-8">
       <div class="flex flex-col md:flex-row md:items-center md:justify-between">
         <div class="flex items-center">
@@ -227,9 +240,21 @@ import BetslipDrawer from './components/BetslipDrawer.vue'
 const { locale, t } = useI18n()
 const store = useRacesStore()
 const betsStore = useBetsStore()
+const betslipDrawer = ref<InstanceType<typeof BetslipDrawer> | null>(null)
+const showGameModeDialog = ref(false)
 
-// View handling
-const currentView = ref<'races' | 'meetings'>('races')
+// Event handlers
+const handleGameModeDialog = () => {
+  console.log('Game mode dialog requested');
+  showGameModeDialog.value = true;
+};
+
+const handleOpenBetslip = () => {
+  console.log('Betslip open requested');
+  if (betslipDrawer.value) {
+    betslipDrawer.value.toggleDrawer();
+  }
+};
 
 // Theme handling
 const isDarkMode = ref(true)
@@ -387,12 +412,48 @@ const handleOpenBetslip = (payload: { race: any; runner: any }) => {
 
 // Start polling and ticking intervals
 onMounted(() => {
+  console.log('App mounted');
+  
+  const savedTheme = localStorage.getItem('theme')
+  if (savedTheme) {
+    isDarkMode.value = savedTheme === 'dark'
+    document.documentElement.setAttribute('data-theme', savedTheme)
+  } else {
+    // Check system preference
+    const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches
+    isDarkMode.value = systemPrefersDark
+    document.documentElement.setAttribute('data-theme', systemPrefersDark ? 'dark' : 'light')
+  }
+  
+  // Listen for game mode dialog request
+  window.addEventListener('show-game-mode-dialog', handleGameModeDialog);
+  
+  // Listen for betslip open requests
+  window.addEventListener('open-betslip', handleOpenBetslip);
+  
+  // Start polling and ticking intervals
   store.startLoops()
   // Initial fetch
   store.fetchRaces()
+  
+  // Log store state for debugging
+  console.log('Store initialized:', store);
+  console.log('Store races:', store.races);
+  
+  // Add a simple interval to log the store state
+  setInterval(() => {
+    console.log('Store state update:', {
+      races: store.races,
+      loadState: store.loadState,
+      selectedCategories: Array.from(store.selectedCategories),
+      nextFive: store.nextFive,
+      racesLength: store.races.length,
+      nextFiveLength: store.nextFive.length
+    });
+  }, 2000);
 })
 
-// Clean up intervals
+// Clean up
 onUnmounted(() => {
   store.stopLoops()
   if (searchDebounce) {
@@ -400,27 +461,3 @@ onUnmounted(() => {
   }
 })
 </script>
-
-<style>
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border-width: 0;
-}
-
-.sr-only-focusable:focus,
-.sr-only:focus {
-  position: static;
-  width: auto;
-  height: auto;
-  overflow: visible;
-  clip: auto;
-  white-space: normal;
-}
-</style>

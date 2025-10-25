@@ -12,7 +12,7 @@ export default defineConfig({
   css: {
     preprocessorOptions: {
       scss: {
-        additionalData: ``
+        // Removed the automatic import to avoid circular dependencies
       }
     }
   }

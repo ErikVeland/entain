@@ -78,7 +78,13 @@ const displayTime = computed(() => {
   if (isStartingSoon.value) {
     return 'Starting soon'
   }
-  return formattedTime.value || '00:00'
+  
+  // Handle case where formattedTime might be undefined or invalid
+  if (!formattedTime.value || formattedTime.value === 'NaN:NaN') {
+    return '00:00'
+  }
+  
+  return formattedTime.value
 })
 
 const textClass = computed(() => {
@@ -104,7 +110,18 @@ const ariaLabel = computed(() => {
   if (isStartingSoon.value) {
     return 'Race is starting soon'
   }
-  return `Race starts in ${formattedTime.value || '00:00'}`
+  
+  // Handle case where formattedTime might be undefined
+  if (!formattedTime.value || formattedTime.value === 'NaN:NaN') {
+    return 'Race starts in 0 minutes 0 seconds'
+  }
+  
+  // Parse time for accessibility
+  const [minutes, seconds] = formattedTime.value.split(':')
+  const mins = parseInt(minutes) || 0
+  const secs = parseInt(seconds) || 0
+  
+  return `Race starts in ${mins} minutes ${secs} seconds`
 })
 
 // Watch for state changes to trigger announcements

@@ -186,17 +186,8 @@ module.exports = {
 		'text-brand-primary',
 		'border-brand-primary',
 		'ring-brand-primary',
-		// Animation classes
-		'animate-fade-in-up',
-		'animate-fade-in-down',
-		'animate-fade-in-left',
-		'animate-fade-in-right',
-		'animate-slide-in-left',
-		'animate-slide-in-right',
-		'animate-slide-out-left',
-		'animate-slide-out-right',
-		'animate-bounce-in',
-		'animate-pulse-slow',
-		'animate-spin-slow'
+		'border-surface',
+		'border-surface-raised',
+		'border-surface-sunken'
 	]
 }

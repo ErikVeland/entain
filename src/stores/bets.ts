@@ -1,6 +1,34 @@
 import { defineStore } from 'pinia'
 import { BettingEngine } from '../game/bettingSimulator'
 
+// Define transaction types
+export interface Transaction {
+  id: string
+  type: 'initial_credit' | 'bet_placed' | 'bet_cancelled' | 'bet_won' | 'bet_lost'
+  amount: number
+  balanceBefore: number
+  balanceAfter: number
+  timestamp: number
+  description: string
+  betId?: string
+  raceId?: string
+}
+
+// Define bet selection for the betslip
+export interface BetSelection {
+  id: string
+  raceId: string
+  raceName: string
+  raceNumber: number
+  runnerId: string
+  runnerNumber: number
+  runnerName: string
+  odds: number | 'SP'
+  market: 'win' | 'place' | 'each-way'
+  stake: number
+  estimatedReturn: number
+}
+
 export const useBetsStore = defineStore('bets', {
   state: () => ({
     engine: new BettingEngine(1000),

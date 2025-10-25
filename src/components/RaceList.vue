@@ -1,17 +1,15 @@
 <template>
   <div>
-    <div v-if="store.loadState === 'loading'" class="space-y-4">
+    <div v-if="store.loadState === 'loading' && store.races.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <!-- Skeleton loaders -->
       <div 
         v-for="i in 5" 
         :key="i"
-        class="w-1/3 flex-shrink-0 px-2"
+        class="bg-surface-raised rounded-xl p-6 animate-pulse"
       >
-        <div class="bg-surface-raised rounded-xl2 p-6 animate-pulse">
-          <div class="h-4 bg-surface-sunken rounded w-3/4 mb-4"></div>
-          <div class="h-6 bg-surface-sunken rounded w-1/2 mb-4"></div>
-          <div class="h-8 bg-surface-sunken rounded w-full"></div>
-        </div>
+        <div class="h-4 bg-surface-sunken rounded w-3/4 mb-4"></div>
+        <div class="h-6 bg-surface-sunken rounded w-1/2 mb-4"></div>
+        <div class="h-8 bg-surface-sunken rounded w-full"></div>
       </div>
     </div>
 
@@ -33,26 +31,21 @@
       <div class="text-text-muted mt-2">{{ $t('races.checkBack') }}</div>
     </div>
 
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
       <div 
-        v-for="(race, index) in store.nextFive" 
+        v-for="race in visibleRaces"
         :key="race.id"
-        class="transition-all duration-1000 ease-in-out flex flex-col"
+        class="transition-all duration-500 ease-in-out flex"
         :class="{
-          'opacity-0 transform translate-x-4 animate-fade-in-right': expiringRaces.has(race.id),
-          'opacity-0 transform -translate-x-4 animate-fade-in-left': newRaces.has(race.id),
-          'opacity-100 transform translate-x-0': !expiringRaces.has(race.id) && !newRaces.has(race.id)
+          'opacity-0 transform translate-y-4 scale-95': expiringRaces.has(race.id),
+          'opacity-100 transform translate-y-0 scale-100': !expiringRaces.has(race.id)
         }"
       >
         <RaceColumn 
           :race="race" 
           :is-active="true"
           :is-expired="expiringRaces.has(race.id)"
-          @navigate-next="() => {}"
-          @navigate-prev="() => {}"
-          @select="() => {}"
-          @add-to-betslip="handleAddToBetslip"
-          class="flex-grow"
+          class="w-full"
         />
       </div>
     </div>
@@ -72,10 +65,16 @@ const retryButton = ref<HTMLButtonElement | null>(null)
 const expiringRaces = ref<Set<string>>(new Set())
 const newRaces = ref<Set<string>>(new Set())
 
-// Emit event to parent to open betslip
-const emit = defineEmits<{
-  (e: 'open-betslip', payload: { race: any; runner: any }): void
-}>()
+// Show all 5 races in a grid
+const visibleRaces = computed(() => {
+  const races = store.nextFive.slice(0, 5); // Show all 5 races
+  console.log('Visible races computed:', races);
+  console.log('Store state in RaceList:', store);
+  console.log('Store races in RaceList:', store.races);
+  console.log('Store loadState in RaceList:', store.loadState);
+  console.log('Next five in RaceList:', store.nextFive);
+  return races;
+})
 
 const retryFetch = () => {
   store.fetchRaces()
@@ -108,7 +107,7 @@ watch(() => store.nextFive, (currentRaces, oldRaces) => {
   if (removedRaceIds.length > 0) {
     setTimeout(() => {
       expiringRaces.value.clear()
-    }, 1000)
+    }, 500)
   }
   
   // Clear new races after animation

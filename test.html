@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Test</title>
+</head>
+<body>
+    <h1>Debug Test</h1>
+    <div id="app">Loading...</div>
+    <script>
+        // Simple test to check if there are any JavaScript errors
+        window.addEventListener('error', function(e) {
+            console.error('Global error:', e.error);
+            document.body.innerHTML += '<p style="color: red;">Error: ' + e.error.message + '</p>';
+        });
+        
+        window.addEventListener('unhandledrejection', function(e) {
+            console.error('Unhandled promise rejection:', e.reason);
+            document.body.innerHTML += '<p style="color: red;">Promise rejection: ' + e.reason + '</p>';
+        });
+    </script>
+    <script type="module" src="http://localhost:5173/src/main.ts"></script>
+</body>
+</html>

@@ -1,3 +1,17 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { type RaceSummary, CATEGORY_IDS } from '../stores/races'
+import RaceHeader from './RaceHeader.vue'
+
+const props = defineProps<{
+  race: RaceSummary
+  isActive?: boolean
+  isExpired?: boolean
+}>()
+
+// No simulation or mock data needed - just display API data
+</script>
+
 <template>
   <div 
     class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden transition-all duration-500 animate-bounce-in flex flex-col h-full"
@@ -11,6 +25,13 @@
     :aria-label="`Race ${race.race_number} at ${race.meeting_name}`"
     role="region"
   >
+    <!-- Full card background category icon -->
+    <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden">
+      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-0 right-0">🏇</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-0 right-0">🐕</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-0 right-0">🛞</span>
+    </div>
+    
     <RaceHeader 
       :meeting-name="race.meeting_name"
       :race-number="race.race_number"

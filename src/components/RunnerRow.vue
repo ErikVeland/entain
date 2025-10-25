@@ -19,8 +19,8 @@
     <!-- Odds button -->
     <div class="ml-2">
       <button 
-        @click="addToBetslip"
-        class="px-3 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center"
+        @click="handleOddsClick"
+        class="px-3 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center bg-surface-sunken hover:bg-brand-primary hover:text-text-inverse border-2 border-surface"
         :class="oddsButtonClass"
         :disabled="isExpired"
         :aria-label="`${$t('game.addToBetslip')} ${runner.name} ${$t('game.at')} ${runner.odds}`"
@@ -36,6 +36,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useBettingLogic } from '../composables/useBettingLogic'
+import { useBetsStore } from '../stores/bets'
 
 const { t } = useI18n()
 
@@ -45,7 +47,7 @@ interface Runner {
   name: string
   weight: string
   jockey: string
-  odds: string
+  odds: string | number
   oddsTrend: 'up' | 'down' | 'none'
   silkColor: string
   bestTime?: string
@@ -53,12 +55,14 @@ interface Runner {
 
 const props = defineProps<{
   runner: Runner
+  raceId: string
+  raceName: string
+  raceNumber: number
   isExpired?: boolean
 }>()
 
-const emit = defineEmits<{
-  (e: 'add-to-betslip', runner: Runner): void
-}>()
+const { addSelection } = useBettingLogic()
+const betsStore = useBetsStore()
 
 const oddsButtonClass = computed(() => {
   const baseClasses = 'bg-surface text-text-base hover:bg-brand-primary hover:text-text-inverse cursor-pointer'
@@ -76,9 +80,46 @@ const oddsButtonClass = computed(() => {
   return baseClasses
 })
 
-const addToBetslip = () => {
-  if (!props.isExpired) {
-    emit('add-to-betslip', props.runner)
+const handleOddsClick = () => {
+  if (props.isExpired) return
+  
+  // Check if game mode is enabled
+  if (!betsStore.showGame) {
+    // Emit event to show game mode dialog
+    const event = new CustomEvent('show-game-mode-dialog')
+    window.dispatchEvent(event)
+    return
   }
+  
+  // Convert odds to number or 'SP'
+  let odds: number | 'SP' = 'SP'
+  if (props.runner.odds !== 'SP') {
+    const oddsNum = typeof props.runner.odds === 'number' ? props.runner.odds : parseFloat(props.runner.odds)
+    if (!isNaN(oddsNum)) {
+      odds = oddsNum
+    }
+  }
+  
+  // Add to betslip
+  addSelection({
+    raceId: props.raceId,
+    raceName: props.raceName,
+    raceNumber: props.raceNumber,
+    runnerId: props.runner.id,
+    runnerNumber: props.runner.number,
+    runnerName: props.runner.name,
+    odds,
+    market: 'win',
+    stake: 0
+  })
+  
+  // Emit event to open betslip drawer
+  const event = new CustomEvent('open-betslip', { 
+    detail: { 
+      raceId: props.raceId,
+      runner: props.runner
+    }
+  })
+  window.dispatchEvent(event)
 }
 </script>
