@@ -30,6 +30,7 @@
               :class="[oddsButtonClass, oddsAnimation]"
               :disabled="isExpired"
               :aria-label="`${$t('game.addToBetslip')} ${runner.name} ${$t('game.at')} ${runner.odds}`"
+              :title="getOddsButtonTitle()"
             >
               {{ runner.odds }}
               <span v-if="runner.oddsTrend === 'up'" class="ml-1 text-success">▲</span>
@@ -70,12 +71,16 @@ const props = defineProps<{
   isExpired?: boolean
 }>()
 
+const betsStore = useBetsStore()
+
 // Track previous odds for animation
 const previousOdds = ref<string | number>(props.runner.odds)
 const oddsAnimation = ref('')
 
 // Watch for odds changes to trigger animations
 watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | number) => {
+  console.log('Odds changed for runner', props.runner.id, 'from', oldOdds, 'to', newOdds);
+  
   if (newOdds !== oldOdds) {
     // Determine if odds went up or down
     let newNum: number, oldNum: number
@@ -108,7 +113,24 @@ watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | numb
 const formatJockeyName = (jockeyName: string) => {
   if (!jockeyName) return ''
   
-  // Split the name into parts
+  // Check if the name already has the prefix (J: or D:)
+  if (jockeyName.startsWith('J:') || jockeyName.startsWith('D:')) {
+    // Split the name into prefix and the rest
+    const [prefix, ...nameParts] = jockeyName.split(' ')
+    
+    if (nameParts.length === 0) {
+      return prefix
+    }
+    
+    if (nameParts.length === 1) {
+      return `${prefix} ${nameParts[0]}`
+    }
+    
+    // Return prefix with first initial and last name
+    return `${prefix} ${nameParts[0][0]}. ${nameParts[nameParts.length - 1]}`
+  }
+  
+  // Handle names without prefix (fallback)
   const parts = jockeyName.trim().split(' ')
   
   if (parts.length === 1) {
@@ -119,12 +141,39 @@ const formatJockeyName = (jockeyName: string) => {
   return `${parts[0][0]}. ${parts[parts.length - 1]}`
 }
 
-const betsStore = useBetsStore()
+const getOddsButtonTitle = () => {
+  // Check if race is running
+  const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+  if (raceElement) {
+    const raceStatus = raceElement.getAttribute('data-race-status');
+    if (raceStatus === 'live') {
+      return 'Cannot place bets on running races';
+    }
+  }
+  
+  if (props.isExpired) {
+    return 'Cannot place bets on expired races';
+  }
+  
+  if (!betsStore.showGame) {
+    return 'Enable game mode to place bets';
+  }
+  
+  return `${t('game.addToBetslip')} ${props.runner.name} ${t('game.at')} ${props.runner.odds}`;
+}
 
 const oddsButtonClass = computed(() => {
   const baseClasses = 'bg-surface text-text-base hover:bg-brand-primary hover:text-text-inverse cursor-pointer'
   
-  if (props.isExpired) {
+  // Check if race is running (live)
+  const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+  let isRaceRunning = false;
+  if (raceElement) {
+    const raceStatus = raceElement.getAttribute('data-race-status');
+    isRaceRunning = raceStatus === 'live';
+  }
+  
+  if (props.isExpired || isRaceRunning) {
     return `${baseClasses} opacity-50 cursor-not-allowed`
   }
   
@@ -138,7 +187,21 @@ const oddsButtonClass = computed(() => {
 })
 
 const handleOddsClick = () => {
-  if (props.isExpired) return
+  // Check if race is running (live)
+  const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+  if (raceElement) {
+    const raceStatus = raceElement.getAttribute('data-race-status');
+    if (raceStatus === 'live') {
+      // Race is running, don't allow betting
+      console.log('Cannot place bet on running race', props.raceId);
+      return;
+    }
+  }
+  
+  if (props.isExpired) {
+    console.log('Cannot place bet on expired race', props.raceId);
+    return;
+  }
   
   // Check if game mode is enabled
   if (!betsStore.showGame) {
@@ -156,6 +219,8 @@ const handleOddsClick = () => {
       odds = oddsNum
     }
   }
+  
+  console.log('Adding runner to betslip:', props.runner);
   
   // Emit event to open betslip drawer
   const event = new CustomEvent('open-betslip', { 

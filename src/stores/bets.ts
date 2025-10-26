@@ -33,8 +33,8 @@ export const useBetsStore = defineStore('bets', {
   state: () => ({
     engine: new BettingEngine(1000),
     showGame: false,
-    // Add state for data mode toggle
-    useSimulatedData: true,
+    // App should start in API mode, so useSimulatedData should be false by default
+    useSimulatedData: false,
     // Track last won bet for animations
     lastWonBetId: ''
   }),
@@ -48,11 +48,13 @@ export const useBetsStore = defineStore('bets', {
   
   actions: {
     setShowGame(show: boolean) {
+      console.log('Setting showGame to', show)
       this.showGame = show
     },
     
     // Add action to toggle data mode
     setUseSimulatedData(useSimulated: boolean) {
+      console.log('Setting useSimulatedData to', useSimulated)
       this.useSimulatedData = useSimulated
     },
     

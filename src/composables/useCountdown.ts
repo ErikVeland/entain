@@ -27,15 +27,9 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
   
   // If race has already started or is about to start
   if (timeDiff <= 0) {
-    if (timeDiff <= -60000) {
-      // Race started more than 1 minute ago, should be removed
-      isInProgress.value = true
-      formattedTime.value = 'LIVE'
-    } else {
-      // Race is about to start or just started
-      isStartingSoon.value = true
-      formattedTime.value = 'Soon'
-    }
+    // Race has started, show LIVE
+    isInProgress.value = true
+    formattedTime.value = 'LIVE'
   } else {
     // Format the time as MM:SS
     const minutes = Math.floor(timeDiff / 60000)
@@ -54,23 +48,15 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
       return
     }
     
-    // If race has already started or is about to start
+    // If race has already started
     if (timeDiff <= 0) {
-      if (timeDiff <= -60000) {
-        // Race started more than 1 minute ago
-        isInProgress.value = true
-        formattedTime.value = 'LIVE'
-        // Stop the interval as the race should be removed
-        stop()
-      } else {
-        // Race is about to start or just started (within 1 minute of start time)
-        isStartingSoon.value = true
-        formattedTime.value = 'Soon'
-        // Don't mark as in progress yet - wait for actual simulation to start
-        isInProgress.value = false
-      }
+      // Race has started, show LIVE and mark as in progress
+      isInProgress.value = true
+      formattedTime.value = 'LIVE'
+      // Stop the interval as the race should be in progress
+      stop()
     } else {
-      // Format the time as MM:SS
+      // Format the time as MM:SS (never show negative values)
       const minutes = Math.max(0, Math.floor(timeDiff / 60000))
       const seconds = Math.max(0, Math.floor((timeDiff % 60000) / 1000))
       
@@ -81,11 +67,11 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
         formattedTime.value = '00:00'
       }
       
-      // If time is less than 1 minute, show "Starting soon"
-      if (minutes === 0 && seconds < 60) {
+      // If time is less than 10 seconds, show "Starting soon"
+      if (minutes === 0 && seconds <= 10) {
         isStartingSoon.value = true
       } else {
-        // Reset starting soon flag if we're more than 1 minute away
+        // Reset flags when counting down normally
         isStartingSoon.value = false
       }
       

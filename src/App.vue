@@ -51,6 +51,13 @@ const toggleSimulation = () => {
   betsStore.setShowGame(newMode)
   betsStore.setUseSimulatedData(newMode)
   console.log('Simulation mode toggled:', newMode)
+  console.log('Show game:', betsStore.showGame)
+  console.log('Use simulated data:', betsStore.useSimulatedData)
+  
+  // Force a refresh of the races to ensure simulation is properly initialized
+  if (newMode) {
+    store.fetchRaces()
+  }
 }
 
 const toggleTheme = () => {
@@ -104,17 +111,27 @@ const handleOpenBetslip = (payload: { race: any; runner: any }) => {
 
 // Start polling and ticking intervals
 onMounted(() => {
-  // Enable simulation mode by default for development
+  // App should start in API mode by default
+  // Only enable simulation mode if explicitly requested via URL parameter
   try {
     // @ts-ignore
     if (import.meta.env && import.meta.env.DEV) {
-      betsStore.setShowGame(true)
-      betsStore.setUseSimulatedData(true)
-      console.log('Enabled simulation mode for development')
+      // Check if simulation mode is requested via URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.has('simulation')) {
+        betsStore.setShowGame(true)
+        betsStore.setUseSimulatedData(true)
+        console.log('Enabled simulation mode via URL parameter')
+      }
     }
   } catch (e) {
-    console.log('Could not enable simulation mode by default')
+    console.log('Could not check for simulation mode parameter')
   }
+  
+  console.log('App mounted')
+  console.log('betsStore.showGame:', betsStore.showGame)
+  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData)
+  console.log('isSimulationMode:', isSimulationMode.value)
   
   // Theme initialization
   const savedTheme = localStorage.getItem('theme')

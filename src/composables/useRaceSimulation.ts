@@ -1,40 +1,49 @@
-// src/composables/useRaceSimulation.ts
-import { useBetsStore } from '../stores/bets'
+import { useSimulationStore } from '../stores/simulation'
 import { createRaceSimulation, type RaceInput, type SimulationController } from '../game/simulatedRace'
 
-// In-memory storage for race controllers since the store doesn't have this functionality
-const raceControllers = new Map<string, SimulationController>()
-
 export function useRaceSimulation() {
-  const betsStore = useBetsStore()
+  const simulationStore = useSimulationStore()
   
-  // Create a race simulation
-  const createSimulation = (raceInput: RaceInput, seed?: number, tickMs?: number): SimulationController => {
-    // Adjust tick interval based on number of active races for better performance
-    const activeRaces = raceControllers.size;
-    const adjustedTickMs = tickMs || (activeRaces > 3 ? 300 : activeRaces > 1 ? 200 : 100);
+  const createSimulation = (
+    input: RaceInput,
+    seed?: number,
+    tickMs: number = 200
+  ): SimulationController => {
+    // Create the simulation controller
+    const controller = createRaceSimulation(input, seed, tickMs)
     
-    const controller = createRaceSimulation(raceInput, seed, adjustedTickMs)
-    
-    // Store the controller in memory
-    raceControllers.set(raceInput.id, controller)
+    // Add to store
+    simulationStore.addSimulationController(input.id, controller)
     
     return controller
   }
   
-  // Get a race simulation controller
   const getSimulation = (raceId: string): SimulationController | undefined => {
-    return raceControllers.get(raceId)
+    return simulationStore.getSimulationController(raceId)
   }
   
-  // Remove a race simulation controller
   const removeSimulation = (raceId: string): void => {
-    raceControllers.delete(raceId)
+    simulationStore.removeSimulationController(raceId)
+  }
+  
+  const startSimulation = (raceId: string): void => {
+    simulationStore.startSimulation(raceId)
+  }
+  
+  const stopSimulation = (raceId: string): void => {
+    simulationStore.stopSimulation(raceId)
+  }
+  
+  const resetSimulation = (raceId: string): void => {
+    simulationStore.resetSimulation(raceId)
   }
   
   return {
     createSimulation,
     getSimulation,
-    removeSimulation
+    removeSimulation,
+    startSimulation,
+    stopSimulation,
+    resetSimulation
   }
 }

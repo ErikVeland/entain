@@ -219,13 +219,15 @@ export function useOddsSimulation() {
   
   // Throttling for odds updates to prevent excessive re-renders
   const lastUpdateTimes = new Map<string, number>()
-  const UPDATE_THROTTLE_MS = 200 // Reduced from 2000ms to 200ms for more responsive updates
+  const UPDATE_THROTTLE_MS = 100 // Increased throttling to 100ms for better performance while still being responsive
   
   // Initialize odds simulation for a race
   const initializeOddsSimulation = (
     raceId: string, 
     runners: SimulatedRunner[]
   ) => {
+    console.log('Initializing odds simulation for race', raceId, 'with runners:', runners)
+    
     // Only initialize simulation if we're in simulation mode
     const simulationsState = simulations.value
     if (!simulationsState[raceId]) {
@@ -241,6 +243,8 @@ export function useOddsSimulation() {
       
       simulationsState[raceId] = initialState
       console.log('Initialized odds simulation for race', raceId, 'with runners:', runners)
+    } else {
+      console.log('Odds simulation already exists for race', raceId)
     }
   }
   
@@ -250,6 +254,7 @@ export function useOddsSimulation() {
     progressByRunner: Record<string, number>,
     order: string[]
   ) => {
+    console.log('Updating odds for race', raceId)
     const simulation = simulations.value[raceId]
     if (!simulation) {
       // No simulation found, which is expected when not in simulation mode
@@ -266,7 +271,7 @@ export function useOddsSimulation() {
     }
     lastUpdateTimes.set(raceId, now);
     
-    console.log('Updating odds for race', raceId, 'with progress:', progressByRunner, 'and order:', order)
+    console.log('Actually updating odds for race', raceId, 'with progress:', progressByRunner, 'and order:', order)
     
     // Update timestamp
     simulation.lastUpdate = now;
@@ -294,8 +299,24 @@ export function useOddsSimulation() {
       
       // Market dynamics: if race is near start, odds are more volatile
       const raceProgress = Math.max(...Object.values(progressByRunner));
-      // Reduced volatility for more realistic changes
-      const marketVolatility = raceProgress < 0.1 ? 1.1 : raceProgress < 0.3 ? 1.05 : 1.0;
+      // Implement more sophisticated market dynamics with realistic volatility patterns:
+      // Early race (0-5%): 1.02x volatility
+      // Mid-early race (5-10%): 1.015x volatility
+      // Mid race (10-20%): 1.01x volatility
+      // Late-mid race (20-50%): 1.005x volatility
+      // End race (50%+): 1.002x volatility
+      let marketVolatility;
+      if (raceProgress < 0.05) {
+        marketVolatility = 1.02;
+      } else if (raceProgress < 0.10) {
+        marketVolatility = 1.015;
+      } else if (raceProgress < 0.20) {
+        marketVolatility = 1.01;
+      } else if (raceProgress < 0.50) {
+        marketVolatility = 1.005;
+      } else {
+        marketVolatility = 1.002;
+      }
       
       // If this is the leader, odds should generally decrease (favorite)
       if (runnerId === leaderId) {
@@ -342,6 +363,10 @@ export function useOddsSimulation() {
         runner.oddsTrend = Math.random() > 0.5 ? 'up' : 'down';
       }
     });
+    
+    // Trigger a reactive update by creating a new object reference
+    console.log('Triggering reactive update for race', raceId);
+    simulations.value = { ...simulations.value };
   }
   
   // Get current simulated runners for a race
@@ -360,6 +385,7 @@ export function useOddsSimulation() {
   
   // Reset simulation for a race
   const resetSimulation = (raceId: string) => {
+    console.log('Resetting simulation for race', raceId)
     delete simulations.value[raceId]
     lastUpdateTimes.delete(raceId)
   }

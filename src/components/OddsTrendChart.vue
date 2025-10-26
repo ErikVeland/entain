@@ -98,14 +98,15 @@ const updateOddsHistory = () => {
       odds: oddsValue
     })
     
-    // Limit history to prevent memory issues (keep last 50 points)
-    if (oddsHistory.value[runner.id].length > 50) {
+    // Limit history to prevent memory issues (keep last 30 points instead of 50)
+    if (oddsHistory.value[runner.id].length > 30) {
       oddsHistory.value[runner.id].shift()
     }
   })
   
   // Force chart update
   updateCounter.value++
+  console.log('Updated odds history for race', props.raceId, 'with', runners.length, 'runners')
 }
 
 // Watch for runner changes to update odds history
@@ -118,14 +119,17 @@ const startWatching = () => {
     watchStopper()
   }
   
+  // Create a computed ref for runners to ensure reactivity
+  const simulatedRunners = computed(() => getSimulatedRunners(props.raceId))
+  
   watchStopper = watch(
-    () => getSimulatedRunners(props.raceId),
+    simulatedRunners,
     (newRunners, oldRunners) => {
       if (Array.isArray(newRunners) && newRunners.length > 0) {
         updateOddsHistory()
       }
     },
-    { deep: true }
+    { deep: true, immediate: true }
   )
   
   // Also watch updateCounter for force updates
@@ -134,10 +138,13 @@ const startWatching = () => {
     if (Array.isArray(runners) && runners.length > 0) {
       updateOddsHistory()
     }
-  })
+  }, { immediate: true })
 }
 
 onMounted(() => {
+  console.log('OddsTrendChart mounted for race', props.raceId)
+  console.log('showChart.value:', showChart.value)
+  
   if (showChart.value) {
     // Initialize history
     initializeOddsHistory()
@@ -145,17 +152,39 @@ onMounted(() => {
     // Start watching for changes
     startWatching()
     
-    // Periodic update to ensure chart refreshes
+    // Periodic update to ensure chart refreshes (reduced from 2000ms to 500ms for more responsive updates)
     intervalId = window.setInterval(() => {
       if (showChart.value) {
         updateCounter.value++
       }
-    }, 1000)
+    }, 500)
   }
+  
+  // Listen for simulation initialization
+  const handleSimulationInitialized = (event: Event) => {
+    const customEvent = event as CustomEvent<{ raceId: string }>;
+    if (customEvent.detail.raceId === props.raceId) {
+      console.log('Simulation initialized for race', props.raceId);
+      if (showChart.value) {
+        initializeOddsHistory();
+        startWatching();
+        loaded.value = true;
+      }
+    }
+  };
+  
+  window.addEventListener('simulation-initialized', handleSimulationInitialized);
+  
+  // Clean up listener
+  onUnmounted(() => {
+    window.removeEventListener('simulation-initialized', handleSimulationInitialized);
+  });
 })
 
 // Clean up watcher and interval
 onUnmounted(() => {
+  console.log('OddsTrendChart unmounted for race', props.raceId)
+  
   if (watchStopper) {
     watchStopper()
   }
@@ -165,22 +194,32 @@ onUnmounted(() => {
 })
 
 // Watch for simulation mode changes
-watch(showChart, (newVal) => {
-  if (newVal) {
+watch(showChart, (newVal, oldVal) => {
+  console.log('showChart changed for race', props.raceId, 'from', oldVal, 'to', newVal)
+  
+  if (newVal && !oldVal) {
     // Enable chart
+    console.log('Enabling chart for race', props.raceId)
     initializeOddsHistory()
     startWatching()
-  } else {
+    loaded.value = true // Make sure loaded is set to true when chart is enabled
+  } else if (!newVal && oldVal) {
     // Disable chart
+    console.log('Disabling chart for race', props.raceId)
     if (watchStopper) {
       watchStopper()
       watchStopper = null
     }
     loaded.value = false
   }
-})
+}, { immediate: true })
 
 const chartData = computed(() => {
+  console.log('Computing chart data for race', props.raceId)
+  console.log('loaded.value:', loaded.value)
+  console.log('showChart.value:', showChart.value)
+  console.log('oddsHistory.value:', oddsHistory.value)
+  
   if (!loaded.value || !showChart.value) {
     return {
       labels: [],
@@ -188,7 +227,10 @@ const chartData = computed(() => {
     }
   }
   
+  // Get fresh runners data to ensure reactivity
   const runners = getSimulatedRunners(props.raceId)
+  console.log('Runners for chart:', runners)
+  
   if (runners.length === 0) {
     return {
       labels: [],
@@ -212,6 +254,8 @@ const chartData = computed(() => {
       }
     })
   }
+  
+  console.log('Time labels:', timeLabels)
   
   // Create datasets for each runner
   const datasets = runners.map((runner, index) => {
@@ -237,6 +281,9 @@ const chartData = computed(() => {
     const history = oddsHistory.value[runner.id] || []
     const oddsData = history.map(point => point.odds)
     
+    console.log('Runner', runner.number, 'history:', history)
+    console.log('Runner', runner.number, 'odds data:', oddsData)
+    
     return {
       label: `${runner.number}. ${runner.name}`,
       data: oddsData,
@@ -249,6 +296,8 @@ const chartData = computed(() => {
       tension: 0.4 // Smooth curves
     }
   })
+  
+  console.log('Chart datasets:', datasets)
   
   return {
     labels: timeLabels,

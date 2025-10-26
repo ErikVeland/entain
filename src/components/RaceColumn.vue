@@ -11,6 +11,7 @@
       'border-success': raceStatus === 'finished'
     }"
     :data-race-id="race.id"
+    :data-race-status="raceStatus"
     :tabindex="isActive ? 0 : -1"
     @keydown="handleKeyDown"
     :aria-label="`Race ${race.race_number} at ${race.meeting_name}`"
@@ -42,12 +43,21 @@
       :race-id="race.id"
     />
     
+    <!-- Simulation Controls (hidden by default, shown only in debug mode) -->
+    <div class="px-3 pt-2" v-if="showDebugControls">
+      <SimulationControls 
+        :race="race"
+        @start="startRaceSimulation"
+        @reset="resetRaceSimulation"
+      />
+    </div>
+    
     <div class="p-3 flex-grow relative z-10">
       <div class="space-y-2">
         <!-- We need to convert the odds to string for RunnerRow -->
         <RunnerRow 
           v-for="(runner, index) in runnersForDisplay"
-          :key="index"
+          :key="runner.id"
           :runner="runner"
           :race-id="race.id"
           :race-name="race.meeting_name"
@@ -57,16 +67,49 @@
         />
         <!-- Show a message when no runners are available (not in simulation mode) -->
         <div 
-          v-if="!betsStore.showGame || !betsStore.useSimulatedData" 
+          v-if="(!betsStore.showGame || !betsStore.useSimulatedData) && runnersForDisplay.length === 0" 
           class="text-center py-4 text-text-muted"
         >
           Runner information not available in API mode
         </div>
+        <!-- Show a message when runners are missing in simulation mode -->
+        <div 
+          v-else-if="betsStore.showGame && betsStore.useSimulatedData && runnersForDisplay.length === 0" 
+          class="text-center py-4 text-text-muted"
+        >
+          No runners available for this race
+        </div>
       </div>
     </div>
     
-    <!-- Odds Trend Chart with dropdown curtain -->
-    <div class="px-3 pb-3 relative z-10" v-if="betsStore.showGame && !isExpired">
+    <!-- Odds Trend Chart - Always visible for active races in simulation mode -->
+    <div class="px-3 pb-3 relative z-10" v-if="betsStore.showGame && !isExpired && raceStatus === 'live'">
+      <div class="border-t border-surface pt-3">
+        <div class="flex items-center justify-between w-full py-2 text-text-base font-medium mb-2">
+          <span>Odds Movements</span>
+          <!-- Visual indicators for significant odds changes -->
+          <div class="flex space-x-1">
+            <div 
+              v-for="runner in runnersWithSignificantChanges" 
+              :key="runner.id"
+              class="w-3 h-3 rounded-full"
+              :class="{
+                'bg-success animate-pulse': runner.oddsTrend === 'down',
+                'bg-danger animate-pulse': runner.oddsTrend === 'up',
+                'bg-warning': runner.oddsTrend === 'none'
+              }"
+              :title="`${runner.number}. ${runner.name}: ${runner.odds}`"
+            ></div>
+          </div>
+        </div>
+        <div class="mt-2">
+          <OddsTrendChart :race-id="race.id" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Odds Trend Chart with dropdown curtain for non-live races -->
+    <div class="px-3 pb-3 relative z-10" v-else-if="betsStore.showGame && !isExpired">
       <div class="border-t border-surface pt-3">
         <button 
           @click="toggleOddsChart"
@@ -114,6 +157,7 @@ import RaceHeader from './RaceHeader.vue'
 import RunnerRow from './RunnerRow.vue'
 import RaceResults from './RaceResults.vue'
 import OddsTrendChart from './OddsTrendChart.vue'
+import SimulationControls from './SimulationControls.vue'
 
 const props = defineProps<{
   race: RaceSummary
@@ -126,11 +170,13 @@ const emit = defineEmits<{
   (e: 'navigate-prev'): void
   (e: 'select'): void
   (e: 'add-to-betslip', payload: { race: RaceSummary; runner: any }): void
+  (e: 'race-started'): void
+  (e: 'race-finished'): void
 }>()
 
 const betsStore = useBetsStore()
 const { initializeOddsSimulation, updateOdds, getSimulatedRunners, resetSimulation, generateRandomizedRunners } = useOddsSimulation()
-const { createSimulation, getSimulation, removeSimulation } = useRaceSimulation()
+const { createSimulation, getSimulation, removeSimulation, startSimulation, stopSimulation, resetSimulation: resetRaceSimulationStore } = useRaceSimulation()
 const { formattedTime, isStartingSoon, isInProgress } = useCountdown(props.race.advertised_start_ms)
 
 // State for odds chart dropdown
@@ -138,6 +184,11 @@ const showOddsChart = ref(false)
 const toggleOddsChart = () => {
   showOddsChart.value = !showOddsChart.value
 }
+
+// Show debug controls only when debug mode is enabled
+const showDebugControls = computed(() => {
+  return betsStore.showGame && betsStore.useSimulatedData && window.location.search.includes('debug')
+})
 
 // Race simulation controller
 let simulationController: any = null
@@ -160,9 +211,19 @@ const runnersForDisplayCache = new Map<string, { runners: any[]; timestamp: numb
 // Computed race status
 const raceStatus = computed(() => {
   if (props.isExpired) return 'finished'
-  if (raceLive.value) return 'live'
+  // Only show 'live' status when race has actually started (countdown finished)
+  if (isInProgress.value) return 'live'
   if (isStartingSoon.value) return 'starting_soon'
   return 'countdown'
+})
+
+// Compute runners with significant odds changes for visual indicators
+const runnersWithSignificantChanges = computed(() => {
+  if (!betsStore.showGame || !betsStore.useSimulatedData) return []
+  
+  const runners = getSimulatedRunners(props.race.id)
+  // Filter to only show runners with significant odds changes (trend is not 'none')
+  return runners.filter(runner => runner.oddsTrend !== 'none')
 })
 
 // Retry loading the race simulation
@@ -219,8 +280,28 @@ const initializeRaceSimulation = () => {
     simulationController.onTick((tick: Tick) => {
       try {
         console.log('Race tick for race', props.race.id, 'with progress:', tick.progressByRunner, 'and order:', tick.order)
-        // Update odds based on race progress
-        updateOdds(props.race.id, tick.progressByRunner, tick.order)
+        
+        // Check if race is actually live/running
+        const raceElement = document.querySelector(`[data-race-id="${props.race.id}"]`);
+        let isRaceRunning = false;
+        if (raceElement) {
+          const raceStatus = raceElement.getAttribute('data-race-status');
+          isRaceRunning = raceStatus === 'live';
+        }
+        
+        // Only update odds if race is NOT running (i.e., it's upcoming)
+        // Once a race starts, odds should be locked
+        if (!isRaceRunning) {
+          updateOdds(props.race.id, tick.progressByRunner, tick.order)
+        } else {
+          console.log('Skipping odds update for running race', props.race.id)
+        }
+        
+        // Update the raceLive status based on the tick
+        if (!raceLive.value && tick.tElapsedMs > 0) {
+          raceLive.value = true;
+          emit('race-started');
+        }
       } catch (err) {
         error.value = err instanceof Error ? err.message : String(err)
         console.error('Error updating odds:', err)
@@ -239,6 +320,9 @@ const initializeRaceSimulation = () => {
         // Mark race as finished
         raceFinished.value = true
         raceLive.value = false
+        
+        // Emit race finished event
+        emit('race-finished')
         
         // Settle any bets for this race
         const settlements = betsStore.settleRace(props.race.id, { placings: result.placings })
@@ -261,15 +345,38 @@ const initializeRaceSimulation = () => {
         console.error('Error finishing race:', err)
       }
     })
+    
+    // Start the simulation immediately so odds can update for upcoming races
+    // But don't mark race as live until the actual start time
+    if (simulationController && betsStore.showGame && betsStore.useSimulatedData) {
+      try {
+        startSimulation(props.race.id)
+        console.log('Started simulation for upcoming race', props.race.id)
+      } catch (err) {
+        console.error('Error starting simulation for upcoming race:', err)
+      }
+    }
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err)
+    // Enhanced error handling with user-friendly error messages
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    error.value = `Failed to initialize race simulation: ${errorMessage}`
     console.error('Error initializing race simulation:', err)
   }
 }
 
 // Initialize simulation on mount
 onMounted(() => {
-  initializeRaceSimulation()
+  try {
+    console.log('RaceColumn mounted for race', props.race.id)
+    console.log('betsStore.showGame:', betsStore.showGame)
+    console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData)
+    initializeRaceSimulation()
+  } catch (err) {
+    // Enhanced error handling with user-friendly error messages
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    error.value = `Failed to mount race component: ${errorMessage}`
+    console.error('Error mounting race component:', err)
+  }
 })
 
 // Start race simulation when countdown ends
@@ -280,34 +387,46 @@ watch(isInProgress, (inProgress) => {
   console.log('raceFinished.value:', raceFinished.value)
   console.log('raceLive.value:', raceLive.value)
   
-  if (inProgress && betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value && !raceLive.value) {
-    console.log('Starting race simulation for race', props.race.id)
-    // Start the simulation when countdown finishes
-    if (simulationController) {
-      try {
-        simulationController.start()
-        raceLive.value = true
-        console.log('Started race simulation for race', props.race.id)
-      } catch (err) {
-        error.value = err instanceof Error ? err.message : String(err)
-        console.error('Error starting race simulation:', err)
-      }
-    }
+  if (inProgress && betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value) {
+    console.log('Marking race as live for race', props.race.id)
+    // Mark race as live when countdown finishes
+    raceLive.value = true
+    // Emit race started event
+    emit('race-started')
+    console.log('Race is now live for race', props.race.id)
   }
-})
+}, { immediate: true })
 
 // Also start race simulation when manually triggered (for testing)
 const startRaceSimulation = () => {
+  console.log('Manual start race simulation requested for race', props.race.id)
+  console.log('betsStore.showGame:', betsStore.showGame)
+  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData)
+  console.log('raceFinished.value:', raceFinished.value)
+  console.log('raceLive.value:', raceLive.value)
+  console.log('simulationController:', !!simulationController)
+  
   if (betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value && !raceLive.value) {
-    if (simulationController) {
-      try {
-        simulationController.start()
-        raceLive.value = true
-      } catch (err) {
-        error.value = err instanceof Error ? err.message : String(err)
-        console.error('Error starting race simulation:', err)
-      }
-    }
+    // Mark race as live
+    raceLive.value = true
+    // Emit race started event
+    emit('race-started')
+    console.log('Started race simulation for race', props.race.id)
+  } else {
+    console.log('Conditions not met for starting race simulation')
+  }
+}
+
+// Reset race simulation
+const resetRaceSimulation = () => {
+  try {
+    cleanupSimulation()
+    initializeRaceSimulation()
+  } catch (err) {
+    // Enhanced error handling with user-friendly error messages
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    error.value = `Failed to reset race simulation: ${errorMessage}`
+    console.error('Error resetting race simulation:', err)
   }
 }
 
@@ -315,7 +434,7 @@ const startRaceSimulation = () => {
 const cleanupSimulation = () => {
   try {
     if (simulationController) {
-      simulationController.stop()
+      stopSimulation(props.race.id)
       simulationController = null
     }
     resetSimulation(props.race.id)
@@ -324,27 +443,58 @@ const cleanupSimulation = () => {
     raceFinished.value = false
     raceLive.value = false
   } catch (err) {
-    error.value = err instanceof Error ? err.message : String(err)
+    // Enhanced error handling with user-friendly error messages
+    const errorMessage = err instanceof Error ? err.message : String(err)
+    error.value = `Failed to clean up race simulation: ${errorMessage}`
     console.error('Error cleaning up simulation:', err)
   }
 }
 
 // Watch for changes in simulation mode
-watch(() => betsStore.showGame && betsStore.useSimulatedData, (newVal) => {
-  if (newVal) {
+watch(() => betsStore.showGame && betsStore.useSimulatedData, (newVal, oldVal) => {
+  console.log('Simulation mode changed for race', props.race.id, 'from', oldVal, 'to', newVal)
+  console.log('betsStore.showGame:', betsStore.showGame)
+  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData)
+  
+  if (newVal && !oldVal) {
     // Switching to simulation mode
-    initializeRaceSimulation()
-  } else {
+    try {
+      console.log('Initializing race simulation for race', props.race.id)
+      initializeRaceSimulation()
+      // Make sure the chart knows the simulation is available
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('simulation-initialized', { detail: { raceId: props.race.id } }));
+      }, 100);
+    } catch (err) {
+      // Enhanced error handling with user-friendly error messages
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      error.value = `Failed to switch to simulation mode: ${errorMessage}`
+      console.error('Error switching to simulation mode:', err)
+    }
+  } else if (!newVal && oldVal) {
     // Switching to non-simulation mode - clean up simulation
-    cleanupSimulation()
+    try {
+      console.log('Cleaning up simulation for race', props.race.id)
+      cleanupSimulation()
+    } catch (err) {
+      // Enhanced error handling with user-friendly error messages
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      error.value = `Failed to switch to API mode: ${errorMessage}`
+      console.error('Error switching to API mode:', err)
+    }
   }
-})
+}, { immediate: true })
 
 // Clean up on unmount
 onUnmounted(() => {
-  cleanupSimulation()
-  // Clean up cache
-  runnersForDisplayCache.delete(props.race.id)
+  try {
+    cleanupSimulation()
+    // Clean up cache
+    runnersForDisplayCache.delete(props.race.id)
+  } catch (err) {
+    // Log error but don't display it since component is unmounting
+    console.error('Error during component unmount:', err)
+  }
 })
 
 // Get runners based on simulation mode
@@ -362,30 +512,26 @@ const runnersForBetPlacer = computed(() => {
 
 // We need to convert the odds to string for RunnerRow
 const runnersForDisplay = computed(() => {
-  // Memoize the result to prevent unnecessary re-renders
-  const cached = runnersForDisplayCache.get(props.race.id);
-  const currentTime = Date.now();
-  
-  // Reduce cache time to 10ms to allow more frequent updates while still preventing excessive re-renders
-  if (cached && currentTime - cached.timestamp < 10) {
-    return cached.runners;
+  // In API mode, we don't show any runners
+  if (!betsStore.showGame || !betsStore.useSimulatedData) {
+    return []
   }
   
-  const runners = runnersForBetPlacer.value.map(runner => ({
+  // In simulation mode, show simulated runners
+  // Remove caching to ensure real-time updates
+  const runners = getSimulatedRunners(props.race.id)
+  console.log('Got simulated runners for race', props.race.id, runners);
+  
+  const formattedRunners = runners.map(runner => ({
     ...runner,
     odds: runner.odds === 'SP' ? 'SP' : runner.odds.toString(),
     // For non-simulation mode, we always show 'none' trend
     oddsTrend: (!betsStore.showGame || !betsStore.useSimulatedData) ? 'none' : runner.oddsTrend
   }));
   
-  console.log('Updating runners for display for race', props.race.id, runners)
+  console.log('Updating runners for display for race', props.race.id, formattedRunners);
   
-  runnersForDisplayCache.set(props.race.id, {
-    runners,
-    timestamp: currentTime
-  });
-  
-  return runners;
+  return formattedRunners;
 })
 
 const handleAddToBetslip = (runner: any) => {

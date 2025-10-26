@@ -10,7 +10,8 @@ export type CategoryId =
 	| '161d9be2-e909-4326-8c2c-35ed71fb460b' // Harness
 	| string
 
-export type WagerType = 'WIN' | 'PLACE' | 'EACH_WAY' | 'MULTI'
+// Extended bet types to include exotic bets
+export type WagerType = 'WIN' | 'PLACE' | 'EACH_WAY' | 'MULTI' | 'QUINELLA' | 'TRIFECTA' | 'FIRST_FOUR'
 
 export interface RunnerQuote {
 	runnerId: string
@@ -59,8 +60,9 @@ export interface BetBase {
 	placedAtMs: number
 	stake: number // for MULTI: this is the unit stake applied to leg multiplier
 	type: WagerType
-	status: 'PENDING' | 'WON' | 'LOST' | 'VOID' | 'SETTLED_PARTIAL'
+	status: 'PENDING' | 'WON' | 'LOST' | 'VOID' | 'SETTLED_PARTIAL' | 'CASHED_OUT'
 	potentialReturn?: number // snapshot (for UI only)
+	cashoutValue?: number // partial cashout value
 }
 
 export interface SingleBet extends BetBase {
@@ -75,13 +77,20 @@ export interface MultiBet extends BetBase {
 	progressiveReturn?: number
 }
 
-export type Bet = SingleBet | MultiBet
+// New interfaces for exotic bets
+export interface ExoticBet extends BetBase {
+	type: 'QUINELLA' | 'TRIFECTA' | 'FIRST_FOUR'
+	legs: BetLeg[]
+	selections: string[][] // Array of runner IDs for each position
+}
+
+export type Bet = SingleBet | MultiBet | ExoticBet
 
 export interface SettlementRecord {
 	betId: string
 	type: WagerType
 	stake: number
-	result: 'WON' | 'LOST' | 'VOID'
+	result: 'WON' | 'LOST' | 'VOID' | 'CASHED_OUT'
 	payout: number // stake + profit for winning; stake for void; 0 for lost
 	profitLoss: number // payout - stake (for EACH_WAY, sum of components)
 	breakdown: string // human-readable details for receipts
@@ -95,6 +104,8 @@ export interface BettingConfig {
 	maxLegsMulti: number
 	minStake: number
 	currency: string
+	// Cashout configuration
+	cashoutFeePercent: number // Percentage fee for cashout (0-100)
 }
 
 export const DEFAULT_CONFIG: BettingConfig = {
@@ -120,7 +131,8 @@ export const DEFAULT_CONFIG: BettingConfig = {
 	},
 	maxLegsMulti: 10,
 	minStake: 0.1,
-	currency: 'Credits'
+	currency: 'Credits',
+	cashoutFeePercent: 5 // 5% fee for cashout
 }
 
 /* --------------------------------- Helpers -------------------------------- */
@@ -205,6 +217,80 @@ export class BettingEngine {
 	placeSingleEachWay(rq: RaceQuote, runnerId: string, stake: number, betId: string): SingleBet {
 		// EACH_WAY: stake is total stake (split 50/50 into WIN and PLACE components)
 		return this.placeSingle(rq, runnerId, stake, betId, 'EACH_WAY')
+	}
+
+	// New method to place exotic bets
+	placeExoticBet(
+		rq: RaceQuote,
+		selections: string[][], // Array of runner IDs for each position
+		stake: number,
+		betType: 'QUINELLA' | 'TRIFECTA' | 'FIRST_FOUR',
+		betId: string
+	): ExoticBet {
+		this.ensureStake(stake)
+		
+		// Validate selections
+		if (betType === 'QUINELLA' && selections.length !== 2) {
+			throw new Error('QUINELLA requires exactly 2 positions')
+		}
+		if (betType === 'TRIFECTA' && selections.length !== 3) {
+			throw new Error('TRIFECTA requires exactly 3 positions')
+		}
+		if (betType === 'FIRST_FOUR' && selections.length !== 4) {
+			throw new Error('FIRST_FOUR requires exactly 4 positions')
+		}
+		
+		// Build legs for each selection
+		const legs: BetLeg[] = []
+		for (const [index, positionSelections] of selections.entries()) {
+			// For simplicity, we'll use the first selection in each position for the leg
+			// In a real implementation, this would be more complex
+			const runnerId = positionSelections[0]
+			const r = rq.runners.find(x => x.runnerId === runnerId)
+			if (!r) throw new Error(`Runner ${runnerId} not found in race ${rq.raceId}`)
+			
+			const winOdds = decimalOddsOrSP(r.decimalOdds, this.cfg)
+			const placeOdds = derivePlaceOddsDecimal(winOdds, this.cfg, rq.categoryId)
+			
+			legs.push({
+				raceId: rq.raceId,
+				selectionRunnerId: r.runnerId,
+				selectionName: r.name,
+				oddsDecimalAtPlacement: winOdds,
+				placeOddsDecimal: placeOdds,
+				categoryId: rq.categoryId,
+				fieldSize: rq.fieldSize ?? rq.runners.length
+			})
+		}
+		
+		// Calculate potential return (simplified calculation)
+		let potentialMultiplier = 1
+		for (const leg of legs) {
+			potentialMultiplier *= leg.oddsDecimalAtPlacement
+		}
+		
+		// Adjust for multiple selections in each position
+		for (const positionSelections of selections) {
+			potentialMultiplier /= positionSelections.length
+		}
+		
+		const potential = stake * potentialMultiplier
+		
+		const bet: ExoticBet = {
+			betId,
+			placedAtMs: Date.now(),
+			stake,
+			type: betType,
+			status: 'PENDING',
+			legs,
+			selections,
+			potentialReturn: Number(fmt(potential))
+		}
+		
+		this.lockFunds(stake)
+		this.storeBet(bet)
+		this.indexBetForRace(rq.raceId, bet.betId)
+		return bet
 	}
 
 	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP'): string {
@@ -311,6 +397,51 @@ export class BettingEngine {
 		return bet
 	}
 
+	/* ------------------------------- Cashout ------------------------------ */
+
+	// Request partial cashout for a bet
+	requestCashout(betId: string, cashoutValue?: number): boolean {
+		const bet = this.bets.get(betId)
+		if (!bet) return false
+		if (bet.status !== 'PENDING') return false
+		
+		// If no cashout value provided, calculate it based on current odds
+		let actualCashoutValue = cashoutValue
+		if (actualCashoutValue === undefined) {
+			// Calculate cashout value based on current odds and potential return
+			// This is a simplified calculation - in a real implementation, this would be more complex
+			const potential = bet.potentialReturn || 0
+			// Apply a discount factor based on risk (typically 70-90% of potential return)
+			const discountFactor = 0.85 // 85% of potential return
+			actualCashoutValue = potential * discountFactor
+			
+			// Apply cashout fee
+			const fee = actualCashoutValue * (this.cfg.cashoutFeePercent / 100)
+			actualCashoutValue -= fee
+		}
+		
+		// Ensure cashout value is reasonable
+		if (actualCashoutValue <= 0 || actualCashoutValue > (bet.potentialReturn || 0)) {
+			return false
+		}
+		
+		// Process cashout
+		this.unlockFunds(bet.stake)
+		this.credit(actualCashoutValue)
+		bet.status = 'CASHED_OUT'
+		bet.cashoutValue = Number(fmt(actualCashoutValue))
+		
+		// Remove from pending bets for all races
+		for (const raceId of this.raceToPendingBets.keys()) {
+			const betIds = this.raceToPendingBets.get(raceId)
+			if (betIds) {
+				betIds.delete(betId)
+			}
+		}
+		
+		return true
+	}
+
 	/* ------------------------------- Cancels ------------------------------ */
 
 	// Optional: allow cancel before advertised start
@@ -351,6 +482,11 @@ export class BettingEngine {
 				batch.push(() => {
 					const rec = this.progressMulti(bet as MultiBet, result)
 					if (rec) records.push(rec)
+				})
+			} else if (['QUINELLA', 'TRIFECTA', 'FIRST_FOUR'].includes(bet.type)) {
+				batch.push(() => {
+					const rec = this.settleExotic(bet as ExoticBet, result)
+					records.push(rec)
 				})
 			} else {
 				batch.push(() => {
@@ -417,6 +553,45 @@ export class BettingEngine {
 		this.credit(payout)
 		bet.status = finalResult === 'VOID' ? 'VOID' : finalResult
 		return this.postSettle(bet, { payout, profitLoss: payout - bet.stake, result: finalResult, breakdown })
+	}
+
+	// New method to settle exotic bets
+	private settleExotic(bet: ExoticBet, result: RaceResult): SettlementRecord {
+		const positions = result.placings
+		let payout = 0
+		let breakdown = ''
+		
+		// Check if the bet wins based on the actual race result
+		let isWin = true
+		for (let i = 0; i < bet.selections.length; i++) {
+			const positionSelections = bet.selections[i]
+			const actualWinner = positions[i]
+			
+			// For exotic bets, the user wins if their selection for each position matches
+			// the actual result for that position
+			if (!positionSelections.includes(actualWinner)) {
+				isWin = false
+				break
+			}
+		}
+		
+		if (isWin) {
+			// Calculate payout based on the odds of the winning selections
+			let totalOdds = 1
+			for (let i = 0; i < bet.legs.length; i++) {
+				totalOdds *= bet.legs[i].oddsDecimalAtPlacement
+			}
+			payout = bet.stake * totalOdds
+			breakdown = `${bet.type} won @ ${fmt(totalOdds)}`
+		} else {
+			payout = 0
+			breakdown = `${bet.type} lost`
+		}
+		
+		this.unlockFunds(bet.stake)
+		this.credit(payout)
+		bet.status = isWin ? 'WON' : 'LOST'
+		return this.postSettle(bet, { payout, profitLoss: payout - bet.stake, result: isWin ? 'WON' : 'LOST', breakdown })
 	}
 
 	private progressMulti(bet: MultiBet, result: RaceResult): SettlementRecord | null {
@@ -496,7 +671,7 @@ export class BettingEngine {
 		this.raceToPendingBets.get(raceId)!.add(betId)
 	}
 
-	private postSettle(bet: Bet, info: { payout: number; profitLoss: number; result: 'WON' | 'LOST' | 'VOID'; breakdown: string }): SettlementRecord {
+	private postSettle(bet: Bet, info: { payout: number; profitLoss: number; result: 'WON' | 'LOST' | 'VOID' | 'CASHED_OUT'; breakdown: string }): SettlementRecord {
 		const rec: SettlementRecord = {
 			betId: bet.betId,
 			type: bet.type,

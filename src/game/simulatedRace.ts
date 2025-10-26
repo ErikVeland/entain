@@ -11,6 +11,17 @@ export type CategoryId =
 	| '161d9be2-e909-4326-8c2c-35ed71fb460b' // Harness
 	| string;
 
+// New interfaces for external factors
+export interface WeatherConditions {
+	type: 'sunny' | 'cloudy' | 'rainy' | 'windy';
+	intensity: number; // 0-1 scale
+}
+
+export interface TrackCondition {
+	type: 'good' | 'dead' | 'slow' | 'fast';
+	quality: number; // 0-1 scale
+}
+
 export interface RunnerInput {
 	id: string;
 	number: number;
@@ -25,6 +36,9 @@ export interface RaceInput {
 	categoryId: CategoryId;
 	advertisedStartMs?: number;
 	runners: RunnerInput[];
+	// New optional fields for external factors
+	weather?: WeatherConditions;
+	trackCondition?: TrackCondition;
 }
 
 export type SimStatus = 'pending' | 'running' | 'finished' | 'aborted';
@@ -180,6 +194,58 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 	// Planned duration for this playback
 	const tTotalMs = pickDurationMs(rand, input.categoryId);
 
+	// External factors
+	const weather = input.weather || { type: 'sunny', intensity: 0 };
+	const trackCondition = input.trackCondition || { type: 'good', quality: 1 };
+
+	// Weather impact factors
+	let weatherSpeedFactor = 1.0;
+	let weatherStaminaFactor = 1.0;
+	
+	switch (weather.type) {
+		case 'rainy':
+			weatherSpeedFactor = 0.9 - (weather.intensity * 0.1); // Slower in rain
+			weatherStaminaFactor = 0.95 - (weather.intensity * 0.05); // More tiring
+			break;
+		case 'windy':
+			weatherSpeedFactor = 0.95 - (weather.intensity * 0.05); // Slightly slower
+			weatherStaminaFactor = 0.97 - (weather.intensity * 0.03); // Slightly more tiring
+			break;
+		case 'cloudy':
+			weatherSpeedFactor = 0.98; // Slight slowdown
+			weatherStaminaFactor = 0.99; // Slight stamina impact
+			break;
+		default: // sunny
+			weatherSpeedFactor = 1.0; // No impact
+			weatherStaminaFactor = 1.0; // No impact
+	}
+
+	// Track condition impact factors
+	let trackSpeedFactor = 1.0;
+	let trackStaminaFactor = 1.0;
+	
+	switch (trackCondition.type) {
+		case 'slow':
+			trackSpeedFactor = 0.85; // Much slower
+			trackStaminaFactor = 0.9; // More tiring
+			break;
+		case 'dead':
+			trackSpeedFactor = 0.92; // Slower
+			trackStaminaFactor = 0.95; // More tiring
+			break;
+		case 'fast':
+			trackSpeedFactor = 1.08; // Faster
+			trackStaminaFactor = 1.02; // Less tiring
+			break;
+		default: // good
+			trackSpeedFactor = 1.0; // Normal
+			trackStaminaFactor = 1.0; // Normal
+	}
+
+	// Combined environmental factors
+	const environmentalSpeedFactor = weatherSpeedFactor * trackSpeedFactor;
+	const environmentalStaminaFactor = weatherStaminaFactor * trackStaminaFactor;
+
 	// Allocate target finish offsets: favourites slightly shorter, outsiders longer.
 	// We derive per-runner "strength" s in (0,1): s = (p - pMin)/(pMax - pMin), then map to time bias.
 	const probs = input.runners.map(r => pMap.get(r.id)!);
@@ -196,7 +262,8 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 		const noise = gaussian(rand, 0, 0.025 + (0.035 * (1 - s)));
 		// Clamp bias+noise to reasonable band
 		const mult = Math.min(1.18, Math.max(0.82, bias * (1 + noise)));
-		finishTimeMs[r.id] = Math.round(tTotalMs * mult);
+		// Apply environmental factors to finish times
+		finishTimeMs[r.id] = Math.round(tTotalMs * mult / environmentalSpeedFactor);
 	}
 
 	// Pace parameters per runner
@@ -207,8 +274,8 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 		const accel = 0.22 + 0.10 * s + (rand() - 0.5) * 0.04; // favourites jump well
 		const kick = 0.16 + 0.08 * s + (rand() - 0.5) * 0.04;  // favourites stronger late
 		const jitter = 0.006 + (1 - s) * 0.012; // outsiders wobble more
-		// Stamina factor - favourites have better stamina
-		const stamina = 0.8 + 0.2 * s + (rand() - 0.5) * 0.1;
+		// Stamina factor - favourites have better stamina, adjusted by environmental factors
+		const stamina = clamp01((0.8 + 0.2 * s + (rand() - 0.5) * 0.1) * environmentalStaminaFactor);
 		paceParams[r.id] = { accel: clamp01(accel), kick: clamp01(kick), jitter, stamina: clamp01(stamina) };
 	}
 
@@ -227,8 +294,8 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 		let base = paceCurve(u, accel, kick, stamina);
 		// Add small seeded jitter (stationary mean, bounded)
 		const j = (gaussian(rand, 0, jitter) * (1 - u)); // less jitter near finish
-		// Add fatigue factor - runners slow down as race progresses
-		const fatigue = Math.max(0.7, 1 - (u * 0.3)); // Up to 30% slower at end
+		// Add fatigue factor - runners slow down as race progresses, adjusted by environmental factors
+		const fatigue = Math.max(0.7, 1 - (u * 0.3 * environmentalStaminaFactor)); // Up to 30% slower at end
 		return clamp01((base + j) * fatigue);
 	}
 
