@@ -1,5 +1,5 @@
 <template>
-  <div v-if="showTicker" class="fixed top-16 left-0 right-0 bg-brand-primary text-text-inverse py-2 z-50">
+  <div v-if="showTicker && isSimulationMode" class="fixed top-16 left-0 right-0 bg-brand-primary text-text-inverse py-2 z-50">
     <div class="container mx-auto px-4 overflow-hidden">
       <div class="animate-marquee whitespace-nowrap">
         {{ currentMessage }}
@@ -9,7 +9,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBetsStore } from '../stores/bets'
 
 // State
@@ -18,6 +18,11 @@ const currentMessage = ref('')
 const messages = ref<string[]>([])
 const betsStore = useBetsStore()
 
+// Only show ticker in simulation mode
+const isSimulationMode = computed(() => {
+  return betsStore.showGame && betsStore.useSimulatedData
+})
+
 // Add a message to the ticker
 const addMessage = (message: string) => {
   messages.value.push(message)
@@ -25,6 +30,9 @@ const addMessage = (message: string) => {
     showTicker.value = true
   }
   currentMessage.value = message
+  
+  // Log to console for debugging
+  console.log('News Ticker Message:', message)
 }
 
 // Clear all messages and hide ticker
@@ -135,3 +143,4 @@ onUnmounted(() => {
   animation: marquee 15s linear infinite;
 }
 </style>
+```

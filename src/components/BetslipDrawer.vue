@@ -97,9 +97,9 @@
                   v-for="selection in activeSelections"
                   :key="selection.id"
                   :selection="selection"
-                  @update-market="updateSelectionMarket"
-                  @update-stake="updateSelectionStake"
-                  @remove="removeSelection"
+                  @update-market="(market: 'win' | 'place' | 'each-way') => handleUpdateMarket(selection.id, market)"
+                  @update-stake="(stake: number) => handleUpdateStake(selection.id, stake)"
+                  @remove="() => handleRemoveSelection(selection.id)"
                 />
               </div>
               
@@ -107,11 +107,11 @@
               <div class="mt-6 pt-4 border-t border-surface">
                 <div class="flex justify-between text-sm mb-1">
                   <span class="text-text-muted">Total Stake:</span>
-                  <span class="font-medium">${{ (totalStake / 100).toFixed(2) }}</span>
+                  <span class="font-medium">${{ (totalStakeValue / 100).toFixed(2) }}</span>
                 </div>
                 <div class="flex justify-between text-sm">
                   <span class="text-text-muted">Est. Return:</span>
-                  <span class="font-medium text-success">${{ (totalEstimatedReturn / 100).toFixed(2) }}</span>
+                  <span class="font-medium text-success">${{ (totalEstimatedReturnValue / 100).toFixed(2) }}</span>
                 </div>
               </div>
               
@@ -125,7 +125,7 @@
                 </button>
                 <button
                   @click="placeBets"
-                  :disabled="!canPlaceBets"
+                  :disabled="!canPlaceBetsValue"
                   class="flex-1 py-2 px-4 bg-brand-primary text-text-inverse rounded-lg hover:bg-opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-brand-primary"
                 >
                   Place Bets
@@ -154,21 +154,24 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBettingLogic } from '../composables/useBettingLogic'
 import { useBetsStore } from '../stores/bets'
+import type { BetSelection } from '../stores/bets'
 import BetCard from './BetCard.vue'
 import PendingBetsList from './PendingBetsList.vue'
 
 const betsStore = useBetsStore()
 const {
-  activeSelections,
+  activeBets,
   totalStake,
-  totalEstimatedReturn,
-  canPlaceBets,
-  updateSelectionMarket,
-  updateSelectionStake,
-  removeSelection,
-  clearSelections,
-  placeSelections
+  bankroll,
+  placeBet,
+  cancelBet,
+  settleRace,
+  calculateEstimatedReturn,
+  canPlaceBets
 } = useBettingLogic()
+
+// State for betslip selections (stored in memory, not in the store)
+const betslipSelections = ref<BetSelection[]>([])
 
 // State
 const isOpen = ref(false)
@@ -177,8 +180,86 @@ const isMobile = ref(false)
 
 // Computed
 const pendingBets = computed(() => betsStore.pendingBets)
+const activeSelections = computed(() => betslipSelections.value)
+const totalStakeValue = computed(() => {
+  return betslipSelections.value.reduce((sum, selection) => sum + selection.stake, 0)
+})
+const totalEstimatedReturnValue = computed(() => {
+  return betslipSelections.value.reduce((sum, selection) => {
+    const numericOdds = selection.odds === 'SP' ? 6.0 : selection.odds
+    return sum + (selection.stake * numericOdds)
+  }, 0)
+})
+const canPlaceBetsValue = computed(() => {
+  return betslipSelections.value.length > 0 && betslipSelections.value.every(s => s.stake > 0)
+})
 
-// Methods
+// Methods for betslip management
+const addSelection = (selection: Omit<BetSelection, 'id' | 'estimatedReturn' | 'stake'>) => {
+  const newSelection: BetSelection = {
+    ...selection,
+    id: `${selection.raceId}-${selection.runnerId}`,
+    stake: 0,
+    estimatedReturn: 0
+  }
+  
+  // Check if selection already exists
+  const existingIndex = betslipSelections.value.findIndex(
+    s => s.raceId === selection.raceId && s.runnerId === selection.runnerId
+  )
+  
+  if (existingIndex >= 0) {
+    // Update existing selection
+    betslipSelections.value[existingIndex] = newSelection
+  } else {
+    // Add new selection
+    betslipSelections.value.push(newSelection)
+  }
+}
+
+const handleUpdateMarket = (selectionId: string, market: 'win' | 'place' | 'each-way') => {
+  const selection = betslipSelections.value.find(s => s.id === selectionId)
+  if (selection) {
+    selection.market = market
+    selection.estimatedReturn = calculateEstimatedReturn(selection.stake, selection.odds, market)
+  }
+}
+
+const handleUpdateStake = (selectionId: string, stake: number) => {
+  const selection = betslipSelections.value.find(s => s.id === selectionId)
+  if (selection) {
+    selection.stake = stake
+    selection.estimatedReturn = calculateEstimatedReturn(stake, selection.odds, selection.market)
+  }
+}
+
+const handleRemoveSelection = (selectionId: string) => {
+  betslipSelections.value = betslipSelections.value.filter(s => s.id !== selectionId)
+}
+
+const clearSelections = () => {
+  betslipSelections.value = []
+}
+
+const placeBets = () => {
+  if (betslipSelections.value.length === 0) return
+  
+  // Place each selection as a bet
+  betslipSelections.value.forEach(selection => {
+    betsStore.placeBet(
+      selection.raceId,
+      selection.runnerId,
+      selection.stake,
+      selection.odds
+    )
+  })
+  
+  // Clear selections after placing
+  clearSelections()
+  alert(`Bets placed. Good luck!`)
+}
+
+// Methods for drawer
 const toggleDrawer = () => {
   isOpen.value = !isOpen.value
   if (isOpen.value) {
@@ -198,17 +279,6 @@ const closeDrawer = () => {
   const openButton = document.querySelector('[aria-label="Open betslip"]') as HTMLElement
   if (openButton) {
     openButton.focus()
-  }
-}
-
-const placeBets = () => {
-  // Capture the values before placing bets since placeSelections() will clear them
-  const selectionCount = activeSelections.value.length
-  const stakeAmount = totalStake.value
-  
-  if (placeSelections()) {
-    // Show success message with captured values
-    alert(`Bets placed. Good luck!`)
   }
 }
 
@@ -262,7 +332,7 @@ const handleOpenBetslip = (event: CustomEvent) => {
     }
     
     // Add to betslip
-    useBettingLogic().addSelection({
+    addSelection({
       raceId: raceId,
       raceName: runner.raceName || 'Unknown Race',
       raceNumber: runner.raceNumber || 1,
@@ -270,8 +340,7 @@ const handleOpenBetslip = (event: CustomEvent) => {
       runnerNumber: runner.number,
       runnerName: runner.name,
       odds,
-      market: 'win',
-      stake: 0
+      market: 'win'
     })
   }
   

@@ -27,7 +27,7 @@
             <button 
               @click="handleOddsClick"
               class="px-2 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center text-sm bg-surface-sunken hover:bg-brand-primary hover:text-text-inverse border-2 border-surface"
-              :class="oddsButtonClass"
+              :class="[oddsButtonClass, oddsAnimation]"
               :disabled="isExpired"
               :aria-label="`${$t('game.addToBetslip')} ${runner.name} ${$t('game.at')} ${runner.odds}`"
             >
@@ -43,7 +43,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useBettingLogic } from '../composables/useBettingLogic'
 import { useBetsStore } from '../stores/bets'
@@ -69,6 +69,41 @@ const props = defineProps<{
   raceNumber: number
   isExpired?: boolean
 }>()
+
+// Track previous odds for animation
+const previousOdds = ref<string | number>(props.runner.odds)
+const oddsAnimation = ref('')
+
+// Watch for odds changes to trigger animations
+watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | number) => {
+  if (newOdds !== oldOdds) {
+    // Determine if odds went up or down
+    let newNum: number, oldNum: number
+    
+    // Convert to numbers for comparison
+    if (newOdds === 'SP') newNum = 6.0
+    else newNum = typeof newOdds === 'number' ? newOdds : parseFloat(String(newOdds))
+    
+    if (oldOdds === 'SP') oldNum = 6.0
+    else oldNum = typeof oldOdds === 'number' ? oldOdds : parseFloat(String(oldOdds))
+    
+    // Trigger appropriate animation
+    if (!isNaN(newNum) && !isNaN(oldNum)) {
+      if (newNum < oldNum) {
+        oddsAnimation.value = 'animate-odds-change-down'
+      } else if (newNum > oldNum) {
+        oddsAnimation.value = 'animate-odds-change-up'
+      }
+      
+      // Reset animation after it completes
+      setTimeout(() => {
+        oddsAnimation.value = ''
+      }, 500)
+    }
+  }
+  
+  previousOdds.value = newOdds
+})
 
 const formatJockeyName = (jockeyName: string) => {
   if (!jockeyName) return ''
@@ -126,7 +161,11 @@ const handleOddsClick = () => {
   const event = new CustomEvent('open-betslip', { 
     detail: { 
       raceId: props.raceId,
-      runner: props.runner
+      runner: {
+        ...props.runner,
+        raceName: props.raceName,
+        raceNumber: props.raceNumber
+      }
     }
   })
   window.dispatchEvent(event)

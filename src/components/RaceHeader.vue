@@ -96,6 +96,14 @@ const progressPercentage = computed(() => {
   return Math.max(0, Math.min(100, percentage))
 })
 
+// Enhanced race status computation
+const raceStatus = computed(() => {
+  if (props.isExpired) return 'finished'
+  if (isInProgress.value) return 'live'
+  if (isStartingSoon.value) return 'starting_soon'
+  return 'countdown'
+})
+
 // Get letter style based on progress
 const getLetterStyle = (index: number) => {
   // If flashing red, all letters should be white
@@ -169,8 +177,8 @@ onUnmounted(() => {
     
     <div class="relative z-10 flex items-center">
       <div 
-        v-if="isInProgress && !isExpired" 
-        class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-brand-primary"
+        v-if="raceStatus === 'live'" 
+        class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-brand-primary animate-pulse"
         style="margin-right: 0; transform: translateX(3px);"
       >
         <span class="mr-1">●</span>
@@ -178,16 +186,25 @@ onUnmounted(() => {
         <span class="sm:hidden">●</span>
       </div>
       <div 
-        v-else-if="isExpired"
+        v-else-if="raceStatus === 'finished'"
         class="px-3 py-1 rounded-full text-xs font-bold text-text-muted border-2 border-brand-primary"
         style="margin-right: 0; transform: translateX(3px);"
       >
         Over
       </div>
       <div 
+        v-else-if="raceStatus === 'starting_soon'"
+        class="px-3 py-1 rounded-full text-xs font-bold bg-warning text-text-inverse flex items-center border-2 border-brand-primary"
+        style="margin-right: 0; transform: translateX(3px);"
+      >
+        <span class="mr-1">●</span>
+        <span class="hidden sm:inline">Starting</span>
+        <span class="sm:hidden">●</span>
+      </div>
+      <div 
         v-else
         class="relative h-6 border-2 border-brand-primary flex items-center rounded-full overflow-hidden"
-        :class="{ 'bg-danger': isFlashingRed }"
+        :class="{ 'bg-danger': isFlashingRed, 'bg-warning': raceStatus === 'starting_soon' }"
         style="width: 64px; margin-right: 0; transform: translateX(3px);"
       >
         <!-- Progress bar background -->

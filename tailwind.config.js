@@ -157,6 +157,49 @@ module.exports = {
 					'100%': {
 						transform: 'rotate(360deg)'
 					}
+				},
+				// Enhanced race animations
+				'odds-change-up': {
+					'0%': {
+						transform: 'scale(1)',
+						backgroundColor: 'rgba(22, 163, 74, 0.2)'
+					},
+					'50%': {
+						transform: 'scale(1.1)',
+						backgroundColor: 'rgba(22, 163, 74, 0.4)'
+					},
+					'100%': {
+						transform: 'scale(1)',
+						backgroundColor: 'transparent'
+					}
+				},
+				'odds-change-down': {
+					'0%': {
+						transform: 'scale(1)',
+						backgroundColor: 'rgba(220, 38, 38, 0.2)'
+					},
+					'50%': {
+						transform: 'scale(1.1)',
+						backgroundColor: 'rgba(220, 38, 38, 0.4)'
+					},
+					'100%': {
+						transform: 'scale(1)',
+						backgroundColor: 'transparent'
+					}
+				},
+				'race-finish': {
+					'0%': {
+						transform: 'scale(1)',
+						boxShadow: '0 0 0 0 rgba(249, 115, 22, 0.4)'
+					},
+					'70%': {
+						transform: 'scale(1.02)',
+						boxShadow: '0 0 0 10px rgba(249, 115, 22, 0)'
+					},
+					'100%': {
+						transform: 'scale(1)',
+						boxShadow: '0 0 0 0 rgba(249, 115, 22, 0)'
+					}
 				}
 			},
 			animation: {
@@ -173,7 +216,10 @@ module.exports = {
 				'slide-out-right': 'slide-out-right 0.3s ease-in',
 				'bounce-in': 'bounce-in 0.6s ease-out',
 				'pulse-slow': 'pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-				'spin-slow': 'spin-slow 3s linear infinite'
+				'spin-slow': 'spin-slow 3s linear infinite',
+				'odds-change-up': 'odds-change-up 0.5s ease-out',
+				'odds-change-down': 'odds-change-down 0.5s ease-out',
+				'race-finish': 'race-finish 1s ease-out'
 			}
 		}
 	},

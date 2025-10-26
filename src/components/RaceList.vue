@@ -1,57 +1,3 @@
-<template>
-  <div>
-    <div v-if="store.loadState === 'loading' && store.races.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-      <!-- Skeleton loaders -->
-      <div 
-        v-for="i in 5" 
-        :key="i"
-        class="bg-surface-raised rounded-xl p-6 animate-pulse"
-      >
-        <div class="h-4 bg-surface-sunken rounded w-3/4 mb-4"></div>
-        <div class="h-6 bg-surface-sunken rounded w-1/2 mb-4"></div>
-        <div class="h-8 bg-surface-sunken rounded w-full"></div>
-      </div>
-    </div>
-
-    <div v-else-if="store.loadState === 'error'" class="text-center py-12">
-      <div class="text-danger text-lg font-medium mb-2">{{ $t('races.error') }}</div>
-      <div class="text-text-muted mb-4">{{ store.errorMessage }}</div>
-      <div class="text-text-muted text-sm mb-4">{{ $t('races.checkBack') }}</div>
-      <button 
-        @click="retryFetch"
-        class="px-4 py-2 bg-brand-primary text-text-inverse rounded-lg hover:bg-opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-brand-primary"
-        ref="retryButton"
-      >
-        {{ $t('races.tryAgain') }}
-      </button>
-    </div>
-
-    <div v-else-if="store.nextFive.length === 0" class="text-center py-12">
-      <div class="text-text-muted text-lg">{{ $t('races.noRaces') }}</div>
-      <div class="text-text-muted mt-2">{{ $t('races.checkBack') }}</div>
-    </div>
-
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-      <div 
-        v-for="race in visibleRaces"
-        :key="race.id"
-        class="transition-all duration-500 ease-in-out flex"
-        :class="{
-          'opacity-0 transform translate-y-4 scale-95': expiringRaces.has(race.id),
-          'opacity-100 transform translate-y-0 scale-100': !expiringRaces.has(race.id)
-        }"
-      >
-        <RaceColumn 
-          :race="race" 
-          :is-active="true"
-          :is-expired="expiringRaces.has(race.id)"
-          class="w-full"
-        />
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -82,6 +28,7 @@ const visibleRaces = computed(() => {
 })
 
 const retryFetch = () => {
+  console.log('Retrying fetch...')
   store.fetchRaces()
 }
 
@@ -94,6 +41,7 @@ const handleAddToBetslip = (payload: { race: any; runner: any }) => {
 // Track expiring and new races
 const previousRaces = ref<string[]>([])
 watch(() => store.nextFive, (currentRaces, oldRaces) => {
+  console.log('Next five changed:', currentRaces, oldRaces)
   const currentRaceIds = currentRaces.map(r => r.id)
   
   // Find races that were removed
@@ -126,6 +74,12 @@ watch(() => store.nextFive, (currentRaces, oldRaces) => {
   previousRaces.value = currentRaceIds
 }, { deep: true })
 
+// Function to check if a race is expired
+const isRaceExpired = (race: any) => {
+  const now = Date.now()
+  return now >= (race.advertised_start_ms + 60000)
+}
+
 // Clean up interval when component unmounts
 import { onUnmounted, onMounted } from 'vue'
 onUnmounted(() => {
@@ -135,6 +89,7 @@ onUnmounted(() => {
 onMounted(() => {
   // Initialize previous races
   previousRaces.value = store.nextFive.map(r => r.id)
+  console.log('RaceList mounted, initial nextFive:', store.nextFive)
   
   // Focus the retry button if it exists and there's an error
   if (store.loadState === 'error' && retryButton.value) {
@@ -142,3 +97,83 @@ onMounted(() => {
   }
 })
 </script>
+
+<template>
+  <div class="space-y-6">
+    <!-- Loading state -->
+    <div v-if="store.loadState === 'loading' && store.races.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <div v-for="i in 5" :key="i" class="bg-surface-raised rounded-2xl shadow-card overflow-hidden animate-pulse">
+        <div class="h-48 bg-surface-sunken"></div>
+        <div class="p-4">
+          <div class="h-6 bg-surface-sunken rounded mb-2"></div>
+          <div class="h-4 bg-surface-sunken rounded w-3/4"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error state -->
+    <div v-else-if="store.loadState === 'error'" class="text-center py-12">
+      <div class="text-5xl mb-4">⚠️</div>
+      <h3 class="text-xl font-bold mb-2">{{ $t('errors.racesLoadFailed') }}</h3>
+      <p class="text-text-muted mb-4">{{ store.errorMessage }}</p>
+      <button 
+        ref="retryButton"
+        @click="retryFetch"
+        class="px-4 py-2 bg-brand-primary text-text-inverse rounded-lg hover:bg-opacity-90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
+      >
+        {{ $t('actions.retry') }}
+      </button>
+    </div>
+
+    <!-- Empty state -->
+    <div v-else-if="store.loadState === 'ready' && visibleRaces.length === 0" class="text-center py-12">
+      <div class="text-5xl mb-4">📭</div>
+      <h3 class="text-xl font-bold mb-2">{{ $t('races.noRacesAvailable') }}</h3>
+      <p class="text-text-muted">{{ $t('races.noRacesDescription') }}</p>
+    </div>
+
+    <!-- Race grid -->
+    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+      <TransitionGroup name="race-list" tag="div" class="contents">
+        <div 
+          v-for="race in visibleRaces"
+          :key="race.id"
+          class="race-list-item"
+        >
+          <RaceColumn
+            :race="race"
+            :is-expired="isRaceExpired(race)"
+            :class="{
+              'opacity-50 scale-95': expiringRaces.has(race.id),
+              'scale-105': newRaces.has(race.id)
+            }"
+            @add-to-betslip="handleAddToBetslip"
+          />
+        </div>
+      </TransitionGroup>
+    </div>
+  </div>
+</template>
+
+<style scoped>
+.race-list-move,
+.race-list-enter-active,
+.race-list-leave-active {
+  transition: all 0.5s ease;
+}
+
+.race-list-enter-from,
+.race-list-leave-to {
+  opacity: 0;
+  transform: translateX(30px);
+}
+
+.race-list-leave-active {
+  position: absolute;
+}
+
+/* Add specific styling for race list items */
+.race-list-item {
+  transition: all 0.5s ease;
+}
+</style>

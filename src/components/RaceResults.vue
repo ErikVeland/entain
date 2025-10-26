@@ -1,5 +1,5 @@
 <template>
-  <div v-if="betsStore.showGame && raceResult" class="mt-6 bg-surface-sunken rounded-lg p-4">
+  <div v-if="betsStore.showGame && raceResult" class="mt-6 bg-surface-sunken rounded-lg p-4 animate-race-finish">
     <h3 class="text-lg font-semibold text-text-base mb-3">Race Results</h3>
     
     <div class="mb-4">

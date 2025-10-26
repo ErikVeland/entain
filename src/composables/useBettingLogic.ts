@@ -1,6 +1,7 @@
 // src/composables/useBettingLogic.ts
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useBetsStore } from '../stores/bets'
+import type { BetSelection } from '../stores/bets'
 
 export function useBettingLogic() {
   const betsStore = useBetsStore()

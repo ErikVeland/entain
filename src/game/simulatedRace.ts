@@ -142,20 +142,26 @@ function normaliseProbabilities(runners: RunnerInput[]): Map<string, number> {
 /* ---------------------------- Pace Curve Helpers -------------------------- */
 
 // Smooth acceleration → cruise → final kick. Returns progress [0..1] at time fraction u.
-function paceCurve(u: number, accel = 0.3, kick = 0.2): number {
-	// Three-piece cubic Bezier-ish easing
+// Enhanced with more realistic horse/greyhound/harness movement patterns
+function paceCurve(u: number, accel = 0.3, kick = 0.2, stamina = 1.0): number {
+	// Three-piece cubic Bezier-ish easing with stamina factor
 	if (u <= accel) {
 		const x = u / accel; // early acceleration
 		return (x * x) / 2 * accel;
 	}
 	if (u >= 1 - kick) {
 		const x = (u - (1 - kick)) / kick; // late kick
-		return 1 - (1 - kick) * (1 - (1 - (1 - x) * (1 - x)) / 2);
+		// Stamina affects the final kick - tired runners have weaker final push
+		const kickStrength = Math.max(0.3, kick * stamina);
+		return 1 - (1 - kickStrength) * (1 - (1 - (1 - x) * (1 - x)) / 2);
 	}
-	// Mid race: near-linear with slight smoothing
+	// Mid race: near-linear with slight smoothing, but stamina affects consistency
 	const midSpan = 1 - accel - kick;
 	const x = (u - accel) / midSpan;
-	return accel / 2 + x * midSpan;
+	// Stamina affects mid-race consistency - tired runners have more variation
+	const consistency = Math.min(1, stamina * 1.2);
+	const variation = (1 - consistency) * 0.05 * (Math.sin(u * 20) + Math.cos(u * 15));
+	return accel / 2 + x * midSpan + variation;
 }
 
 /* ------------------------------- Simulation ------------------------------- */
@@ -194,14 +200,16 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 	}
 
 	// Pace parameters per runner
-	const paceParams: Record<string, { accel: number; kick: number; jitter: number }> = {};
+	const paceParams: Record<string, { accel: number; kick: number; jitter: number; stamina: number }> = {};
 	for (const r of input.runners) {
 		const p = pMap.get(r.id)!;
 		const s = pMax === pMin ? 0.5 : (p - pMin) / (pMax - pMin);
 		const accel = 0.22 + 0.10 * s + (rand() - 0.5) * 0.04; // favourites jump well
 		const kick = 0.16 + 0.08 * s + (rand() - 0.5) * 0.04;  // favourites stronger late
 		const jitter = 0.006 + (1 - s) * 0.012; // outsiders wobble more
-		paceParams[r.id] = { accel: clamp01(accel), kick: clamp01(kick), jitter };
+		// Stamina factor - favourites have better stamina
+		const stamina = 0.8 + 0.2 * s + (rand() - 0.5) * 0.1;
+		paceParams[r.id] = { accel: clamp01(accel), kick: clamp01(kick), jitter, stamina: clamp01(stamina) };
 	}
 
 	// State
@@ -215,11 +223,13 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 	function computeProgress(runnerId: string, elapsed: number): number {
 		const total = finishTimeMs[runnerId];
 		const u = clamp01(elapsed / total);
-		const { accel, kick, jitter } = paceParams[runnerId];
-		let base = paceCurve(u, accel, kick);
+		const { accel, kick, jitter, stamina } = paceParams[runnerId];
+		let base = paceCurve(u, accel, kick, stamina);
 		// Add small seeded jitter (stationary mean, bounded)
 		const j = (gaussian(rand, 0, jitter) * (1 - u)); // less jitter near finish
-		return clamp01(base + j);
+		// Add fatigue factor - runners slow down as race progresses
+		const fatigue = Math.max(0.7, 1 - (u * 0.3)); // Up to 30% slower at end
+		return clamp01((base + j) * fatigue);
 	}
 
 	function emitTick(): void {

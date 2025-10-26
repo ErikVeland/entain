@@ -9,8 +9,12 @@ export function useRaceSimulation() {
   const betsStore = useBetsStore()
   
   // Create a race simulation
-  const createSimulation = (raceInput: RaceInput, seed?: number): SimulationController => {
-    const controller = createRaceSimulation(raceInput, seed)
+  const createSimulation = (raceInput: RaceInput, seed?: number, tickMs?: number): SimulationController => {
+    // Adjust tick interval based on number of active races for better performance
+    const activeRaces = raceControllers.size;
+    const adjustedTickMs = tickMs || (activeRaces > 3 ? 300 : activeRaces > 1 ? 200 : 100);
+    
+    const controller = createRaceSimulation(raceInput, seed, adjustedTickMs)
     
     // Store the controller in memory
     raceControllers.set(raceInput.id, controller)

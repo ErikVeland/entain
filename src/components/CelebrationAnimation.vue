@@ -3,7 +3,7 @@
     <!-- Confetti animation -->
     <div v-if="showConfetti" class="absolute inset-0 overflow-hidden">
       <div 
-        v-for="i in 150" 
+        v-for="i in 200" 
         :key="i"
         class="absolute w-2 h-2 rounded-full"
         :style="confettiStyles[i - 1]"
@@ -15,7 +15,7 @@
       v-if="showWinCelebration"
       class="absolute inset-0 flex items-center justify-center"
     >
-      <div class="bg-surface-raised rounded-xl p-8 shadow-xl border border-brand-primary animate-pulse">
+      <div class="bg-surface-raised rounded-xl p-8 shadow-xl border border-brand-primary animate-pulse transform transition-all duration-300 hover:scale-105">
         <div class="text-center">
           <div class="text-5xl mb-4">🏆</div>
           <h2 class="text-2xl font-bold text-text-base mb-2">Congratulations!</h2>
@@ -28,10 +28,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useAnimationEffects } from '../composables/useAnimationEffects'
 
-const { showConfetti, showWinCelebration, winAmount } = useAnimationEffects()
+// Define CustomEvent type for TypeScript
+interface CustomEventDetail {
+  amount?: number;
+  winAmount?: number;
+}
+
+const { showConfetti, showWinCelebration, winAmount, triggerWinCelebration } = useAnimationEffects()
 
 // Generate confetti styles
 const confettiStyles = ref<any[]>([])
@@ -39,18 +45,38 @@ const confettiStyles = ref<any[]>([])
 onMounted(() => {
   // Generate random confetti pieces
   const pieces = []
-  for (let i = 0; i < 150; i++) {
+  for (let i = 0; i < 200; i++) {
+    // Create different shapes
+    const isCircle = Math.random() > 0.5
+    const size = Math.random() * 12 + 4
+    
     pieces.push({
       left: `${Math.random() * 100}%`,
       top: `-10%`,
       backgroundColor: `hsl(${Math.random() * 360}, 100%, 50%)`,
-      width: `${Math.random() * 10 + 5}px`,
-      height: `${Math.random() * 10 + 5}px`,
-      animation: `confetti-fall ${Math.random() * 3 + 2}s linear forwards`,
-      animationDelay: `${Math.random() * 2}s`
+      width: `${size}px`,
+      height: `${size}px`,
+      borderRadius: isCircle ? '50%' : '0',
+      animation: `confetti-fall ${Math.random() * 4 + 3}s linear forwards, confetti-spin ${Math.random() * 2 + 1}s linear infinite`,
+      animationDelay: `${Math.random() * 3}s`,
+      opacity: Math.random() * 0.5 + 0.5
     })
   }
   confettiStyles.value = pieces
+  
+  // Listen for win celebration trigger
+  const handleWinCelebration = (event: Event) => {
+    const customEvent = event as CustomEvent<CustomEventDetail>;
+    if (customEvent.detail && customEvent.detail.amount) {
+      triggerWinCelebration(customEvent.detail.amount);
+    }
+  };
+  window.addEventListener('trigger-win-celebration', handleWinCelebration as EventListener);
+  
+  // Clean up event listener
+  onUnmounted(() => {
+    window.removeEventListener('trigger-win-celebration', handleWinCelebration as EventListener);
+  });
 })
 </script>
 
@@ -63,6 +89,15 @@ onMounted(() => {
   100% {
     transform: translateY(100vh) rotate(720deg);
     opacity: 0;
+  }
+}
+
+@keyframes confetti-spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 

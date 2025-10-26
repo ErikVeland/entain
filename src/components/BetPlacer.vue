@@ -25,12 +25,12 @@
     </div>
     
     <div class="mb-4">
-      <label class="block text-text-base text-sm mb-1">Bet Amount (${{ config.minBet }}-{{ config.maxBet }})</label>
+      <label class="block text-text-base text-sm mb-1">Bet Amount (${{ config.minStake }}-100)</label>
       <input 
         v-model.number="betAmount" 
         type="number" 
-        :min="config.minBet" 
-        :max="config.maxBet" 
+        :min="config.minStake" 
+        :max="100" 
         :step="1"
         class="w-full bg-surface-raised text-text-base rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
         placeholder="Enter bet amount"
@@ -45,11 +45,16 @@
       Place Bet
     </button>
     
+    <!-- Error display -->
+    <div v-if="error" class="mt-2 p-2 bg-danger bg-opacity-20 text-danger rounded text-sm">
+      {{ error }}
+    </div>
+    
     <div v-if="pendingBets.length > 0" class="mt-4">
       <h4 class="text-text-base text-sm mb-2">Your Bets on This Race</h4>
       <div 
         v-for="bet in pendingBets" 
-        :key="bet.id" 
+        :key="bet.betId" 
         class="flex justify-between items-center bg-surface-raised rounded p-2 mb-2"
       >
         <div>
@@ -57,7 +62,7 @@
           <div class="text-text-muted text-xs">${{ bet.stake }} @ {{ formatOdds(getOddsFromBet(bet)) }}</div>
         </div>
         <button 
-          @click="cancelBet(bet.id)"
+          @click="cancelBet(bet.betId)"
           class="text-danger text-xs hover:underline focus:outline-none"
         >
           Cancel
@@ -85,6 +90,7 @@ const props = defineProps<{
 const betsStore = useBetsStore()
 const selectedRunnerId = ref('')
 const betAmount = ref(10)
+const error = ref<string | null>(null)
 
 const config = DEFAULT_CONFIG
 
@@ -94,8 +100,8 @@ const pendingBets = computed(() => betsStore.engine.getPendingBetsForRace(props.
 const canPlaceBet = computed(() => {
   return (
     selectedRunnerId.value !== '' && 
-    betAmount.value >= config.minBet && 
-    betAmount.value <= config.maxBet && 
+    betAmount.value >= config.minStake && 
+    betAmount.value <= 100 && 
     betAmount.value <= bankroll.value.balance
   )
 })
@@ -133,21 +139,33 @@ const placeBet = () => {
   const runner = props.runners.find(r => r.id === selectedRunnerId.value)
   if (!runner) return
   
-  const betId = betsStore.placeBet(
-    props.raceId,
-    selectedRunnerId.value,
-    betAmount.value,
-    runner.odds
-  )
-  
-  if (betId) {
-    // Reset form
-    selectedRunnerId.value = ''
-    betAmount.value = 10
+  try {
+    error.value = null
+    const betId = betsStore.placeBet(
+      props.raceId,
+      selectedRunnerId.value,
+      betAmount.value,
+      runner.odds
+    )
+    
+    if (betId) {
+      // Reset form
+      selectedRunnerId.value = ''
+      betAmount.value = 10
+    }
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err)
+    console.error('Error placing bet:', err)
   }
 }
 
 const cancelBet = (betId: string) => {
-  betsStore.cancelBet(betId)
+  try {
+    error.value = null
+    betsStore.cancelBet(betId)
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : String(err)
+    console.error('Error cancelling bet:', err)
+  }
 }
 </script>

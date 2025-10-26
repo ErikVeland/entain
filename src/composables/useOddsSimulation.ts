@@ -102,11 +102,11 @@ const horseNames = [
 // More creative and realistic greyhound names based on real examples
 const greyhoundNames = [
   'Zoomerang', 'Bark Ruffalo', 'Chasin\' Pavements', 'Greta Runberg', 'Fast and Furryous',
-  'Snaccident Waiting', 'Whippet Good', 'Elon\'s Leash', 'Dogtor Strange', 'Paw Patrol Tax Fraud',
+  'Snaccident Waiting', 'Whippet Good', 'Dogtor Strange', 'Paw Patrol Tax Fraud',
   'Bite Club', 'Holy Sniff', 'Tracktopus Prime', 'Ruff McGraw', 'Lick James',
   'Fetchual Healing', 'Bark Wahlberg', 'Puppercut Deluxe', 'Gritty Committee', 'K9 West',
   'The Great Catsby', 'Collateral Beagle', 'Sit Happens', 'Goober Supreme', 'Fleas Navidad',
-  'Tails from the Crypt', 'Run D.M.C', 'Sniff Happens', 'Labrathor', 'Noodle of Fortune',
+  'Tails from the Crypt', 'Walk of Shamehound', 'Sniff Happens', 'Labrathor', 'Noodle of Fortune',
   'Mr Worldwide', 'Chew Barker', 'Greyt Expectations', 'Salty Biscuit', 'Pawblo Escobark',
   'Lord of the Leashes', 'Sir Licks-A-Lot', 'No Bones About It', 'Chair Sniffer', 'Bark Twain',
   'Couch Rocket', 'Tailspin City', 'Notorious D.O.G.', 'Walk of Shamehound', 'Shake\'n\'Bacon',
@@ -183,8 +183,19 @@ export function generateRandomizedRunners(raceId: string, categoryId: string, co
       jockey = shuffledHorseJockeys[i % shuffledHorseJockeys.length]
     }
     
-    // Assign different starting odds for variety (between 2.0 and 10.0)
-    const baseOdds = 2.0 + (Math.random() * 8.0)
+    // Assign more realistic starting odds based on runner number and category
+    // Favorites (lower numbers) get shorter odds, outsiders (higher numbers) get longer odds
+    let baseOdds;
+    if (i < 2) {
+      // Top 2 favorites: 1.5-3.0
+      baseOdds = 1.5 + (Math.random() * 1.5);
+    } else if (i < 5) {
+      // Next 3: 3.0-8.0
+      baseOdds = 3.0 + (Math.random() * 5.0);
+    } else {
+      // Rest: 8.0-20.0
+      baseOdds = 8.0 + (Math.random() * 12.0);
+    }
     
     runners.push({
       id: `${raceId}-runner-${i + 1}`,
@@ -206,6 +217,10 @@ export function useOddsSimulation() {
   // Store simulation states for each race
   const simulations = ref<Record<string, OddsSimulationState>>({})
   
+  // Throttling for odds updates to prevent excessive re-renders
+  const lastUpdateTimes = new Map<string, number>()
+  const UPDATE_THROTTLE_MS = 200 // Reduced from 2000ms to 200ms for more responsive updates
+  
   // Initialize odds simulation for a race
   const initializeOddsSimulation = (
     raceId: string, 
@@ -225,6 +240,7 @@ export function useOddsSimulation() {
       })
       
       simulationsState[raceId] = initialState
+      console.log('Initialized odds simulation for race', raceId, 'with runners:', runners)
     }
   }
   
@@ -237,14 +253,26 @@ export function useOddsSimulation() {
     const simulation = simulations.value[raceId]
     if (!simulation) {
       // No simulation found, which is expected when not in simulation mode
+      console.log('No simulation found for race', raceId)
       return
     }
     
+    // Throttle updates to prevent excessive re-renders
+    const now = Date.now();
+    const lastUpdate = lastUpdateTimes.get(raceId) || 0;
+    if (now - lastUpdate < UPDATE_THROTTLE_MS) {
+      console.log('Throttling odds update for race', raceId)
+      return;
+    }
+    lastUpdateTimes.set(raceId, now);
+    
+    console.log('Updating odds for race', raceId, 'with progress:', progressByRunner, 'and order:', order)
+    
     // Update timestamp
-    simulation.lastUpdate = Date.now()
+    simulation.lastUpdate = now;
     
     // Get current leader
-    const leaderId = order[0]
+    const leaderId = order[0];
     
     // Update odds for each runner based on their position and progress with more realistic changes
     Object.keys(simulation.runners).forEach(runnerId => {
@@ -264,40 +292,56 @@ export function useOddsSimulation() {
       let newOdds = currentOdds
       let trend: OddsTrend = 'none'
       
+      // Market dynamics: if race is near start, odds are more volatile
+      const raceProgress = Math.max(...Object.values(progressByRunner));
+      // Reduced volatility for more realistic changes
+      const marketVolatility = raceProgress < 0.1 ? 1.1 : raceProgress < 0.3 ? 1.05 : 1.0;
+      
       // If this is the leader, odds should generally decrease (favorite)
       if (runnerId === leaderId) {
         // Leader gets favored odds, but changes should be gradual
-        const leaderFactor = 0.995 + (0.01 * (1 - progress)) // Much smaller changes
-        newOdds = Math.max(1.1, currentOdds * leaderFactor)
-        trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none'
+        // Much smaller changes for realism
+        const leaderFactor = 0.999 + (0.001 * (1 - progress)) * marketVolatility;
+        newOdds = Math.max(1.1, currentOdds * leaderFactor);
+        trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none';
       } 
       // If runner is in top 3 and making progress, odds may decrease
       else if (currentPosition < 3 && progress > 0.3) {
-        const top3Factor = 0.997 + (0.005 * (1 - (currentPosition / 3))) // Very small changes
-        newOdds = Math.max(1.2, currentOdds * top3Factor)
-        trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none'
+        // Smaller changes for top 3 runners
+        const top3Factor = 0.9995 + (0.0005 * (1 - (currentPosition / 3))) * marketVolatility;
+        newOdds = Math.max(1.2, currentOdds * top3Factor);
+        trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none';
       }
       // If runner is falling behind, odds may increase
       else if (currentPosition > 2 && progress < 0.7) {
-        const trailingFactor = 1.003 + (0.008 * (currentPosition / order.length)) // Small increases
-        newOdds = currentOdds * trailingFactor
-        trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none'
+        // Smaller increases for trailing runners
+        const trailingFactor = 1.0005 + (0.0005 * (currentPosition / order.length)) * marketVolatility;
+        newOdds = currentOdds * trailingFactor;
+        trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
       }
-      // For middle runners, very small fluctuations
+      // For middle runners, small fluctuations
       else {
-        // Very small random fluctuation (±0.3%)
-        const fluctuation = 0.997 + (Math.random() * 0.006)
-        newOdds = currentOdds * fluctuation
-        trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none'
+        // Very small random fluctuation with reduced market volatility factor
+        const fluctuation = 0.9999 + (Math.random() * 0.0002) * marketVolatility;
+        newOdds = currentOdds * fluctuation;
+        trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
       }
       
-      // Ensure odds stay within reasonable bounds (much tighter range)
-      newOdds = Math.max(1.1, Math.min(50, newOdds))
+      // Ensure odds stay within reasonable bounds (tighter range)
+      newOdds = Math.max(1.1, Math.min(50, newOdds));
       
       // Update runner odds and trend
-      runner.odds = parseFloat(newOdds.toFixed(2))
-      runner.oddsTrend = trend
-    })
+      runner.odds = parseFloat(newOdds.toFixed(2));
+      runner.oddsTrend = trend;
+      
+      console.log('Updated odds for runner', runnerId, 'from', currentOdds, 'to', runner.odds, 'with trend', trend)
+      
+      // Add some randomness to trend to make it less predictable
+      if (trend === 'none' && Math.random() < 0.05) {
+        // 5% chance of a small random trend even when it should be none
+        runner.oddsTrend = Math.random() > 0.5 ? 'up' : 'down';
+      }
+    });
   }
   
   // Get current simulated runners for a race
@@ -305,15 +349,19 @@ export function useOddsSimulation() {
     const simulation = simulations.value[raceId]
     if (!simulation) {
       // Return empty array when not in simulation mode
+      console.log('No simulation found in getSimulatedRunners for race', raceId)
       return []
     }
     
-    return Object.values(simulation.runners)
+    const runners = Object.values(simulation.runners)
+    console.log('Returning runners for race', raceId, runners)
+    return runners
   }
   
   // Reset simulation for a race
   const resetSimulation = (raceId: string) => {
     delete simulations.value[raceId]
+    lastUpdateTimes.delete(raceId)
   }
   
   return {

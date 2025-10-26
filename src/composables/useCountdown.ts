@@ -63,9 +63,11 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
         // Stop the interval as the race should be removed
         stop()
       } else {
-        // Race is about to start or just started
+        // Race is about to start or just started (within 1 minute of start time)
         isStartingSoon.value = true
         formattedTime.value = 'Soon'
+        // Don't mark as in progress yet - wait for actual simulation to start
+        isInProgress.value = false
       }
     } else {
       // Format the time as MM:SS
@@ -82,7 +84,13 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
       // If time is less than 1 minute, show "Starting soon"
       if (minutes === 0 && seconds < 60) {
         isStartingSoon.value = true
+      } else {
+        // Reset starting soon flag if we're more than 1 minute away
+        isStartingSoon.value = false
       }
+      
+      // Ensure not in progress when counting down
+      isInProgress.value = false
     }
   }, 1000)
 

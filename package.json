@@ -2,6 +2,7 @@
   "name": "racehub",
   "version": "1.0.0",
   "description": "A Vue 3 application that displays upcoming horse, greyhound, and harness races from the Neds API",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

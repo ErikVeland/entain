@@ -61,17 +61,21 @@ const now = () => Date.now()
  * Normalize raw API race to internal model.
  */
 function normalizeRace(raw: NedsApiRaceRaw): RaceSummary {
+  console.log('Normalizing race:', raw)
   const secs = typeof raw.advertised_start?.seconds === 'string'
     ? parseInt(raw.advertised_start.seconds, 10)
     : Number(raw.advertised_start?.seconds ?? 0)
 
-  return {
+  const result = {
     id: raw.race_id,
     meeting_name: raw.meeting_name,
     race_number: typeof raw.race_number === 'string' ? parseInt(raw.race_number, 10) : Number(raw.race_number),
     advertised_start_ms: secs * 1000,
     category_id: raw.category_id
   }
+  
+  console.log('Normalized race result:', result)
+  return result
 }
 
 /**
@@ -165,14 +169,6 @@ export const useRacesStore = defineStore('races', {
         .filter(r => !isExpired(r, cutoffNow))
         .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
       
-      // If we have fewer than 5 races, fetch more
-      if (activeRaces.length < 5) {
-        // Trigger a fetch in the background
-        setTimeout(() => {
-          this.fetchRaces()
-        }, 100)
-      }
-      
       console.log('Next five races:', activeRaces.slice(0, 5))
       return activeRaces.slice(0, 5)
     },
@@ -218,10 +214,12 @@ export const useRacesStore = defineStore('races', {
         // Use cached data
         this.races = cached.data
         this.loadState = 'ready'
+        console.log('Using cached races data')
         return
       }
       
       try {
+        console.log('Fetching races from API...')
         const res = await fetch('https://api.neds.com.au/rest/v1/racing/?method=nextraces&count=10', {
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store'
@@ -294,12 +292,15 @@ export const useRacesStore = defineStore('races', {
         console.log('Updated races state:', this.races);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
+        console.error('Error fetching races:', err)
         
         // Implement retry mechanism for transient errors
         if (retryCount < 3 && (msg.includes('500') || msg.includes('503') || msg.includes('network') || msg.includes('fetch'))) {
           // Exponential backoff: 1s, 2s, 4s
           const delay = Math.pow(2, retryCount) * 1000
+          console.log(`Retrying fetch in ${delay}ms (attempt ${retryCount + 1})`)
           setTimeout(() => {
+            // Use the action directly
             this.fetchRaces(retryCount + 1)
           }, delay)
           return
@@ -307,7 +308,6 @@ export const useRacesStore = defineStore('races', {
         
         this.errorMessage = msg
         this.loadState = 'error'
-        console.error('Error fetching races:', err)
       }
     },
 
@@ -371,7 +371,9 @@ export const useRacesStore = defineStore('races', {
       if (before > after && after < 5) {
         // Trigger a fetch in the background
         setTimeout(() => {
-          this.fetchRaces()
+          // Get the store instance and call the action
+          const store = useRacesStore()
+          store.fetchRaces()
         }, 100)
       }
       

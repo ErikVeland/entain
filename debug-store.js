@@ -1,24 +1,25 @@
-// Simple test to check what the races store is returning
-const { createPinia, setActivePinia } = require('pinia');
+// Simple Node.js script to test race store functionality
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import { useRacesStore } from './src/stores/races.ts'
 
-// Create a pinia instance
-const pinia = createPinia();
-setActivePinia(pinia);
+// Create a simple Vue app with Pinia
+const app = createApp({})
+const pinia = createPinia()
+app.use(pinia)
 
-// Import the races store
-const { useRacesStore } = require('./src/stores/races.ts');
+// Get the races store
+const store = useRacesStore()
 
-// Create an instance of the store
-const store = useRacesStore();
+console.log('Testing race store functionality...')
 
-// Test the store
-console.log('Store created:', store);
-
-// Try to fetch races
+// Test fetchRaces
 store.fetchRaces().then(() => {
-  console.log('Races fetched:', store.races);
-  console.log('Load state:', store.loadState);
-  console.log('Next five:', store.nextFive);
-}).catch(err => {
-  console.error('Error fetching races:', err);
-});
+  console.log('Fetch completed')
+  console.log('Store state:', store.$state)
+  console.log('Races count:', store.races.length)
+  console.log('Next five races:', store.nextFive)
+  console.log('Load state:', store.loadState)
+}).catch(error => {
+  console.error('Error fetching races:', error)
+})

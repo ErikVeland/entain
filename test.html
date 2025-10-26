@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Debug Test</title>
+    <title>Test Race Fetching</title>
 </head>
 <body>
-    <h1>Debug Test</h1>
-    <div id="app">Loading...</div>
+    <h1>Test Race Fetching</h1>
+    <button id="fetchBtn">Fetch Races</button>
+    <div id="output"></div>
+
     <script>
-        // Simple test to check if there are any JavaScript errors
-        window.addEventListener('error', function(e) {
-            console.error('Global error:', e.error);
-            document.body.innerHTML += '<p style="color: red;">Error: ' + e.error.message + '</p>';
-        });
-        
-        window.addEventListener('unhandledrejection', function(e) {
-            console.error('Unhandled promise rejection:', e.reason);
-            document.body.innerHTML += '<p style="color: red;">Promise rejection: ' + e.reason + '</p>';
+        document.getElementById('fetchBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch('https://api.neds.com.au/rest/v1/racing/?method=nextraces&count=10');
+                const data = await response.json();
+                document.getElementById('output').innerHTML = '<pre>' + JSON.stringify(data, null, 2) + '</pre>';
+            } catch (error) {
+                document.getElementById('output').innerHTML = '<p>Error: ' + error.message + '</p>';
+            }
         });
     </script>
-    <script type="module" src="http://localhost:5173/src/main.ts"></script>
 </body>
 </html>

@@ -1,49 +1,21 @@
 <template>
-  <div class="bg-surface-raised rounded-xl2 p-4 shadow-card">
-    <div class="flex justify-between items-center mb-4">
-      <h3 class="text-lg font-semibold text-text-base">Odds Movement</h3>
-      <div class="flex space-x-2">
-        <button 
-          @click="timeRange = '5m'"
-          class="px-2 py-1 text-xs rounded"
-          :class="timeRange === '5m' ? 'bg-brand-primary text-text-inverse' : 'bg-surface text-text-base'"
-        >
-          5m
-        </button>
-        <button 
-          @click="timeRange = '15m'"
-          class="px-2 py-1 text-xs rounded"
-          :class="timeRange === '15m' ? 'bg-brand-primary text-text-inverse' : 'bg-surface text-text-base'"
-        >
-          15m
-        </button>
-        <button 
-          @click="timeRange = '30m'"
-          class="px-2 py-1 text-xs rounded"
-          :class="timeRange === '30m' ? 'bg-brand-primary text-text-inverse' : 'bg-surface text-text-base'"
-        >
-          30m
-        </button>
-      </div>
-    </div>
-    <div class="h-64">
-      <Line 
-        v-if="loaded && chartData.datasets.length > 0 && showChart"
-        :data="chartData" 
-        :options="chartOptions"
-      />
-      <div v-else class="flex items-center justify-center h-full text-text-muted">
-        <div class="text-center">
-          <p>Loading odds movement data...</p>
-          <div class="mt-2 w-8 h-8 border-4 border-brand-primary border-t-transparent rounded-full animate-spin mx-auto"></div>
-        </div>
-      </div>
-    </div>
+  <div v-if="showChart && loaded" class="h-64 w-full">
+    <Line 
+      :data="chartData" 
+      :options="chartOptions"
+      ref="chartRef"
+    />
+  </div>
+  <div v-else-if="showChart" class="h-64 w-full flex items-center justify-center">
+    <div class="text-text-muted">Loading chart data...</div>
+  </div>
+  <div v-else class="h-64 w-full flex items-center justify-center">
+    <div class="text-text-muted">Chart not available in API mode</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import {
   Chart as ChartJS,
   Title,
@@ -58,6 +30,7 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import { useBetsStore } from '../stores/bets'
+import { useOddsSimulation } from '../composables/useOddsSimulation'
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale, Filler)
 
@@ -66,6 +39,7 @@ const props = defineProps<{
 }>()
 
 const betsStore = useBetsStore()
+const { getSimulatedRunners } = useOddsSimulation()
 
 // Only show chart in simulation mode
 const showChart = computed(() => {
@@ -73,83 +47,149 @@ const showChart = computed(() => {
 })
 
 const timeRange = ref<'5m' | '15m' | '30m'>('15m')
-const mockOddsData = ref<Record<string, { time: number; odds: number }[]>>({})
+const oddsHistory = ref<Record<string, { time: number; odds: number }[]>>({})
 const loaded = ref(false)
+const updateCounter = ref(0) // Force updates
 
-// Generate mock data
+// Initialize odds history for runners
+const initializeOddsHistory = () => {
+  if (!showChart.value) return
+  
+  const runners = getSimulatedRunners(props.raceId)
+  if (runners.length === 0) return
+  
+  // Initialize history for each runner
+  runners.forEach(runner => {
+    if (!oddsHistory.value[runner.id]) {
+      oddsHistory.value[runner.id] = []
+    }
+    
+    // Add initial odds point
+    const currentOdds = runner.odds === 'SP' ? 6.0 : runner.odds
+    oddsHistory.value[runner.id].push({
+      time: Date.now(),
+      odds: typeof currentOdds === 'number' ? currentOdds : 6.0
+    })
+  })
+  
+  loaded.value = true
+}
+
+// Update odds history when runners change
+const updateOddsHistory = () => {
+  if (!showChart.value) return
+  
+  const runners = getSimulatedRunners(props.raceId)
+  if (runners.length === 0) return
+  
+  const now = Date.now()
+  
+  runners.forEach(runner => {
+    const currentOdds = runner.odds === 'SP' ? 6.0 : runner.odds
+    const oddsValue = typeof currentOdds === 'number' ? currentOdds : 6.0
+    
+    // Add new data point
+    if (!oddsHistory.value[runner.id]) {
+      oddsHistory.value[runner.id] = []
+    }
+    
+    oddsHistory.value[runner.id].push({
+      time: now,
+      odds: oddsValue
+    })
+    
+    // Limit history to prevent memory issues (keep last 50 points)
+    if (oddsHistory.value[runner.id].length > 50) {
+      oddsHistory.value[runner.id].shift()
+    }
+  })
+  
+  // Force chart update
+  updateCounter.value++
+}
+
+// Watch for runner changes to update odds history
+let watchStopper: (() => void) | null = null
+let intervalId: number | null = null
+
+// Function to start watching for changes
+const startWatching = () => {
+  if (watchStopper) {
+    watchStopper()
+  }
+  
+  watchStopper = watch(
+    () => getSimulatedRunners(props.raceId),
+    (newRunners, oldRunners) => {
+      if (Array.isArray(newRunners) && newRunners.length > 0) {
+        updateOddsHistory()
+      }
+    },
+    { deep: true }
+  )
+  
+  // Also watch updateCounter for force updates
+  watch(updateCounter, () => {
+    const runners = getSimulatedRunners(props.raceId)
+    if (Array.isArray(runners) && runners.length > 0) {
+      updateOddsHistory()
+    }
+  })
+}
+
 onMounted(() => {
-  // Only initialize mock data if in simulation mode
   if (showChart.value) {
-    // Simulate fetching odds history data
-    setTimeout(() => {
-      // Generate mock odds data for 4 runners
-      const runners = ['Thunder Bay', 'Midnight Express', 'Desert Storm', 'Got Immunity']
-      const now = Date.now()
-      
-      runners.forEach((runner, index) => {
-        mockOddsData.value[runner] = []
-        const baseOdds = [2.4, 3.4, 11.0, 6.0][index]
-        
-        // Generate data points based on selected time range
-        const points = timeRange.value === '5m' ? 10 : timeRange.value === '15m' ? 15 : 30
-        const interval = timeRange.value === '5m' ? 30000 : timeRange.value === '15m' ? 60000 : 60000
-        
-        for (let i = 0; i < points; i++) {
-          const time = now - ((points - i) * interval)
-          const trend = index === 0 ? -0.1 : index === 1 ? -0.05 : index === 2 ? 0.1 : 0
-          const fluctuation = (Math.random() - 0.5) * 0.3
-          const odds = Math.max(1.1, baseOdds + (i * trend * 0.1) + fluctuation)
-          
-          mockOddsData.value[runner].push({
-            time,
-            odds: parseFloat(odds.toFixed(2))
-          })
-        }
-      })
-      
-      loaded.value = true
-    }, 800)
+    // Initialize history
+    initializeOddsHistory()
+    
+    // Start watching for changes
+    startWatching()
+    
+    // Periodic update to ensure chart refreshes
+    intervalId = window.setInterval(() => {
+      if (showChart.value) {
+        updateCounter.value++
+      }
+    }, 1000)
   }
 })
 
-// Watch for time range changes
-watch(timeRange, () => {
-  // Only update mock data if in simulation mode
-  if (showChart.value) {
+// Clean up watcher and interval
+onUnmounted(() => {
+  if (watchStopper) {
+    watchStopper()
+  }
+  if (intervalId) {
+    clearInterval(intervalId)
+  }
+})
+
+// Watch for simulation mode changes
+watch(showChart, (newVal) => {
+  if (newVal) {
+    // Enable chart
+    initializeOddsHistory()
+    startWatching()
+  } else {
+    // Disable chart
+    if (watchStopper) {
+      watchStopper()
+      watchStopper = null
+    }
     loaded.value = false
-    setTimeout(() => {
-      // In a real implementation, we would fetch new data based on the time range
-      // For now, we'll just regenerate mock data
-      const runners = Object.keys(mockOddsData.value)
-      const now = Date.now()
-      
-      runners.forEach((runner, index) => {
-        mockOddsData.value[runner] = []
-        const baseOdds = [2.4, 3.4, 11.0, 6.0][index]
-        
-        const points = timeRange.value === '5m' ? 10 : timeRange.value === '15m' ? 15 : 30
-        const interval = timeRange.value === '5m' ? 30000 : timeRange.value === '15m' ? 60000 : 60000
-        
-        for (let i = 0; i < points; i++) {
-          const time = now - ((points - i) * interval)
-          const trend = index === 0 ? -0.1 : index === 1 ? -0.05 : index === 2 ? 0.1 : 0
-          const fluctuation = (Math.random() - 0.5) * 0.3
-          const odds = Math.max(1.1, baseOdds + (i * trend * 0.1) + fluctuation)
-          
-          mockOddsData.value[runner].push({
-            time,
-            odds: parseFloat(odds.toFixed(2))
-          })
-        }
-      })
-      
-      loaded.value = true
-    }, 500)
   }
 })
 
 const chartData = computed(() => {
-  if (!loaded.value) {
+  if (!loaded.value || !showChart.value) {
+    return {
+      labels: [],
+      datasets: []
+    }
+  }
+  
+  const runners = getSimulatedRunners(props.raceId)
+  if (runners.length === 0) {
     return {
       labels: [],
       datasets: []
@@ -158,10 +198,10 @@ const chartData = computed(() => {
   
   // Create time labels (last 10 points)
   const timeLabels: string[] = []
-  const runners = Object.keys(mockOddsData.value)
+  const sampleRunnerId = runners[0].id
   
-  if (runners.length > 0 && mockOddsData.value[runners[0]].length > 0) {
-    const dataPoints = mockOddsData.value[runners[0]]
+  if (oddsHistory.value[sampleRunnerId] && oddsHistory.value[sampleRunnerId].length > 0) {
+    const dataPoints = oddsHistory.value[sampleRunnerId]
     dataPoints.forEach((point, index) => {
       // Show fewer labels to avoid clutter
       if (index % 2 === 0 || index === dataPoints.length - 1) {
@@ -179,24 +219,32 @@ const chartData = computed(() => {
       'rgb(249, 115, 22)', // brand-primary (orange)
       'rgb(15, 23, 42)',   // brand-secondary (dark blue)
       'rgb(250, 204, 21)', // brand-accent (yellow)
-      'rgb(22, 163, 74)'   // success (green)
+      'rgb(22, 163, 74)',  // success (green)
+      'rgb(124, 58, 237)', // violet
+      'rgb(219, 39, 119)'  // pink
     ]
     
     const backgroundColors = [
       'rgba(249, 115, 22, 0.1)',
       'rgba(15, 23, 42, 0.1)',
       'rgba(250, 204, 21, 0.1)',
-      'rgba(22, 163, 74, 0.1)'
+      'rgba(22, 163, 74, 0.1)',
+      'rgba(124, 58, 237, 0.1)',
+      'rgba(219, 39, 119, 0.1)'
     ]
     
+    // Get odds history for this runner
+    const history = oddsHistory.value[runner.id] || []
+    const oddsData = history.map(point => point.odds)
+    
     return {
-      label: runner,
-      data: mockOddsData.value[runner].map(point => point.odds),
-      borderColor: colors[index],
-      backgroundColor: backgroundColors[index],
+      label: `${runner.number}. ${runner.name}`,
+      data: oddsData,
+      borderColor: colors[index % colors.length],
+      backgroundColor: backgroundColors[index % backgroundColors.length],
       borderWidth: 2,
       pointRadius: 3,
-      pointBackgroundColor: colors[index],
+      pointBackgroundColor: colors[index % colors.length],
       fill: false,
       tension: 0.4 // Smooth curves
     }

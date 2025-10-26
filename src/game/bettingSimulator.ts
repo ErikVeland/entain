@@ -339,19 +339,30 @@ export class BettingEngine {
 		const impacted = this.raceToPendingBets.get(result.raceId)
 		if (!impacted || impacted.size === 0) return []
 		const records: SettlementRecord[] = []
+		
+		// Batch processing for better performance
+		const batch: Array<() => void> = []
+		
 		for (const betId of Array.from(impacted)) {
 			const bet = this.bets.get(betId)
 			if (!bet || bet.status !== 'PENDING') continue
 
 			if (bet.type === 'MULTI') {
-				const rec = this.progressMulti(bet as MultiBet, result)
-				if (rec) records.push(rec)
-				// if still pending, keep it indexed for remaining legs
+				batch.push(() => {
+					const rec = this.progressMulti(bet as MultiBet, result)
+					if (rec) records.push(rec)
+				})
 			} else {
-				const rec = this.settleSingle(bet as SingleBet, result)
-				records.push(rec)
+				batch.push(() => {
+					const rec = this.settleSingle(bet as SingleBet, result)
+					records.push(rec)
+				})
 			}
 		}
+		
+		// Apply all settlements at once
+		batch.forEach(settle => settle())
+		
 		// Clean index for this race after settlements
 		this.raceToPendingBets.delete(result.raceId)
 		return records
