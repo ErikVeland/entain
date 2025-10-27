@@ -231,7 +231,7 @@ export const useRacesStore = defineStore('races', {
       }
       
       try {
-        const res = await fetch('https://api.neds.com.au/rest/v1/racing/?method=nextraces&count=10', {
+        const res = await fetch('/api/rest/v1/racing/?method=nextraces&count=10', {
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store'
         })
