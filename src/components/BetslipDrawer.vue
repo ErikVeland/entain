@@ -140,7 +140,7 @@
             <!-- Success message when bets are placed -->
             <div 
               v-if="Object.keys(placingBets).length > 0" 
-              class="mb-4 p-3 bg-success bg-opacity-20 text-success rounded-lg text-center"
+              class="mb-4 p-3 bg-success bg-opacity-20 text-success rounded-lg text-center success-message"
             >
               Bets placed successfully! Good luck!
             </div>
@@ -494,17 +494,31 @@ defineExpose({
     opacity: 1;
   }
   50% {
-    transform: translate(-50%, -50%) scale(1.2);
+    transform: translate(-100px, -100px) scale(1.2);
     opacity: 0.8;
   }
   100% {
-    transform: translate(-100%, -100%) scale(0.8);
+    transform: translate(-200px, -200px) scale(0.5);
     opacity: 0;
   }
 }
 
 .bet-fly-animation {
-  animation: betFly 0.5s ease-out forwards;
+  animation: betFly 0.8s ease-out forwards;
+  position: relative;
+  z-index: 10;
+}
+
+/* Success message animation */
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translateY(-10px); }
+  10% { opacity: 1; transform: translateY(0); }
+  90% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+
+.success-message {
+  animation: fadeInOut 3s ease-in-out forwards;
 }
 
 /* Add any additional styles if needed */
