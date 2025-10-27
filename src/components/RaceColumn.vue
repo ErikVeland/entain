@@ -225,7 +225,8 @@ watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, start
   
   // Check if race is in countdown status (upcoming race)
   // Odds should update only when race is upcoming (countdown) and not expired
-  const isCountdown = !isExpired && !inProgress && !startingSoon && !raceFinished.value;
+  // Allow odds updates even when "starting soon" as long as not in progress
+  const isCountdown = !isExpired && !inProgress && !raceFinished.value;
   console.log('Is race in countdown status?', isCountdown);
   console.log('betsStore.showGame:', betsStore.showGame);
   console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData);

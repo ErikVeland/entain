@@ -104,7 +104,7 @@ const close = () => {
 
 const enableGameMode = () => {
   betsStore.setShowGame(true)
-  betsStore.acceptWelcomeCredits()
+  betsStore.setUseSimulatedData(true)
   emit('confirm')
 }
 

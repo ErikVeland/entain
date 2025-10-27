@@ -114,22 +114,22 @@ onMounted(() => {
     <!-- Error state -->
     <div v-else-if="store.loadState === 'error'" class="text-center py-12">
       <div class="text-5xl mb-4">⚠️</div>
-      <h3 class="text-xl font-bold mb-2">{{ $t('errors.racesLoadFailed') }}</h3>
+      <h3 class="text-xl font-bold mb-2">{{ $t('races.error') }}</h3>
       <p class="text-text-muted mb-4">{{ store.errorMessage }}</p>
       <button 
         ref="retryButton"
         @click="retryFetch"
         class="px-4 py-2 bg-brand-primary text-text-inverse rounded-lg hover:bg-opacity-90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
       >
-        {{ $t('actions.retry') }}
+        {{ $t('races.tryAgain') }}
       </button>
     </div>
 
     <!-- Empty state -->
     <div v-else-if="store.loadState === 'ready' && visibleRaces.length === 0" class="text-center py-12">
       <div class="text-5xl mb-4">📭</div>
-      <h3 class="text-xl font-bold mb-2">{{ $t('races.noRacesAvailable') }}</h3>
-      <p class="text-text-muted">{{ $t('races.noRacesDescription') }}</p>
+      <h3 class="text-xl font-bold mb-2">{{ $t('races.noRaces') }}</h3>
+      <p class="text-text-muted">{{ $t('races.checkBack') }}</p>
     </div>
 
     <!-- Race grid -->

@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import App from './App.vue'
-import i18n from './i18n'
+import i18n from './i18n/index.ts'
 
 // Import theme initialization CSS first to prevent FOUC
 import './assets/styles/theme-init.css'

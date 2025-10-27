@@ -54,6 +54,7 @@ import { useBettingLogic } from '../composables/useBettingLogic'
 import { useBetsStore } from '../stores/bets'
 
 const { t } = useI18n()
+const betsStore = useBetsStore()
 
 interface Runner {
   id: string
@@ -75,7 +76,10 @@ const props = defineProps<{
   isExpired?: boolean
 }>()
 
-const betsStore = useBetsStore()
+// Log when runner prop changes
+watch(() => props.runner, (newRunner, oldRunner) => {
+  console.log('Runner prop changed for runner', newRunner.id, 'from', oldRunner, 'to', newRunner);
+}, { deep: true });
 
 // Track previous odds for animation
 const previousOdds = ref<string | number>(props.runner.odds)
@@ -96,16 +100,26 @@ watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | numb
     if (oldOdds === 'SP') oldNum = 6.0
     else oldNum = typeof oldOdds === 'number' ? oldOdds : parseFloat(String(oldOdds))
     
+    console.log('Comparing odds for runner', props.runner.id, 'newNum:', newNum, 'oldNum:', oldNum);
+    
     // Trigger appropriate animation
     if (!isNaN(newNum) && !isNaN(oldNum)) {
       if (newNum < oldNum) {
+        console.log('Triggering odds change down animation for runner', props.runner.id);
         oddsAnimation.value = 'animate-odds-change-down'
       } else if (newNum > oldNum) {
+        console.log('Triggering odds change up animation for runner', props.runner.id);
         oddsAnimation.value = 'animate-odds-change-up'
+      }
+      
+      // Log when animation is applied
+      if (oddsAnimation.value) {
+        console.log('Applied animation class', oddsAnimation.value, 'to runner', props.runner.id);
       }
       
       // Reset animation after it completes
       setTimeout(() => {
+        console.log('Resetting animation for runner', props.runner.id);
         oddsAnimation.value = ''
       }, 500)
     }

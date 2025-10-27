@@ -157,6 +157,7 @@ export const useRacesStore = defineStore('races', {
           break
       }
       
+      console.log('Active races computed:', filtered.length, 'total races:', state.races.length);
       return filtered
     },
     /**
@@ -168,8 +169,13 @@ export const useRacesStore = defineStore('races', {
         .filter(r => state.selectedCategories.has(r.category_id))
         .filter(r => !isExpired(r, cutoffNow))
         .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
-      
-      console.log('Next five races:', activeRaces.slice(0, 5))
+  
+      console.log('Computing nextFive races:')
+      console.log('- Total races in store:', state.races.length)
+      console.log('- Races after category filter:', state.races.filter(r => state.selectedCategories.has(r.category_id)).length)
+      console.log('- Races after expiration filter:', state.races.filter(r => state.selectedCategories.has(r.category_id)).filter(r => !isExpired(r, cutoffNow)).length)
+      console.log('- Sorted active races:', activeRaces.length)
+      console.log('- Next five races:', activeRaces.slice(0, 5))
       return activeRaces.slice(0, 5)
     },
     /**
@@ -453,5 +459,9 @@ export const useRacesStore = defineStore('races', {
  * A race is considered expired 60,000ms after its advertised start time.
  */
 function isExpired(r: RaceSummary, t: number): boolean {
-  return t >= (r.advertised_start_ms + 60000)
+  // Log for debugging
+  console.log('Checking if race is expired:', r.id, 'Start time:', r.advertised_start_ms, 'Current time:', t, 'Difference:', t - r.advertised_start_ms);
+  const result = t >= (r.advertised_start_ms + 60000);
+  console.log('Race expired result for', r.id, ':', result);
+  return result;
 }

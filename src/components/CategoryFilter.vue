@@ -12,27 +12,27 @@
         category.bgClass
       ]"
       :aria-pressed="category.active"
-      :title="`${category.active ? $t('categories.selectAll') : $t('categories.selectAll')} ${$t(`categories.${category.name.toLowerCase()}`)} ${$t('categories.races')}`"
+      :title="`${category.active ? $t('categories.selectAll') : $t('categories.selectAll')} ${$t(`categories.${category.name}`)} ${$t('meetings.races')}`"
     >
       <div class="flex items-center">
         <!-- Category icon -->
         <span 
-          v-if="category.name === 'Horse'" 
+          v-if="category.name === 'horse'" 
           class="text-[36px] mr-3"
           :class="category.active ? 'text-white' : 'text-horse'"
         >🏇</span>
         <span 
-          v-else-if="category.name === 'Greyhound'" 
+          v-else-if="category.name === 'greyhound'" 
           class="text-[36px] mr-3"
           :class="category.active ? 'text-white' : 'text-greyhound'"
         >🐕</span>
         <span 
-          v-else-if="category.name === 'Harness'" 
+          v-else-if="category.name === 'harness'" 
           class="text-[36px] mr-3"
           :class="category.active ? 'text-white' : 'text-harness'"
         >🛞</span>
         
-        <span>{{ $t(`categories.${category.name.toLowerCase()}`) }}</span>
+        <span>{{ $t(`categories.${category.name}`) }}</span>
       </div>
       
       <!-- Emoji tickbox -->
@@ -57,21 +57,21 @@ const store = useRacesStore()
 const categories = computed(() => [
   {
     id: CATEGORY_IDS.HORSE,
-    name: 'Horse',
+    name: 'horse',
     active: store.selectedCategories.has(CATEGORY_IDS.HORSE),
-    bgClass: 'bg-horse', // Orange for horses
+    bgClass: 'bg-horse',
   },
   {
     id: CATEGORY_IDS.GREYHOUND,
-    name: 'Greyhound',
+    name: 'greyhound',
     active: store.selectedCategories.has(CATEGORY_IDS.GREYHOUND),
-    bgClass: 'bg-greyhound', // Coppery silver for greyhounds
+    bgClass: 'bg-greyhound',
   },
   {
     id: CATEGORY_IDS.HARNESS,
-    name: 'Harness',
+    name: 'harness',
     active: store.selectedCategories.has(CATEGORY_IDS.HARNESS),
-    bgClass: 'bg-harness', // Orangey red for harness
+    bgClass: 'bg-harness',
   }
 ])
 

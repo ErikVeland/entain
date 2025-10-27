@@ -36,27 +36,27 @@
               category.bgClass
             ]"
             :aria-pressed="category.active"
-            :title="`${category.active ? $t('categories.selectAll') : $t('categories.selectAll')} ${$t(`categories.${category.name.toLowerCase()}`)} ${$t('categories.races')}`"
+            :title="`${category.active ? $t('categories.selectAll') : $t('categories.selectAll')} ${$t(`categories.${category.name}`)} ${$t('meetings.races')}`"
           >
             <div class="flex items-center">
               <!-- Category icon -->
               <span 
-                v-if="category.name === 'Horse'" 
+                v-if="category.name === 'horse'" 
                 class="text-lg mr-1.5"
                 :class="category.active ? 'text-white' : 'text-horse'"
               >🏇</span>
               <span 
-                v-else-if="category.name === 'Greyhound'" 
+                v-else-if="category.name === 'greyhound'" 
                 class="text-lg mr-1.5"
                 :class="category.active ? 'text-white' : 'text-greyhound'"
               >🐕</span>
               <span 
-                v-else-if="category.name === 'Harness'" 
+                v-else-if="category.name === 'harness'" 
                 class="text-lg mr-1.5"
                 :class="category.active ? 'text-white' : 'text-harness'"
               >🛞</span>
               
-              <span class="truncate">{{ $t(`categories.${category.name.toLowerCase()}`) }}</span>
+              <span class="truncate">{{ $t(`categories.${category.name}`) }}</span>
             </div>
             
             <!-- Emoji tickbox -->
@@ -75,7 +75,7 @@
             v-model="localTimeFilter"
             @change="updateTimeFilter"
             class="appearance-none bg-surface text-text-base rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-200 cursor-pointer"
-            :aria-label="$t('races.timeFilter')"
+            :aria-label="$t('races.sortBy')"
           >
             <option value="all">{{ $t('races.allTimes') }}</option>
             <option value="next-hour">{{ $t('races.nextHour') }}</option>
@@ -147,21 +147,21 @@ const updateSortOrder = () => {
 const categories = computed(() => [
   {
     id: CATEGORY_IDS.HORSE,
-    name: 'Horse',
+    name: 'horse',
     active: store.selectedCategories.has(CATEGORY_IDS.HORSE),
-    bgClass: 'bg-horse', // Orange for horses
+    bgClass: 'bg-horse',
   },
   {
     id: CATEGORY_IDS.GREYHOUND,
-    name: 'Greyhound',
+    name: 'greyhound',
     active: store.selectedCategories.has(CATEGORY_IDS.GREYHOUND),
-    bgClass: 'bg-greyhound', // Coppery silver for greyhounds
+    bgClass: 'bg-greyhound',
   },
   {
     id: CATEGORY_IDS.HARNESS,
-    name: 'Harness',
+    name: 'harness',
     active: store.selectedCategories.has(CATEGORY_IDS.HARNESS),
-    bgClass: 'bg-harness', // Orangey red for harness
+    bgClass: 'bg-harness',
   }
 ])
 
