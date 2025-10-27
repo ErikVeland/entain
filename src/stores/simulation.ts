@@ -7,6 +7,12 @@ interface SimulationState {
   activeRaces: Set<string>
   raceStatus: Map<string, 'pending' | 'running' | 'finished' | 'aborted'>
   speedMultipliers: Map<string, number>
+  raceProgress: Map<string, {
+    progressByRunner: Record<string, number>
+    order: string[]
+    gaps: Record<string, number>
+    etaMs: number
+  }>
 }
 
 export const useSimulationStore = defineStore('simulation', {
@@ -14,7 +20,8 @@ export const useSimulationStore = defineStore('simulation', {
     controllers: new Map(),
     activeRaces: new Set(),
     raceStatus: new Map(),
-    speedMultipliers: new Map()
+    speedMultipliers: new Map(),
+    raceProgress: new Map()
   }),
   
   getters: {
@@ -32,6 +39,14 @@ export const useSimulationStore = defineStore('simulation', {
     
     getSpeedMultiplier: (state) => (raceId: string) => {
       return state.speedMultipliers.get(raceId) || 1
+    },
+    
+    getRaceLeader: (state) => (raceId: string) => {
+      const progress = state.raceProgress.get(raceId)
+      if (progress && progress.order.length > 0) {
+        return progress.order[0] // Return the ID of the leader
+      }
+      return null
     }
   },
   
@@ -49,6 +64,7 @@ export const useSimulationStore = defineStore('simulation', {
         this.activeRaces.delete(raceId)
         this.raceStatus.delete(raceId)
         this.speedMultipliers.delete(raceId)
+        this.raceProgress.delete(raceId)
       }
     },
     
@@ -78,6 +94,19 @@ export const useSimulationStore = defineStore('simulation', {
       this.speedMultipliers.set(raceId, multiplier)
     },
     
+    updateRaceProgress(raceId: string, progress: {
+      progressByRunner: Record<string, number>
+      order: string[]
+      gaps: Record<string, number>
+      etaMs: number
+    }) {
+      this.raceProgress.set(raceId, progress)
+    },
+    
+    getRaceProgress(raceId: string) {
+      return this.raceProgress.get(raceId)
+    },
+    
     resetSimulation(raceId: string) {
       // Ensure smooth transition by properly cleaning up before resetting
       const controller = this.controllers.get(raceId)
@@ -86,6 +115,7 @@ export const useSimulationStore = defineStore('simulation', {
       }
       this.activeRaces.delete(raceId)
       this.raceStatus.set(raceId, 'pending')
+      this.raceProgress.delete(raceId)
     },
     
     resetAllSimulations() {
@@ -97,6 +127,7 @@ export const useSimulationStore = defineStore('simulation', {
       this.activeRaces.clear()
       this.raceStatus.clear()
       this.speedMultipliers.clear()
+      this.raceProgress.clear()
     }
   }
 })

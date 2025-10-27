@@ -10,7 +10,6 @@ const props = defineProps<{
   startTime: number
   isExpired?: boolean
   raceId: string
-  raceFinished?: boolean
 }>()
 
 const categoryIcon = computed(() => {
@@ -99,7 +98,7 @@ const progressPercentage = computed(() => {
 
 // Enhanced race status computation
 const raceStatus = computed(() => {
-  if (props.isExpired || props.raceFinished) return 'finished'
+  if (props.isExpired) return 'finished'
   if (isInProgress.value) return 'live'
   if (isStartingSoon.value) return 'starting_soon'
   return 'countdown'
@@ -128,7 +127,7 @@ const getLetterStyle = (index: number) => {
 }
 
 const countdownDisplay = computed(() => {
-  if (props.isExpired || props.raceFinished) {
+  if (props.isExpired) {
     return 'Over'
   }
   
@@ -152,3 +151,83 @@ onUnmounted(() => {
   }
 })
 </script>
+
+<template>
+  <div class="bg-surface-sunken px-3 py-2 flex items-center justify-between relative rounded-t-xl2 overflow-hidden">
+    <!-- Background category icon (full card) -->
+    <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
+      <span v-if="categoryIcon === 'horse'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🏇</span>
+      <span v-else-if="categoryIcon === 'greyhound'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🐕</span>
+      <span v-else-if="categoryIcon === 'harness'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🛞</span>
+    </div>
+    
+    <!-- Race number cap (smaller circular) -->
+    <div class="absolute top-1/2 left-2 transform -translate-y-1/2 bg-brand-primary text-text-inverse w-6 h-6 flex items-center justify-center font-bold text-sm z-10 rounded-full">
+      {{ raceNumber }}
+    </div>
+    
+    <!-- Meeting name with ellipsis - properly spaced -->
+    <div 
+      class="relative z-10 font-bold uppercase text-text-base flex-grow text-left min-w-0 ml-8 mr-2" 
+      :class="{ 'opacity-50': isExpired }"
+      :title="meetingName"
+    >
+      <div class="truncate">{{ meetingName }}</div>
+    </div>
+    
+    <div class="relative z-10 flex items-center">
+      <div 
+        v-if="raceStatus === 'live'" 
+        class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-brand-primary animate-pulse"
+        style="margin-right: 0; transform: translateX(3px);"
+      >
+        <span class="mr-1">●</span>
+        <span class="hidden sm:inline">LIVE</span>
+        <span class="sm:hidden">●</span>
+      </div>
+      <div 
+        v-else-if="raceStatus === 'finished'"
+        class="px-3 py-1 rounded-full text-xs font-bold text-text-muted border-2 border-brand-primary"
+        style="margin-right: 0; transform: translateX(3px);"
+      >
+        Over
+      </div>
+      <div 
+        v-else-if="raceStatus === 'starting_soon'"
+        class="px-3 py-1 rounded-full text-xs font-bold bg-warning text-text-inverse flex items-center border-2 border-brand-primary"
+        style="margin-right: 0; transform: translateX(3px);"
+      >
+        <span class="mr-1">●</span>
+        <span class="hidden sm:inline">Starting</span>
+        <span class="sm:hidden">●</span>
+      </div>
+      <div 
+        v-else
+        class="relative h-6 border-2 border-brand-primary flex items-center rounded-full overflow-hidden"
+        :class="{ 'bg-danger': isFlashingRed, 'bg-warning': raceStatus === 'starting_soon' }"
+        style="width: 64px; margin-right: 0; transform: translateX(3px);"
+      >
+        <!-- Progress bar background -->
+        <div class="absolute inset-0 bg-surface-raised"></div>
+        
+        <!-- Progress fill (straight edges) -->
+        <div 
+          class="absolute inset-0 bg-brand-primary transition-all duration-1000 ease-linear"
+          :style="{ width: progressPercentage + '%' }"
+        ></div>
+        
+        <!-- Countdown text with letter-by-letter fade -->
+        <div class="absolute inset-0 flex items-center justify-center text-xs font-bold whitespace-nowrap">
+          <span 
+            v-for="(char, index) in countdownDisplay" 
+            :key="index"
+            class="transition-opacity duration-300"
+            :style="getLetterStyle(index)"
+          >
+            {{ char }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

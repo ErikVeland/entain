@@ -97,6 +97,7 @@
                   v-for="selection in activeSelections"
                   :key="selection.id"
                   :selection="selection"
+                  :class="{ 'bet-fly-animation': placingBets[selection.id] }"
                   @update-market="handleUpdateMarket"
                   @update-stake="handleUpdateStake"
                   @remove="handleRemoveSelection"
@@ -136,6 +137,14 @@
           
           <!-- Pending bets tab -->
           <div v-if="activeTab === 'pending'" class="p-4">
+            <!-- Success message when bets are placed -->
+            <div 
+              v-if="Object.keys(placingBets).length > 0" 
+              class="mb-4 p-3 bg-success bg-opacity-20 text-success rounded-lg text-center"
+            >
+              Bets placed successfully! Good luck!
+            </div>
+            
             <div v-if="pendingBets.length === 0" class="text-center py-8">
               <div class="text-text-muted">No pending bets</div>
             </div>
@@ -182,6 +191,9 @@ const stakeInputs = ref<Record<string, number>>({})
 const isOpen = ref(false)
 const activeTab = ref<'betslip' | 'pending'>('betslip')
 const isMobile = ref(false)
+
+// Track which bets are being placed with animation
+const placingBets = ref<Record<string, boolean>>({})
 
 // Computed
 const pendingBets = computed(() => betsStore.pendingBets)
@@ -295,51 +307,71 @@ const placeBets = () => {
     return
   }
   
-  // Place each selection as a bet
+  // Mark all selections as being placed for animation
   betslipSelections.value.forEach(selection => {
-    // Ensure stake is a valid number
-    const stake = isNaN(selection.stake) ? 0 : selection.stake
-    console.log('Processing selection:', selection, 'Stake:', stake)
-    
-    if (stake > 0) {
-      // Find the race to get the advertised start time
-      const race = racesStore.races.find(r => r.id === selection.raceId)
-      const advertisedStartMs = race ? race.advertised_start_ms : undefined
-      
-      console.log('Race found:', race, 'Advertised start time:', advertisedStartMs)
-      
-      try {
-        console.log('Attempting to place bet with parameters:', {
-          raceId: selection.raceId,
-          runnerId: selection.runnerId,
-          stake: stake,
-          odds: selection.odds,
-          advertisedStartMs: advertisedStartMs
-        })
-        
-        const result = betsStore.placeBet(
-          selection.raceId,
-          selection.runnerId,
-          stake,
-          selection.odds,
-          advertisedStartMs
-        )
-        
-        console.log('Bet placed successfully:', result)
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        console.error('Error placing bet:', error)
-        alert(`Error placing bet: ${errorMessage}`)
-      }
-    } else {
-      console.log('Skipping selection with zero or invalid stake')
-    }
+    placingBets.value[selection.id] = true
   })
   
-  // Clear selections after placing
-  clearSelections()
-  console.log('Bets placed and selections cleared')
-  alert(`Bets placed. Good luck!`)
+  // Switch to pending bets tab to show the animation
+  activeTab.value = 'pending'
+  
+  // Place each selection as a bet with a slight delay for animation
+  betslipSelections.value.forEach((selection, index) => {
+    // Add a small delay for each bet to create a sequential animation effect
+    setTimeout(() => {
+      // Ensure stake is a valid number
+      const stake = isNaN(selection.stake) ? 0 : selection.stake
+      console.log('Processing selection:', selection, 'Stake:', stake)
+      
+      if (stake > 0) {
+        // Find the race to get the advertised start time
+        const race = racesStore.races.find(r => r.id === selection.raceId)
+        const advertisedStartMs = race ? race.advertised_start_ms : undefined
+        
+        console.log('Race found:', race, 'Advertised start time:', advertisedStartMs)
+        
+        try {
+          console.log('Attempting to place bet with parameters:', {
+            raceId: selection.raceId,
+            runnerId: selection.runnerId,
+            stake: stake,
+            odds: selection.odds,
+            advertisedStartMs: advertisedStartMs
+          })
+          
+          const result = betsStore.placeBet(
+            selection.raceId,
+            selection.runnerId,
+            stake,
+            selection.odds,
+            advertisedStartMs
+          )
+          
+          console.log('Bet placed successfully:', result)
+          
+          // Remove the selection from the placing animation tracking
+          delete placingBets.value[selection.id]
+        } catch (error: unknown) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('Error placing bet:', error)
+          // Show error in a more user-friendly way
+          alert(`Error placing bet: ${errorMessage}`)
+          // Remove the selection from the placing animation tracking
+          delete placingBets.value[selection.id]
+        }
+      } else {
+        console.log('Skipping selection with zero or invalid stake')
+        // Remove the selection from the placing animation tracking
+        delete placingBets.value[selection.id]
+      }
+    }, index * 200) // 200ms delay between each bet placement
+  })
+  
+  // Clear selections after placing (but keep the animation tracking)
+  setTimeout(() => {
+    clearSelections()
+    console.log('Bets placed and selections cleared')
+  }, betslipSelections.value.length * 200 + 500)
 }
 
 // Methods for drawer
@@ -455,5 +487,25 @@ defineExpose({
 </script>
 
 <style scoped>
+/* Add animation for bet placement */
+@keyframes betFly {
+  0% {
+    transform: translate(0, 0) scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-100%, -100%) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.bet-fly-animation {
+  animation: betFly 0.5s ease-out forwards;
+}
+
 /* Add any additional styles if needed */
 </style>

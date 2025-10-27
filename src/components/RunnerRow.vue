@@ -23,8 +23,8 @@
             <span v-if="(runner.jockey || runner.weight) && runner.bestTime"> | </span>
             <!-- Expand BT to Best Time on larger screens -->
             <span v-if="runner.bestTime" :title="$t('game.bestTime')">
-              <span class="hidden md:inline">Best Time: {{ runner.bestTime }}</span>
-              <span class="md:hidden">BT: {{ runner.bestTime }}</span>
+              <span class="hidden lg:inline">Best Time: {{ runner.bestTime }}</span>
+              <span class="lg:hidden">BT: {{ runner.bestTime }}</span>
             </span>
           </div>
           

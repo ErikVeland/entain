@@ -59,11 +59,23 @@ const liveRaceUpdates = computed(() => {
       // Find the race in the store
       const race = store.races.find(r => r.id === raceId)
       if (race) {
+        // Get the race progress to determine the current leader
+        const progress = simulationStore.getRaceProgress(raceId)
+        let leader = "Race in progress"
+        
+        if (progress && progress.order.length > 0) {
+          // Get the first runner in the order (the leader)
+          const leaderId = progress.order[0]
+          // We would need to get the runner name from the race data
+          leader = "Leading runner" // Placeholder
+        }
+        
         return {
           raceId: race.id,
           meetingName: race.meeting_name,
           raceNumber: race.race_number,
-          categoryId: race.category_id
+          categoryId: race.category_id,
+          leader: leader
         }
       }
     }
@@ -280,9 +292,6 @@ onUnmounted(() => {
 
 <template>
   <div class="min-h-screen bg-surface text-text-base transition-colors duration-200 flex flex-col">
-    <!-- News Ticker -->
-    <NewsTicker />
-
     <!-- Debug Panel -->
     <DebugPanel :show-debug="showDebug" @close="showDebug = false" />
 
@@ -320,7 +329,8 @@ onUnmounted(() => {
           <!-- Live race updates in header -->
           <div v-if="isSimulationMode && liveRaceUpdates" class="ml-4 text-sm bg-brand-primary bg-opacity-20 px-3 py-1 rounded-full text-brand-primary flex items-center">
             <span class="mr-2">🔴</span>
-            <span>{{ liveRaceUpdates.meetingName }} R{{ liveRaceUpdates.raceNumber }} Live</span>
+            <span v-if="liveRaceUpdates.leader">{{ liveRaceUpdates.meetingName }} R{{ liveRaceUpdates.raceNumber }}: {{ liveRaceUpdates.leader }} leads!</span>
+            <span v-else>{{ liveRaceUpdates.meetingName }} R{{ liveRaceUpdates.raceNumber }} Live</span>
           </div>
           <!-- Next race information when no races are live -->
           <div v-else-if="isSimulationMode && nextRaceInfo" class="ml-4 text-sm bg-surface-sunken px-3 py-1 rounded-full text-text-base flex items-center">

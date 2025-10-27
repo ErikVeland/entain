@@ -251,6 +251,17 @@ watch(isInProgress, (inProgress) => {
         raceLive.value = true
         // Emit race started event
         emit('race-started')
+        
+        // Dispatch race start event for live ticker
+        const event = new CustomEvent('race-start', {
+          detail: {
+            raceName: props.race.meeting_name,
+            raceNumber: props.race.race_number,
+            userBets: [] // We would need to implement user bet tracking here
+          }
+        });
+        window.dispatchEvent(event);
+        
         console.log('Started race simulation for race', props.race.id)
       } catch (err) {
         // Enhanced error handling with user-friendly error messages and retry option
@@ -342,6 +353,14 @@ const initializeRaceSimulation = () => {
         // DO NOT update odds during live race - odds are locked once race starts
         // Odds should only update for upcoming races (in countdown status)
         console.log('Race tick for race', props.race.id, '- odds are locked during live race');
+        
+        // Update race progress in the simulation store
+        updateRaceProgress(props.race.id, {
+          progressByRunner: tick.progressByRunner,
+          order: tick.order,
+          gaps: tick.gaps,
+          etaMs: tick.etaMs
+        });
       } catch (err) {
         error.value = err instanceof Error ? err.message : String(err)
         console.error('Error handling race tick:', err)
@@ -380,6 +399,17 @@ const initializeRaceSimulation = () => {
             window.dispatchEvent(event)
           }
         }
+      
+        // Dispatch race finish event for live ticker
+        const finishEvent = new CustomEvent('race-finish', {
+          detail: {
+            raceId: props.race.id,
+            message: `${props.race.meeting_name} R${props.race.race_number} has finished`,
+            winner: result.placings.length > 0 ? { id: result.placings[0] } : null,
+            userBets: [] // We would need to implement user bet tracking here
+          }
+        });
+        window.dispatchEvent(finishEvent);
       } catch (err) {
         error.value = err instanceof Error ? err.message : String(err)
         console.error('Error finishing race:', err)
