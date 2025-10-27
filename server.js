@@ -9,9 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-// Try multiple ports to avoid EADDRINUSE errors
-const ports = [process.env.PORT || 4000, 3000, 3001, 5000, 8080];
-let currentPortIndex = 0;
+const port = process.env.PORT || 4000;
 
 // Serve static files from the dist directory
 app.use(express.static(path.join(__dirname, 'dist')));
@@ -22,12 +20,6 @@ app.use('/api', createProxyMiddleware({
   changeOrigin: true,
   pathRewrite: {
     '^/api': '', // Remove /api prefix
-  },
-  onProxyRes: function (proxyRes, req, res) {
-    // Add CORS headers
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   }
 }));
 
@@ -36,30 +28,6 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'dist', 'index.html'));
 });
 
-// Function to try starting server on different ports
-function startServer() {
-  const port = ports[currentPortIndex];
-  
-  const server = app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}`);
-  });
-  
-  server.on('error', (err) => {
-    if (err.code === 'EADDRINUSE') {
-      console.log(`Port ${port} is busy, trying next port...`);
-      currentPortIndex++;
-      if (currentPortIndex < ports.length) {
-        startServer();
-      } else {
-        console.error('No available ports found');
-        process.exit(1);
-      }
-    } else {
-      console.error(err);
-      process.exit(1);
-    }
-  });
-}
-
-// Start the server
-startServer();
+app.listen(port, () => {
+  console.log('Server running at http://localhost:' + port);
+});
