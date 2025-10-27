@@ -132,7 +132,7 @@ export const DEFAULT_CONFIG: BettingConfig = {
 	},
 	maxLegsMulti: 10,
 	minStake: 0.1,
-	maxStake: 100,
+	maxStake: 1000, // Updated to 1000 cents ($10.00) as per project requirements
 	currency: 'Credits',
 	cashoutFeePercent: 5 // 5% fee for cashout
 }
@@ -181,6 +181,14 @@ export class BettingEngine {
 		this.turnover = 0
 		this.bets = new Map()
 		this.raceToPendingBets = new Map()
+	}
+
+	// Method to add credits to the bankroll (for restarting the game)
+	addCredits(amount: number) {
+		if (amount > 0) {
+			this.balance += amount
+			this.settledPnl += amount
+		}
 	}
 
 	getBankroll(): BankrollSnapshot {
@@ -301,6 +309,8 @@ export class BettingEngine {
 	}
 
 	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number): string {
+		console.log('BettingEngine.placeBet called with:', { raceId, runnerId, stake, odds, advertisedStartMs });
+		
 		// Create a minimal RaceQuote for the bet
 		const rq: RaceQuote = {
 			raceId: raceId,
@@ -319,15 +329,20 @@ export class BettingEngine {
 		}
 
 		// Check if betting is allowed
+		console.log('Checking if betting is allowed. Current time:', Date.now(), 'Race start time:', rq.advertisedStartMs);
 		if (!this.isBettingAllowed(rq.advertisedStartMs)) {
-			throw new Error('Betting is closed for this race')
+			const error = new Error('Betting is closed for this race');
+			console.log('Betting not allowed:', error.message);
+			throw error;
 		}
 
 		// Generate a unique bet ID
 		const betId = `bet_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+		console.log('Generated bet ID:', betId);
 
 		// Place a WIN bet
 		this.placeSingleWin(rq, runnerId, stake, betId)
+		console.log('Successfully placed single win bet');
 
 		return betId
 	}
@@ -377,6 +392,7 @@ export class BettingEngine {
 	}
 
 	private placeSingle(rq: RaceQuote, runnerId: string, stake: number, betId: string, type: 'WIN' | 'PLACE' | 'EACH_WAY'): SingleBet {
+		console.log('placeSingle called with:', { rq, runnerId, stake, betId, type });
 		this.ensureStake(stake)
 		
 		// Check if betting is allowed
@@ -419,6 +435,7 @@ export class BettingEngine {
 		this.lockFunds(stake)
 		this.storeBet(bet)
 		this.indexBetForRace(rq.raceId, bet.betId)
+		console.log('placeSingle returning bet:', bet);
 		return bet
 	}
 
@@ -774,7 +791,9 @@ export class BettingEngine {
 	private isBettingAllowed(advertisedStartMs: number): boolean {
 		const now = Date.now();
 		// Market closes when race starts
-		return now < advertisedStartMs;
+		const result = now < advertisedStartMs;
+		console.log('isBettingAllowed check:', { now, advertisedStartMs, result });
+		return result;
 	}
 
 	private lockFunds(stake: number) {

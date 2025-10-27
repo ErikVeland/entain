@@ -12,6 +12,7 @@ import BalanceWidget from './components/BalanceWidget.vue'
 import BetslipDrawer from './components/BetslipDrawer.vue'
 import ControlBar from './components/ControlBar.vue'
 import GameModeDialog from './components/GameModeDialog.vue'
+import GameOverDialog from './components/GameOverDialog.vue'
 import TestRaces from './components/TestRaces.vue'
 
 const { locale, t } = useI18n()
@@ -168,6 +169,11 @@ const handleOpenBetslip = (payload: { race: any; runner: any }) => {
   }, 100)
 }
 
+// Handle game restart
+const handleRestart = () => {
+  betsStore.showGameOver = false
+}
+
 // Start polling and ticking intervals
 onMounted(() => {
   // App should start in API mode by default
@@ -296,6 +302,12 @@ onUnmounted(() => {
       :is-open="showGameModeDialog"
       @close="showGameModeDialog = false"
       @confirm="showGameModeDialog = false"
+    />
+
+    <!-- Game Over Dialog -->
+    <GameOverDialog
+      :is-open="betsStore.showGameOver"
+      @restart="handleRestart"
     />
 
     <!-- Betslip Drawer -->

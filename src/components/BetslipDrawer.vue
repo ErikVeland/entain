@@ -154,11 +154,13 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBettingLogic } from '../composables/useBettingLogic'
 import { useBetsStore } from '../stores/bets'
+import { useRacesStore } from '../stores/races'
 import type { BetSelection } from '../stores/bets'
 import BetCard from './BetCard.vue'
 import PendingBetsList from './PendingBetsList.vue'
 
 const betsStore = useBetsStore()
+const racesStore = useRacesStore()
 const {
   activeBets,
   totalStake,
@@ -172,6 +174,9 @@ const {
 
 // State for betslip selections (stored in memory, not in the store)
 const betslipSelections = ref<BetSelection[]>([])
+
+// Track stake inputs separately to enable real-time validation
+const stakeInputs = ref<Record<string, number>>({})
 
 // State
 const isOpen = ref(false)
@@ -214,9 +219,19 @@ const totalEstimatedReturnValue = computed(() => {
 })
 
 const canPlaceBetsValue = computed(() => {
-  return betslipSelections.value.length > 0 && betslipSelections.value.every(s => {
+  const result = betslipSelections.value.length > 0 && betslipSelections.value.some(s => {
     const stake = isNaN(s.stake) ? 0 : s.stake
     return stake > 0
+  })
+  console.log('canPlaceBetsValue computed:', result, 'Selections length:', betslipSelections.value.length, 'Selections:', betslipSelections.value)
+  return result
+})
+
+// Add a new computed property to track if any selections have invalid stakes
+const hasValidStakes = computed(() => {
+  return betslipSelections.value.every(s => {
+    const stake = isNaN(s.stake) ? 0 : s.stake
+    return stake >= 0 // Allow 0 stake, but must be a valid number
   })
 })
 
@@ -252,6 +267,9 @@ const handleUpdateMarket = (selectionId: string, market: 'win' | 'place' | 'each
 }
 
 const handleUpdateStake = (selectionId: string, stake: number) => {
+  // Update the stake input tracking
+  stakeInputs.value[selectionId] = stake
+  
   const selection = betslipSelections.value.find(s => s.id === selectionId)
   if (selection) {
     selection.stake = stake
@@ -268,20 +286,59 @@ const clearSelections = () => {
 }
 
 const placeBets = () => {
-  if (betslipSelections.value.length === 0) return
+  console.log('Place Bets button clicked!')
+  console.log('Betslip selections:', betslipSelections.value)
+  console.log('Has valid stakes:', hasValidStakes.value)
+  
+  if (betslipSelections.value.length === 0 || !hasValidStakes.value) {
+    console.log('Cannot place bets - no selections or invalid stakes')
+    return
+  }
   
   // Place each selection as a bet
   betslipSelections.value.forEach(selection => {
-    betsStore.placeBet(
-      selection.raceId,
-      selection.runnerId,
-      selection.stake,
-      selection.odds
-    )
+    // Ensure stake is a valid number
+    const stake = isNaN(selection.stake) ? 0 : selection.stake
+    console.log('Processing selection:', selection, 'Stake:', stake)
+    
+    if (stake > 0) {
+      // Find the race to get the advertised start time
+      const race = racesStore.races.find(r => r.id === selection.raceId)
+      const advertisedStartMs = race ? race.advertised_start_ms : undefined
+      
+      console.log('Race found:', race, 'Advertised start time:', advertisedStartMs)
+      
+      try {
+        console.log('Attempting to place bet with parameters:', {
+          raceId: selection.raceId,
+          runnerId: selection.runnerId,
+          stake: stake,
+          odds: selection.odds,
+          advertisedStartMs: advertisedStartMs
+        })
+        
+        const result = betsStore.placeBet(
+          selection.raceId,
+          selection.runnerId,
+          stake,
+          selection.odds,
+          advertisedStartMs
+        )
+        
+        console.log('Bet placed successfully:', result)
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error('Error placing bet:', error)
+        alert(`Error placing bet: ${errorMessage}`)
+      }
+    } else {
+      console.log('Skipping selection with zero or invalid stake')
+    }
   })
   
   // Clear selections after placing
   clearSelections()
+  console.log('Bets placed and selections cleared')
   alert(`Bets placed. Good luck!`)
 }
 

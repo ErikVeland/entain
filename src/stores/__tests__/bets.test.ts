@@ -24,11 +24,11 @@ describe('useBetsStore', () => {
     store.engine.placeBet = mockPlaceBet
     
     // Place a bet
-    const result = store.placeBet('race1', 'runner1', 100, 2.5)
+    const result = store.placeBet('race1', 'runner1', 100, 2.5, undefined)
     
     // Check that the bet was placed
     expect(result).toBe('bet1')
-    expect(mockPlaceBet).toHaveBeenCalledWith('race1', 'runner1', 100, 2.5)
+    expect(mockPlaceBet).toHaveBeenCalledWith('race1', 'runner1', 100, 2.5, undefined)
   })
 
   it('can cancel bets', () => {

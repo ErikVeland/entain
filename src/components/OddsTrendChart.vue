@@ -478,7 +478,8 @@ const chartOptions = {
         padding: 20,
         textAlign: 'left' as const
       },
-      position: 'bottom' as const
+      position: 'bottom' as const,
+      align: 'start' as const
     },
     tooltip: {
       backgroundColor: '#111827', // surface-raised

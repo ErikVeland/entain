@@ -195,14 +195,14 @@ export function generateRandomizedRunners(raceId: string, categoryId: string, co
     // Favorites (lower numbers) get shorter odds, outsiders (higher numbers) get longer odds
     let baseOdds;
     if (i < 2) {
-      // Top 2 favorites: 1.5-3.0
-      baseOdds = 1.5 + (Math.random() * 1.5);
+      // Top 2 favorites: 1.5-2.5 (reduced from 1.5-3.0)
+      baseOdds = 1.5 + (Math.random() * 1.0);
     } else if (i < 5) {
-      // Next 3: 3.0-8.0
-      baseOdds = 3.0 + (Math.random() * 5.0);
+      // Next 3: 2.5-6.0 (reduced from 3.0-8.0)
+      baseOdds = 2.5 + (Math.random() * 3.5);
     } else {
-      // Rest: 8.0-20.0
-      baseOdds = 8.0 + (Math.random() * 12.0);
+      // Rest: 6.0-15.0 (reduced from 8.0-20.0)
+      baseOdds = 6.0 + (Math.random() * 9.0);
     }
     
     runners.push({
@@ -308,55 +308,63 @@ const updateOdds = (
     // Market dynamics: if race is near start, odds are more volatile
     const raceProgress = Math.max(...Object.values(progressByRunner));
     // Implement more sophisticated market dynamics with realistic volatility patterns:
-    // Early race (0-5%): 1.05x volatility (increased from 1.005)
-    // Mid-early race (5-10%): 1.04x volatility (increased from 1.004)
-    // Mid race (10-20%): 1.03x volatility (increased from 1.003)
-    // Late-mid race (20-50%): 1.02x volatility (increased from 1.002)
-    // End race (50%+): 1.01x volatility (increased from 1.001)
+    // Early race (0-5%): 1.02x volatility (reduced from 1.05)
+    // Mid-early race (5-10%): 1.015x volatility (reduced from 1.04)
+    // Mid race (10-20%): 1.01x volatility (reduced from 1.03)
+    // Late-mid race (20-50%): 1.008x volatility (reduced from 1.02)
+    // End race (50%+): 1.005x volatility (reduced from 1.01)
     let marketVolatility;
     if (raceProgress < 0.05) {
-      marketVolatility = 1.05;
-    } else if (raceProgress < 0.10) {
-      marketVolatility = 1.04;
-    } else if (raceProgress < 0.20) {
-      marketVolatility = 1.03;
-    } else if (raceProgress < 0.50) {
       marketVolatility = 1.02;
-    } else {
+    } else if (raceProgress < 0.10) {
+      marketVolatility = 1.015;
+    } else if (raceProgress < 0.20) {
       marketVolatility = 1.01;
+    } else if (raceProgress < 0.50) {
+      marketVolatility = 1.008;
+    } else {
+      marketVolatility = 1.005;
     }
     
-    // If this is the leader, odds should generally decrease (favorite)
+    // If this is the leader, odds should generally decrease (favorite) but not drastically
     if (runnerId === leaderId) {
-      // Leader gets favored odds, but changes should be more visible (±5%)
-      const leaderFactor = 0.95 + (0.05 * (1 - progress)) * marketVolatility;
+      // Leader gets favored odds, but changes should be subtle and realistic
+      const leaderFactor = 0.99 + (0.01 * (1 - progress)) * marketVolatility;
       newOdds = Math.max(1.1, currentOdds * leaderFactor);
       trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none';
     } 
-    // If runner is in top 3 and making progress, odds may decrease
+    // If runner is in top 3 and making progress, odds may decrease slightly
     else if (currentPosition < 3 && progress > 0.3) {
-      // Changes for top 3 runners (±5%)
-      const top3Factor = 0.95 + (0.05 * (1 - (currentPosition / 3))) * marketVolatility;
+      // Subtle changes for top 3 runners
+      const top3Factor = 0.99 + (0.01 * (1 - (currentPosition / 3))) * marketVolatility;
       newOdds = Math.max(1.2, currentOdds * top3Factor);
       trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none';
     }
-    // If runner is falling behind, odds may increase
+    // If runner is falling behind, odds may increase but with more realistic constraints
     else if (currentPosition > 2 && progress < 0.7) {
-      // Increases for trailing runners (±5%)
-      const trailingFactor = 1.05 + (0.05 * (currentPosition / order.length)) * marketVolatility;
-      newOdds = currentOdds * trailingFactor;
-      trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
+      // More realistic increases for trailing runners - smaller increases and not all runners increase simultaneously
+      // Only increase odds if the runner is significantly behind
+      if (currentPosition > order.length * 0.6) { // Only runners in the bottom 40% get odds increases
+        const trailingFactor = 1.01 + (0.02 * ((currentPosition - 2) / (order.length - 2))) * marketVolatility;
+        newOdds = currentOdds * trailingFactor;
+        trend = newOdds > currentOdds ? 'up' : 'none';
+      } else {
+        // Small random fluctuations for middle runners
+        const fluctuation = 0.99 + (Math.random() * 0.02) * marketVolatility;
+        newOdds = currentOdds * fluctuation;
+        trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
+      }
     }
-    // For middle runners, small fluctuations (±5%)
+    // For middle runners, small fluctuations
     else {
-      // Random fluctuation with market volatility factor
-      const fluctuation = 0.95 + (Math.random() * 0.10) * marketVolatility;
+      // Random fluctuation with market volatility factor - smaller range for more stability
+      const fluctuation = 0.99 + (Math.random() * 0.02) * marketVolatility;
       newOdds = currentOdds * fluctuation;
       trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
     }
     
-    // Ensure odds stay within reasonable bounds (capped at 50)
-    newOdds = Math.max(1.1, Math.min(50, newOdds));
+    // Ensure odds stay within reasonable bounds (capped at 20 for more realistic racing odds)
+    newOdds = Math.max(1.1, Math.min(20, newOdds));
     
     // Update runner odds and trend
     // Keep more precision for comparison but display with 2 decimal places

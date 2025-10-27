@@ -89,7 +89,6 @@
           class="w-full pl-8 pr-4 py-2 bg-surface-sunken text-text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
           :class="{ 'border border-danger': hasError }"
           placeholder="0.00"
-          @blur="updateStake"
           aria-label="Enter stake amount"
         >
       </div>
@@ -135,6 +134,13 @@ const previousOdds = ref(props.selection.odds)
 // State
 const stakeInput = ref(props.selection.stake / 100) // Convert from cents to dollars
 
+// Watch for changes to stakeInput and emit update-stake event immediately
+watch(stakeInput, (newStake) => {
+  // Convert to cents and emit
+  const stakeInCents = Math.round(newStake * 100)
+  emit('update-stake', props.selection.id, stakeInCents)
+})
+
 // Computed
 const hasError = computed(() => {
   return stakeInput.value > 0 && (stakeInput.value * 100 > availableBalance.value || stakeInput.value < 0.1)
@@ -168,12 +174,7 @@ const updateMarket = (market: 'win' | 'place' | 'each-way') => {
   emit('update-market', props.selection.id, market)
 }
 
-const updateStake = () => {
-  // Convert to cents and emit
-  const stakeInCents = Math.round(stakeInput.value * 100)
-  emit('update-stake', props.selection.id, stakeInCents)
-}
-
+// Remove the updateStake method since we're now updating in real-time
 const remove = () => {
   emit('remove', props.selection.id)
 }
