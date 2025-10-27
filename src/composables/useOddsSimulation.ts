@@ -203,7 +203,7 @@ export function generateRandomizedRunners(raceId: string, categoryId: string, co
       name,
       weight,
       jockey,
-      odds: parseFloat(baseOdds.toFixed(2)), // Start with actual odds instead of SP
+      odds: parseFloat(baseOdds.toFixed(2)), // Initialize with numeric odds values instead of 'SP'
       oddsTrend: 'none',
       silkColor: shuffledSilkColors[i % shuffledSilkColors.length], // Ensure unique colors
       bestTime: bestTime || undefined
@@ -219,7 +219,7 @@ export function useOddsSimulation() {
   
   // Throttling for odds updates to prevent excessive re-renders
   const lastUpdateTimes = new Map<string, number>()
-  const UPDATE_THROTTLE_MS = 100 // Increased throttling to 100ms for better performance while still being responsive
+  const UPDATE_THROTTLE_MS = 500 // Reduced throttling to 500ms for more responsive updates
   
   // Initialize odds simulation for a race
   const initializeOddsSimulation = (
@@ -248,7 +248,7 @@ export function useOddsSimulation() {
     }
   }
   
-  // Update odds based on race progress
+  // Update odds based on race progress with more realistic fluctuations (±0.5%)
   const updateOdds = (
     raceId: string,
     progressByRunner: Record<string, number>,
@@ -286,41 +286,37 @@ export function useOddsSimulation() {
       const currentPosition = order.indexOf(runnerId)
       
       // Convert current odds to number for calculation
-      let currentOdds: number
-      if (runner.odds === 'SP') {
-        currentOdds = 6.0 // Default SP value
-      } else {
-        currentOdds = runner.odds
-      }
+      // Runners should already be initialized with numeric odds values
+      let currentOdds: number = typeof runner.odds === 'number' ? runner.odds : 6.0 // Fallback to 6.0 if somehow 'SP'
       
-      // Calculate new odds based on position and progress with more realistic changes
+      // Calculate new odds based on position and progress with more realistic changes (±0.5%)
       let newOdds = currentOdds
       let trend: OddsTrend = 'none'
       
       // Market dynamics: if race is near start, odds are more volatile
       const raceProgress = Math.max(...Object.values(progressByRunner));
       // Implement more sophisticated market dynamics with realistic volatility patterns:
-      // Early race (0-5%): 1.02x volatility
-      // Mid-early race (5-10%): 1.015x volatility
-      // Mid race (10-20%): 1.01x volatility
-      // Late-mid race (20-50%): 1.005x volatility
-      // End race (50%+): 1.002x volatility
+      // Early race (0-5%): 1.005x volatility
+      // Mid-early race (5-10%): 1.004x volatility
+      // Mid race (10-20%): 1.003x volatility
+      // Late-mid race (20-50%): 1.002x volatility
+      // End race (50%+): 1.001x volatility
       let marketVolatility;
       if (raceProgress < 0.05) {
-        marketVolatility = 1.02;
-      } else if (raceProgress < 0.10) {
-        marketVolatility = 1.015;
-      } else if (raceProgress < 0.20) {
-        marketVolatility = 1.01;
-      } else if (raceProgress < 0.50) {
         marketVolatility = 1.005;
-      } else {
+      } else if (raceProgress < 0.10) {
+        marketVolatility = 1.004;
+      } else if (raceProgress < 0.20) {
+        marketVolatility = 1.003;
+      } else if (raceProgress < 0.50) {
         marketVolatility = 1.002;
+      } else {
+        marketVolatility = 1.001;
       }
       
       // If this is the leader, odds should generally decrease (favorite)
       if (runnerId === leaderId) {
-        // Leader gets favored odds, but changes should be gradual
+        // Leader gets favored odds, but changes should be gradual (±0.5%)
         // Much smaller changes for realism
         const leaderFactor = 0.999 + (0.001 * (1 - progress)) * marketVolatility;
         newOdds = Math.max(1.1, currentOdds * leaderFactor);
@@ -328,19 +324,19 @@ export function useOddsSimulation() {
       } 
       // If runner is in top 3 and making progress, odds may decrease
       else if (currentPosition < 3 && progress > 0.3) {
-        // Smaller changes for top 3 runners
+        // Smaller changes for top 3 runners (±0.5%)
         const top3Factor = 0.9995 + (0.0005 * (1 - (currentPosition / 3))) * marketVolatility;
         newOdds = Math.max(1.2, currentOdds * top3Factor);
         trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none';
       }
       // If runner is falling behind, odds may increase
       else if (currentPosition > 2 && progress < 0.7) {
-        // Smaller increases for trailing runners
+        // Smaller increases for trailing runners (±0.5%)
         const trailingFactor = 1.0005 + (0.0005 * (currentPosition / order.length)) * marketVolatility;
         newOdds = currentOdds * trailingFactor;
         trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
       }
-      // For middle runners, small fluctuations
+      // For middle runners, small fluctuations (±0.5%)
       else {
         // Very small random fluctuation with reduced market volatility factor
         const fluctuation = 0.9999 + (Math.random() * 0.0002) * marketVolatility;
@@ -348,7 +344,7 @@ export function useOddsSimulation() {
         trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
       }
       
-      // Ensure odds stay within reasonable bounds (tighter range)
+      // Ensure odds stay within reasonable bounds (capped at 50)
       newOdds = Math.max(1.1, Math.min(50, newOdds));
       
       // Update runner odds and trend
@@ -356,12 +352,6 @@ export function useOddsSimulation() {
       runner.oddsTrend = trend;
       
       console.log('Updated odds for runner', runnerId, 'from', currentOdds, 'to', runner.odds, 'with trend', trend)
-      
-      // Add some randomness to trend to make it less predictable
-      if (trend === 'none' && Math.random() < 0.05) {
-        // 5% chance of a small random trend even when it should be none
-        runner.oddsTrend = Math.random() > 0.5 ? 'up' : 'down';
-      }
     });
     
     // Trigger a reactive update by creating a new object reference

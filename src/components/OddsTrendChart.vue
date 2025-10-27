@@ -65,10 +65,11 @@ const initializeOddsHistory = () => {
     }
     
     // Add initial odds point
-    const currentOdds = runner.odds === 'SP' ? 6.0 : runner.odds
+    // Runners should already be initialized with numeric odds values
+    const currentOdds = typeof runner.odds === 'number' ? runner.odds : 6.0 // Fallback to 6.0 if somehow 'SP'
     oddsHistory.value[runner.id].push({
       time: Date.now(),
-      odds: typeof currentOdds === 'number' ? currentOdds : 6.0
+      odds: currentOdds
     })
   })
   
@@ -82,11 +83,29 @@ const updateOddsHistory = () => {
   const runners = getSimulatedRunners(props.raceId)
   if (runners.length === 0) return
   
+  // ONLY update odds history for upcoming races (countdown status)
+  // For live/running races, show locked data from race start
+  const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+  let isRaceCountdown = false;
+  if (raceElement) {
+    const raceStatus = raceElement.getAttribute('data-race-status');
+    // Only update for countdown races (upcoming races)
+    isRaceCountdown = raceStatus === 'countdown';
+  }
+  
+  // DO NOT update odds history if race is not in countdown status
+  // This ensures locked data is shown for live/running races
+  if (!isRaceCountdown) {
+    console.log('Skipping odds history update for non-countdown race - showing locked data', props.raceId)
+    return
+  }
+  
   const now = Date.now()
   
   runners.forEach(runner => {
-    const currentOdds = runner.odds === 'SP' ? 6.0 : runner.odds
-    const oddsValue = typeof currentOdds === 'number' ? currentOdds : 6.0
+    // Runners should already be initialized with numeric odds values
+    const currentOdds = typeof runner.odds === 'number' ? runner.odds : 6.0 // Fallback to 6.0 if somehow 'SP'
+    const oddsValue = currentOdds
     
     // Add new data point
     if (!oddsHistory.value[runner.id]) {
@@ -106,7 +125,7 @@ const updateOddsHistory = () => {
   
   // Force chart update
   updateCounter.value++
-  console.log('Updated odds history for race', props.raceId, 'with', runners.length, 'runners')
+  console.log('Updated odds history for countdown race', props.raceId, 'with', runners.length, 'runners')
 }
 
 // Watch for runner changes to update odds history
@@ -120,7 +139,11 @@ const startWatching = () => {
   }
   
   // Create a computed ref for runners to ensure reactivity
-  const simulatedRunners = computed(() => getSimulatedRunners(props.raceId))
+  const simulatedRunners = computed(() => {
+    // Return runners for all races to show data
+    // For live/running races, this will show the locked data
+    return getSimulatedRunners(props.raceId)
+  })
   
   watchStopper = watch(
     simulatedRunners,
@@ -134,9 +157,22 @@ const startWatching = () => {
   
   // Also watch updateCounter for force updates
   watch(updateCounter, () => {
-    const runners = getSimulatedRunners(props.raceId)
-    if (Array.isArray(runners) && runners.length > 0) {
-      updateOddsHistory()
+    // ONLY update for upcoming races (countdown status)
+    const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+    let isRaceCountdown = false;
+    if (raceElement) {
+      const raceStatus = raceElement.getAttribute('data-race-status');
+      // Only update for countdown races (upcoming races)
+      isRaceCountdown = raceStatus === 'countdown';
+    }
+    
+    // Update only for countdown races to show live odds updates
+    // For live/running races, show locked data
+    if (isRaceCountdown) {
+      const runners = getSimulatedRunners(props.raceId)
+      if (Array.isArray(runners) && runners.length > 0) {
+        updateOddsHistory()
+      }
     }
   }, { immediate: true })
 }

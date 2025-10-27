@@ -25,12 +25,12 @@
     </div>
     
     <div class="mb-4">
-      <label class="block text-text-base text-sm mb-1">Bet Amount (${{ config.minStake }}-100)</label>
+      <label class="block text-text-base text-sm mb-1">Bet Amount (${{ config.minStake }}-${{ config.maxStake }})</label>
       <input 
         v-model.number="betAmount" 
         type="number" 
         :min="config.minStake" 
-        :max="100" 
+        :max="config.maxStake" 
         :step="1"
         class="w-full bg-surface-raised text-text-base rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-brand-primary"
         placeholder="Enter bet amount"
@@ -44,6 +44,14 @@
     >
       Place Bet
     </button>
+    
+    <!-- Message when betting is disabled due to race status -->
+    <div 
+      v-if="props.raceStatus === 'live' || props.raceStatus === 'finished' || props.raceStatus === 'expired'" 
+      class="mt-2 p-2 bg-warning bg-opacity-20 text-warning rounded text-sm text-center"
+    >
+      Betting is closed for this race
+    </div>
     
     <!-- Error display -->
     <div v-if="error" class="mt-2 p-2 bg-danger bg-opacity-20 text-danger rounded text-sm">
@@ -84,7 +92,9 @@ const props = defineProps<{
     number: number,
     name: string,
     odds: number | 'SP'
-  }>
+  }>,
+  raceStatus?: 'countdown' | 'starting_soon' | 'live' | 'finished' | 'expired',
+  advertisedStartMs?: number
 }>()
 
 const betsStore = useBetsStore()
@@ -98,10 +108,14 @@ const bankroll = computed(() => betsStore.bankroll)
 const pendingBets = computed(() => betsStore.engine.getPendingBetsForRace(props.raceId))
 
 const canPlaceBet = computed(() => {
+  // Disable betting once race starts (live, finished, or expired)
+  const isRaceClosed = props.raceStatus === 'live' || props.raceStatus === 'finished' || props.raceStatus === 'expired'
+  
   return (
+    !isRaceClosed &&
     selectedRunnerId.value !== '' && 
     betAmount.value >= config.minStake && 
-    betAmount.value <= 100 && 
+    betAmount.value <= config.maxStake && 
     betAmount.value <= bankroll.value.balance
   )
 })

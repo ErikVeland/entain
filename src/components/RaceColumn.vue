@@ -150,6 +150,7 @@ import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { type RaceSummary, CATEGORY_IDS } from '../stores/races'
 import { useBetsStore } from '../stores/bets'
 import { useOddsSimulation, type SimulatedRunner } from '../composables/useOddsSimulation'
+import { useOddsUpdater } from '../composables/useOddsUpdater'
 import { useRaceSimulation } from '../composables/useRaceSimulation'
 import { useCountdown } from '../composables/useCountdown'
 import { type Tick, type Result } from '../game/simulatedRace'
@@ -176,6 +177,7 @@ const emit = defineEmits<{
 
 const betsStore = useBetsStore()
 const { initializeOddsSimulation, updateOdds, getSimulatedRunners, resetSimulation, generateRandomizedRunners } = useOddsSimulation()
+const { registerCountdownRace, unregisterCountdownRace } = useOddsUpdater()
 const { createSimulation, getSimulation, removeSimulation, startSimulation, stopSimulation, resetSimulation: resetRaceSimulationStore } = useRaceSimulation()
 const { formattedTime, isStartingSoon, isInProgress } = useCountdown(props.race.advertised_start_ms)
 
@@ -205,10 +207,9 @@ const raceLive = ref(false)
 // Error handling
 const error = ref<string | null>(null)
 
-// Cache for runners display to prevent unnecessary re-renders
-const runnersForDisplayCache = new Map<string, { runners: any[]; timestamp: number }>()
+// Cache for runners display to ensure proper reactivity
 
-// Computed race status
+// Computed race status with smooth transitions
 const raceStatus = computed(() => {
   if (props.isExpired) return 'finished'
   // Only show 'live' status when race has actually started (countdown finished)
@@ -216,6 +217,57 @@ const raceStatus = computed(() => {
   if (isStartingSoon.value) return 'starting_soon'
   return 'countdown'
 })
+
+// Watch for race status changes to manage odds updates
+watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, startingSoon, isExpired]) => {
+  console.log('Race status changed for race', props.race.id, 'inProgress:', inProgress, 'startingSoon:', startingSoon, 'isExpired:', isExpired);
+  
+  // Check if race is in countdown status (upcoming race)
+  // Odds should update only when race is upcoming (countdown) and not expired
+  const isCountdown = !isExpired && !inProgress && !startingSoon && !raceFinished.value;
+  
+  if (isCountdown && betsStore.showGame && betsStore.useSimulatedData) {
+    console.log('Registering race for odds updates:', props.race.id);
+    // Register race for global odds updates
+    registerCountdownRace(props.race.id);
+  } else {
+    console.log('Unregistering race from odds updates:', props.race.id);
+    // Unregister race from global odds updates
+    unregisterCountdownRace(props.race.id);
+  }
+}, { immediate: true });
+
+// Start race simulation when countdown ends with smooth transition
+watch(isInProgress, (inProgress) => {
+  console.log('isInProgress changed for race', props.race.id, 'to', inProgress)
+  console.log('betsStore.showGame:', betsStore.showGame)
+  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData)
+  console.log('raceFinished.value:', raceFinished.value)
+  console.log('raceLive.value:', raceLive.value)
+  
+  if (inProgress && betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value && !raceLive.value) {
+    console.log('Starting race simulation for race', props.race.id)
+    // Start the simulation when countdown finishes
+    if (simulationController) {
+      try {
+        startSimulation(props.race.id)
+        raceLive.value = true
+        // Emit race started event
+        emit('race-started')
+        console.log('Started race simulation for race', props.race.id)
+      } catch (err) {
+        // Enhanced error handling with user-friendly error messages and retry option
+        const errorMessage = err instanceof Error ? err.message : String(err)
+        error.value = `Failed to start race simulation: ${errorMessage}. Please try again.`
+        console.error('Error starting race simulation:', err)
+      }
+    }
+  } else if (!inProgress && raceLive.value && !raceFinished.value) {
+    // Race is no longer in progress but was marked as live - ensure proper cleanup
+    console.log('Race is no longer in progress, cleaning up race', props.race.id)
+    raceLive.value = false
+  }
+}, { immediate: true })
 
 // Compute runners with significant odds changes for visual indicators
 const runnersWithSignificantChanges = computed(() => {
@@ -281,30 +333,12 @@ const initializeRaceSimulation = () => {
       try {
         console.log('Race tick for race', props.race.id, 'with progress:', tick.progressByRunner, 'and order:', tick.order)
         
-        // Check if race is actually live/running
-        const raceElement = document.querySelector(`[data-race-id="${props.race.id}"]`);
-        let isRaceRunning = false;
-        if (raceElement) {
-          const raceStatus = raceElement.getAttribute('data-race-status');
-          isRaceRunning = raceStatus === 'live';
-        }
-        
-        // Only update odds if race is NOT running (i.e., it's upcoming)
-        // Once a race starts, odds should be locked
-        if (!isRaceRunning) {
-          updateOdds(props.race.id, tick.progressByRunner, tick.order)
-        } else {
-          console.log('Skipping odds update for running race', props.race.id)
-        }
-        
-        // Update the raceLive status based on the tick
-        if (!raceLive.value && tick.tElapsedMs > 0) {
-          raceLive.value = true;
-          emit('race-started');
-        }
+        // DO NOT update odds during live race - odds are locked once race starts
+        // Odds should only update for upcoming races (in countdown status)
+        console.log('Race tick for race', props.race.id, '- odds are locked during live race');
       } catch (err) {
         error.value = err instanceof Error ? err.message : String(err)
-        console.error('Error updating odds:', err)
+        console.error('Error handling race tick:', err)
       }
     })
     
@@ -345,17 +379,6 @@ const initializeRaceSimulation = () => {
         console.error('Error finishing race:', err)
       }
     })
-    
-    // Start the simulation immediately so odds can update for upcoming races
-    // But don't mark race as live until the actual start time
-    if (simulationController && betsStore.showGame && betsStore.useSimulatedData) {
-      try {
-        startSimulation(props.race.id)
-        console.log('Started simulation for upcoming race', props.race.id)
-      } catch (err) {
-        console.error('Error starting simulation for upcoming race:', err)
-      }
-    }
   } catch (err) {
     // Enhanced error handling with user-friendly error messages
     const errorMessage = err instanceof Error ? err.message : String(err)
@@ -378,24 +401,6 @@ onMounted(() => {
     console.error('Error mounting race component:', err)
   }
 })
-
-// Start race simulation when countdown ends
-watch(isInProgress, (inProgress) => {
-  console.log('isInProgress changed for race', props.race.id, 'to', inProgress)
-  console.log('betsStore.showGame:', betsStore.showGame)
-  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData)
-  console.log('raceFinished.value:', raceFinished.value)
-  console.log('raceLive.value:', raceLive.value)
-  
-  if (inProgress && betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value) {
-    console.log('Marking race as live for race', props.race.id)
-    // Mark race as live when countdown finishes
-    raceLive.value = true
-    // Emit race started event
-    emit('race-started')
-    console.log('Race is now live for race', props.race.id)
-  }
-}, { immediate: true })
 
 // Also start race simulation when manually triggered (for testing)
 const startRaceSimulation = () => {
@@ -489,8 +494,10 @@ watch(() => betsStore.showGame && betsStore.useSimulatedData, (newVal, oldVal) =
 onUnmounted(() => {
   try {
     cleanupSimulation()
-    // Clean up cache
-    runnersForDisplayCache.delete(props.race.id)
+    // Unregister from global odds updates
+    unregisterCountdownRace(props.race.id)
+    // Clean up cache - removed due to reactivity issues
+    // runnersForDisplayCache.delete(props.race.id)
   } catch (err) {
     // Log error but don't display it since component is unmounting
     console.error('Error during component unmount:', err)
@@ -518,7 +525,6 @@ const runnersForDisplay = computed(() => {
   }
   
   // In simulation mode, show simulated runners
-  // Remove caching to ensure real-time updates
   const runners = getSimulatedRunners(props.race.id)
   console.log('Got simulated runners for race', props.race.id, runners);
   

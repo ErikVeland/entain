@@ -103,6 +103,7 @@ export interface BettingConfig {
 	placeTerms: Record<string, { factor: number; places: (fieldSize: number) => number }>
 	maxLegsMulti: number
 	minStake: number
+	maxStake: number
 	currency: string
 	// Cashout configuration
 	cashoutFeePercent: number // Percentage fee for cashout (0-100)
@@ -111,16 +112,16 @@ export interface BettingConfig {
 export const DEFAULT_CONFIG: BettingConfig = {
 	defaultSpDecimal: 6.0,
 	placeTerms: {
-		// Typical UK-style approximations, tweak as desired
-		'4a2788f8-e825-4d36-9894-efd4baf1cfae': { // Horse
+		// Realistic place terms by category
+		'4a2788f8-e825-4d36-9894-efd4baf1cfae': { // Horse - Typically pays 3 places for 8+ runners, 2 places for 5-7 runners, 1 place for 4 or fewer
 			factor: 0.25,
 			places: (n) => (n >= 8 ? 3 : n >= 5 ? 2 : 1)
 		},
-		'161d9be2-e909-4326-8c2c-35ed71fb460b': { // Harness (approx)
+		'161d9be2-e909-4326-8c2c-35ed71fb460b': { // Harness - Typically pays 3 places for 8+ runners, 2 places for 5-7 runners, 1 place for 4 or fewer
 			factor: 0.25,
 			places: (n) => (n >= 8 ? 3 : n >= 5 ? 2 : 1)
 		},
-		'9daef0d7-bf3c-4f50-921d-8e818c60fe61': { // Greyhound
+		'9daef0d7-bf3c-4f50-921d-8e818c60fe61': { // Greyhound - Typically pays 3 places for 8+ runners, 2 places for 5-7 runners, 1 place for 4 or fewer
 			factor: 0.33,
 			places: (n) => (n >= 8 ? 3 : n >= 5 ? 2 : 1)
 		},
@@ -131,6 +132,7 @@ export const DEFAULT_CONFIG: BettingConfig = {
 	},
 	maxLegsMulti: 10,
 	minStake: 0.1,
+	maxStake: 100,
 	currency: 'Credits',
 	cashoutFeePercent: 5 // 5% fee for cashout
 }
@@ -229,6 +231,11 @@ export class BettingEngine {
 	): ExoticBet {
 		this.ensureStake(stake)
 		
+		// Check if betting is allowed
+		if (!this.isBettingAllowed(rq.advertisedStartMs)) {
+			throw new Error('Betting is closed for this race')
+		}
+		
 		// Validate selections
 		if (betType === 'QUINELLA' && selections.length !== 2) {
 			throw new Error('QUINELLA requires exactly 2 positions')
@@ -293,14 +300,14 @@ export class BettingEngine {
 		return bet
 	}
 
-	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP'): string {
+	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number): string {
 		// Create a minimal RaceQuote for the bet
 		const rq: RaceQuote = {
 			raceId: raceId,
 			meetingName: 'Unknown Meeting',
 			raceNumber: 1,
 			categoryId: '4a2788f8-e825-4d36-9894-efd4baf1cfae', // Default to horse racing
-			advertisedStartMs: Date.now() + 300000, // 5 minutes from now
+			advertisedStartMs: advertisedStartMs || Date.now() + 300000, // 5 minutes from now if not provided
 			runners: [
 				{
 					runnerId: runnerId,
@@ -309,6 +316,11 @@ export class BettingEngine {
 					decimalOdds: odds === 'SP' ? null : odds
 				}
 			]
+		}
+
+		// Check if betting is allowed
+		if (!this.isBettingAllowed(rq.advertisedStartMs)) {
+			throw new Error('Betting is closed for this race')
 		}
 
 		// Generate a unique bet ID
@@ -324,6 +336,13 @@ export class BettingEngine {
 		if (legs.length < 2) throw new Error('MULTI requires at least 2 legs')
 		if (legs.length > this.cfg.maxLegsMulti) throw new Error(`MULTI max legs ${this.cfg.maxLegsMulti}`)
 		this.ensureStake(stake)
+
+		// Check if betting is allowed for all legs
+		for (const { rq } of legs) {
+			if (!this.isBettingAllowed(rq.advertisedStartMs)) {
+				throw new Error('Betting is closed for one or more races in this multi bet')
+			}
+		}
 
 		const builtLegs: BetLeg[] = legs.map(({ rq, runnerId }) => {
 			const r = rq.runners.find(x => x.runnerId === runnerId)
@@ -359,6 +378,12 @@ export class BettingEngine {
 
 	private placeSingle(rq: RaceQuote, runnerId: string, stake: number, betId: string, type: 'WIN' | 'PLACE' | 'EACH_WAY'): SingleBet {
 		this.ensureStake(stake)
+		
+		// Check if betting is allowed
+		if (!this.isBettingAllowed(rq.advertisedStartMs)) {
+			throw new Error('Betting is closed for this race')
+		}
+		
 		const r = rq.runners.find(x => x.runnerId === runnerId)
 		if (!r) throw new Error(`Runner ${runnerId} not found in race ${rq.raceId}`)
 		const winOdds = decimalOddsOrSP(r.decimalOdds, this.cfg)
@@ -512,20 +537,24 @@ export class BettingEngine {
 		let breakdown = ''
 		let finalResult: 'WON' | 'LOST' | 'VOID' = 'LOST'
 
+		// Check for dead heats (multiple runners in the same position)
+		const runnersInPosition = result.placings.filter((runnerId, index) => index + 1 === position).length;
+		const deadHeatDivisor = runnersInPosition > 1 ? runnersInPosition : 1;
+
 		if (bet.type === 'WIN') {
 			if (position === 1) {
-				payout = bet.stake * leg.oddsDecimalAtPlacement
+				payout = (bet.stake * leg.oddsDecimalAtPlacement) / deadHeatDivisor;
 				finalResult = 'WON'
-				breakdown = `WIN @ ${fmt(leg.oddsDecimalAtPlacement)} (P1)`
+				breakdown = `WIN @ ${fmt(leg.oddsDecimalAtPlacement)} (P1${runnersInPosition > 1 ? `, dead heat with ${runnersInPosition - 1} other${runnersInPosition - 1 > 1 ? 's' : ''}` : ''})`
 			} else {
 				payout = 0
 				breakdown = `WIN lost (P${position || 'DNF'})`
 			}
 		} else if (bet.type === 'PLACE') {
 			if (position >= 1 && position <= placesAllowed) {
-				payout = bet.stake * leg.placeOddsDecimal
+				payout = (bet.stake * leg.placeOddsDecimal) / deadHeatDivisor;
 				finalResult = 'WON'
-				breakdown = `PLACE @ ${fmt(leg.placeOddsDecimal)} (P${position}/${placesAllowed})`
+				breakdown = `PLACE @ ${fmt(leg.placeOddsDecimal)} (P${position}/${placesAllowed}${runnersInPosition > 1 ? `, dead heat with ${runnersInPosition - 1} other${runnersInPosition - 1 > 1 ? 's' : ''}` : ''})`
 			} else {
 				payout = 0
 				breakdown = `PLACE lost (P${position || 'DNF'}, pays ${placesAllowed})`
@@ -537,16 +566,16 @@ export class BettingEngine {
 			let winWon = false
 			let placeWon = false
 			if (position === 1) {
-				winPart = half * leg.oddsDecimalAtPlacement
+				winPart = (half * leg.oddsDecimalAtPlacement) / deadHeatDivisor;
 				winWon = true
 			}
 			if (position >= 1 && position <= placesAllowed) {
-				placePart = half * leg.placeOddsDecimal
+				placePart = (half * leg.placeOddsDecimal) / deadHeatDivisor;
 				placeWon = true
 			}
 			payout = winPart + placePart
 			finalResult = winWon || placeWon ? (winWon && placeWon ? 'WON' : 'SETTLED_PARTIAL') as any : 'LOST'
-			breakdown = `E/W: WIN@${fmt(leg.oddsDecimalAtPlacement)} ${winWon ? '✓' : '✗'} + PLACE@${fmt(leg.placeOddsDecimal)} ${placeWon ? '✓' : '✗'} (P${position || 'DNF'}, pays ${placesAllowed})`
+			breakdown = `E/W: WIN@${fmt(leg.oddsDecimalAtPlacement)} ${winWon ? '✓' : '✗'} + PLACE@${fmt(leg.placeOddsDecimal)} ${placeWon ? '✓' : '✗'} (P${position || 'DNF'}, pays ${placesAllowed}${runnersInPosition > 1 ? `, dead heat with ${runnersInPosition - 1} other${runnersInPosition - 1 > 1 ? 's' : ''}` : ''})`
 		}
 
 		this.unlockFunds(bet.stake)
@@ -561,17 +590,105 @@ export class BettingEngine {
 		let payout = 0
 		let breakdown = ''
 		
-		// Check if the bet wins based on the actual race result
-		let isWin = true
-		for (let i = 0; i < bet.selections.length; i++) {
-			const positionSelections = bet.selections[i]
-			const actualWinner = positions[i]
-			
-			// For exotic bets, the user wins if their selection for each position matches
-			// the actual result for that position
-			if (!positionSelections.includes(actualWinner)) {
-				isWin = false
-				break
+		// Enhanced exotic bet settlement logic
+		let isWin = false;
+		let winningCombinations = 0;
+		
+		// Handle different exotic bet types
+		switch (bet.type) {
+			case 'QUINELLA':
+				// QUINELLA: Top 2 finishers in any order
+				// Check if both selected runners finished in top 2 positions (any order)
+				if (bet.selections.length === 2) {
+					const firstPositionRunners = bet.selections[0];
+					const secondPositionRunners = bet.selections[1];
+					
+					// Check if the actual first and second place runners are in our selections
+					const actualFirst = positions[0];
+					const actualSecond = positions[1];
+					
+					// Win if both runners are in the top 2 (in any order)
+					isWin = (firstPositionRunners.includes(actualFirst) && secondPositionRunners.includes(actualSecond)) ||
+							(firstPositionRunners.includes(actualSecond) && secondPositionRunners.includes(actualFirst));
+					
+					if (isWin) {
+						winningCombinations = 1;
+						// For QUINELLA, we need to calculate combinations
+						// If both positions have multiple selections, we have more combinations
+						const firstCombos = firstPositionRunners.length;
+						const secondCombos = secondPositionRunners.length;
+						winningCombinations = firstCombos * secondCombos;
+					}
+				}
+				break;
+				
+			case 'TRIFECTA':
+				// TRIFECTA: Top 3 finishers in exact order
+				if (bet.selections.length === 3) {
+					isWin = true;
+					winningCombinations = 1;
+					
+					// Check each position
+					for (let i = 0; i < 3; i++) {
+						const positionSelections = bet.selections[i];
+						const actualWinner = positions[i];
+						
+						if (!positionSelections.includes(actualWinner)) {
+							isWin = false;
+							break;
+						}
+						
+						// Count combinations for this position
+						winningCombinations *= positionSelections.length;
+					}
+				}
+				break;
+				
+			case 'FIRST_FOUR':
+				// FIRST_FOUR: Top 4 finishers in exact order
+				if (bet.selections.length === 4) {
+					isWin = true;
+					winningCombinations = 1;
+					
+					// Check each position
+					for (let i = 0; i < 4; i++) {
+						const positionSelections = bet.selections[i];
+						const actualWinner = positions[i];
+						
+						if (!positionSelections.includes(actualWinner)) {
+							isWin = false;
+							break;
+						}
+						
+						// Count combinations for this position
+						winningCombinations *= positionSelections.length;
+					}
+				}
+				break;
+				
+			default:
+				// Fallback to original logic for unknown bet types
+				isWin = true;
+				for (let i = 0; i < bet.selections.length; i++) {
+					const positionSelections = bet.selections[i];
+					const actualWinner = positions[i];
+					
+					if (!positionSelections.includes(actualWinner)) {
+						isWin = false;
+						break;
+					}
+				}
+				winningCombinations = 1;
+				break;
+		}
+		
+		// Check for dead heats in each position
+		let deadHeatDivisor = 1;
+		for (let i = 0; i < Math.min(bet.selections.length, positions.length); i++) {
+			const positionIndex = i + 1; // 1-based position
+			const runnersInPosition = result.placings.filter((runnerId, index) => index + 1 === positionIndex).length;
+			if (runnersInPosition > 1) {
+				deadHeatDivisor *= runnersInPosition;
 			}
 		}
 		
@@ -581,8 +698,10 @@ export class BettingEngine {
 			for (let i = 0; i < bet.legs.length; i++) {
 				totalOdds *= bet.legs[i].oddsDecimalAtPlacement
 			}
-			payout = bet.stake * totalOdds
-			breakdown = `${bet.type} won @ ${fmt(totalOdds)}`
+			
+			// Adjust payout based on winning combinations and dead heats
+			payout = (bet.stake * totalOdds * winningCombinations) / deadHeatDivisor;
+			breakdown = `${bet.type} won @ ${fmt(totalOdds)} (combinations: ${winningCombinations}${deadHeatDivisor > 1 ? `, dead heat divisor: ${deadHeatDivisor}` : ''})`
 		} else {
 			payout = 0
 			breakdown = `${bet.type} lost`
@@ -603,10 +722,14 @@ export class BettingEngine {
 		const leg = bet.legs[idx]
 		const won = result.placings[0] === leg.selectionRunnerId
 
+		// Check for dead heat in first position
+		const runnersInFirstPosition = result.placings.filter((runnerId, index) => index === 0).length;
+		const deadHeatDivisor = runnersInFirstPosition > 1 ? runnersInFirstPosition : 1;
+
 		// Track progressive multiplier
 		if (won) {
 			const multiplierBefore = bet.progressiveReturn ? bet.progressiveReturn / bet.stake : 1
-			const nextMultiplier = multiplierBefore * leg.oddsDecimalAtPlacement
+			const nextMultiplier = (multiplierBefore * leg.oddsDecimalAtPlacement) / deadHeatDivisor;
 			bet.progressiveReturn = bet.stake * nextMultiplier
 		} else {
 			// Lose entire multi
@@ -616,14 +739,14 @@ export class BettingEngine {
 				payout: 0,
 				profitLoss: -bet.stake,
 				result: 'LOST',
-				breakdown: `Leg ${idx + 1}/${bet.legs.length} lost: ${leg.selectionName} WIN@${fmt(leg.oddsDecimalAtPlacement)}`
+				breakdown: `Leg ${idx + 1}/${bet.legs.length} lost: ${leg.selectionName} WIN@${fmt(leg.oddsDecimalAtPlacement)}${deadHeatDivisor > 1 ? ` (dead heat with ${deadHeatDivisor - 1} other${deadHeatDivisor - 1 > 1 ? 's' : ''})` : ''}`
 			})
 		}
 
 		// If this was the last leg, pay out
 		const remaining = bet.legs.slice(idx + 1)
 		if (remaining.length === 0) {
-			const payout = bet.progressiveReturn ?? 0
+			const payout = (bet.progressiveReturn ?? 0) / deadHeatDivisor;
 			this.unlockFunds(bet.stake)
 			this.credit(payout)
 			bet.status = 'WON'
@@ -631,7 +754,7 @@ export class BettingEngine {
 				payout,
 				profitLoss: payout - bet.stake,
 				result: 'WON',
-				breakdown: `MULTI won. Legs: ${bet.legs.length}, Return: ${fmt(payout)}`
+				breakdown: `MULTI won. Legs: ${bet.legs.length}, Return: ${fmt(payout)}${deadHeatDivisor > 1 ? ` (dead heat divisor: ${deadHeatDivisor})` : ''}`
 			})
 		}
 
@@ -643,7 +766,15 @@ export class BettingEngine {
 
 	private ensureStake(stake: number) {
 		if (stake < this.cfg.minStake) throw new Error(`Min stake ${this.cfg.minStake}`)
+		if (stake > this.cfg.maxStake) throw new Error(`Max stake ${this.cfg.maxStake}`)
 		if (stake > this.balance) throw new Error('Insufficient funds')
+	}
+
+	// Check if betting is allowed for a race based on start time
+	private isBettingAllowed(advertisedStartMs: number): boolean {
+		const now = Date.now();
+		// Market closes when race starts
+		return now < advertisedStartMs;
 	}
 
 	private lockFunds(stake: number) {

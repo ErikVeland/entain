@@ -3,6 +3,7 @@ import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRacesStore, CATEGORY_IDS } from './stores/races'
 import { useBetsStore } from './stores/bets'
+import { useSimulationStore } from './stores/simulation'
 import RaceList from './components/RaceList.vue'
 import MeetingsView from './components/MeetingsView.vue'
 import NewsTicker from './components/NewsTicker.vue'
@@ -16,6 +17,7 @@ import TestRaces from './components/TestRaces.vue'
 const { locale, t } = useI18n()
 const store = useRacesStore()
 const betsStore = useBetsStore()
+const simulationStore = useSimulationStore()
 const betslipDrawer = ref<InstanceType<typeof BetslipDrawer> | null>(null)
 const showGameModeDialog = ref(false)
 const currentView = ref<'races' | 'meetings'>('races')
@@ -44,6 +46,54 @@ const toggleDebug = () => {
 // Combined simulation mode (combines game mode and simulated data)
 const isSimulationMode = computed(() => {
   return betsStore.showGame && betsStore.useSimulatedData
+})
+
+// Get live race updates
+const liveRaceUpdates = computed(() => {
+  if (!isSimulationMode.value) return null
+  
+  // Find the first running race with a smooth transition
+  for (const [raceId, status] of simulationStore.raceStatus.entries()) {
+    if (status === 'running') {
+      // Find the race in the store
+      const race = store.races.find(r => r.id === raceId)
+      if (race) {
+        return {
+          raceId: race.id,
+          meetingName: race.meeting_name,
+          raceNumber: race.race_number,
+          categoryId: race.category_id
+        }
+      }
+    }
+  }
+  
+  return null
+})
+
+// Get next race information when no races are live
+const nextRaceInfo = computed(() => {
+  if (!isSimulationMode.value) return null
+  
+  // If there are live races, don't show next race info
+  if (liveRaceUpdates.value) return null
+  
+  // Find the next upcoming race
+  const now = Date.now()
+  const upcomingRaces = store.races
+    .filter(r => r.advertised_start_ms > now)
+    .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+  
+  if (upcomingRaces.length > 0) {
+    const nextRace = upcomingRaces[0]
+    return {
+      meetingName: nextRace.meeting_name,
+      raceNumber: nextRace.race_number,
+      startTime: new Date(nextRace.advertised_start_ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    }
+  }
+  
+  return null
 })
 
 const toggleSimulation = () => {
@@ -238,6 +288,16 @@ onUnmounted(() => {
       <div class="flex flex-col md:flex-row md:items-center md:justify-between">
         <div class="flex items-center">
           <h1 class="text-2xl font-bold text-brand-primary">🏁 RACEHUB</h1>
+          <!-- Live race updates in header -->
+          <div v-if="isSimulationMode && liveRaceUpdates" class="ml-4 text-sm bg-brand-primary bg-opacity-20 px-3 py-1 rounded-full text-brand-primary flex items-center">
+            <span class="mr-2">🔴</span>
+            <span>{{ liveRaceUpdates.meetingName }} R{{ liveRaceUpdates.raceNumber }} Live</span>
+          </div>
+          <!-- Next race information when no races are live -->
+          <div v-else-if="isSimulationMode && nextRaceInfo" class="ml-4 text-sm bg-surface-sunken px-3 py-1 rounded-full text-text-base flex items-center">
+            <span class="mr-2">⏱️</span>
+            <span>NEXT RACE: {{ nextRaceInfo.meetingName }} R{{ nextRaceInfo.raceNumber }} at {{ nextRaceInfo.startTime }}</span>
+          </div>
         </div>
         <div class="mt-4 md:mt-0 flex items-center space-x-2">
           <!-- Debug toggle with bug icon -->
@@ -305,8 +365,13 @@ onUnmounted(() => {
                 <span class="mr-3 text-4xl" v-else>🏟️</span>
                 <span v-if="currentView === 'races'">{{ $t('views.nextFive') }}</span>
                 <span v-else>{{ $t('views.meetings') }}</span>
-                <!-- Show live updates only in simulation mode -->
-                <span v-if="isSimulationMode" class="ml-2 text-lg font-normal opacity-90">/ Live Racing</span>
+                <!-- Show specific race information instead of generic text -->
+                <span v-if="isSimulationMode && liveRaceUpdates" class="ml-2 text-lg font-normal opacity-90">
+                  / {{ liveRaceUpdates.meetingName }} R{{ liveRaceUpdates.raceNumber }} Live
+                </span>
+                <span v-else-if="isSimulationMode && nextRaceInfo" class="ml-2 text-lg font-normal opacity-90">
+                  / NEXT: {{ nextRaceInfo.meetingName }} R{{ nextRaceInfo.raceNumber }}
+                </span>
               </h2>
               <!-- Show live updates text only in simulation mode -->
               <p v-if="isSimulationMode" class="text-text-inverse opacity-80 text-base mt-2">{{ $t('races.liveUpdates') }}</p>

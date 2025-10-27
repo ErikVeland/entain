@@ -19,7 +19,11 @@
             <span v-if="runner.jockey && runner.weight"> | </span>
             <span v-if="runner.weight">{{ runner.weight }}</span>
             <span v-if="(runner.jockey || runner.weight) && runner.bestTime"> | </span>
-            <span v-if="runner.bestTime" :title="$t('game.bestTime')">BT: {{ runner.bestTime }}</span>
+            <!-- Expand BT to Best Time on larger screens -->
+            <span v-if="runner.bestTime" :title="$t('game.bestTime')">
+              <span class="hidden md:inline">Best Time: {{ runner.bestTime }}</span>
+              <span class="md:hidden">BT: {{ runner.bestTime }}</span>
+            </span>
           </div>
           
           <!-- Odds button -->
@@ -142,12 +146,12 @@ const formatJockeyName = (jockeyName: string) => {
 }
 
 const getOddsButtonTitle = () => {
-  // Check if race is running
+  // Check race status
   const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
   if (raceElement) {
     const raceStatus = raceElement.getAttribute('data-race-status');
-    if (raceStatus === 'live') {
-      return 'Cannot place bets on running races';
+    if (raceStatus === 'live' || raceStatus === 'starting_soon' || raceStatus === 'finished') {
+      return `Cannot place bets on ${raceStatus} races`;
     }
   }
   
@@ -165,15 +169,17 @@ const getOddsButtonTitle = () => {
 const oddsButtonClass = computed(() => {
   const baseClasses = 'bg-surface text-text-base hover:bg-brand-primary hover:text-text-inverse cursor-pointer'
   
-  // Check if race is running (live)
+  // Check race status - only allow betting on countdown races (upcoming)
   const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
-  let isRaceRunning = false;
+  let isRaceActive = false;
   if (raceElement) {
     const raceStatus = raceElement.getAttribute('data-race-status');
-    isRaceRunning = raceStatus === 'live';
+    // Allow betting only on countdown races (upcoming)
+    isRaceActive = raceStatus === 'countdown';
   }
   
-  if (props.isExpired || isRaceRunning) {
+  // Disable betting if race is expired OR not in countdown status
+  if (props.isExpired || !isRaceActive) {
     return `${baseClasses} opacity-50 cursor-not-allowed`
   }
   
@@ -187,19 +193,24 @@ const oddsButtonClass = computed(() => {
 })
 
 const handleOddsClick = () => {
-  // Check if race is running (live)
+  // Check race status - only allow betting on countdown races (upcoming)
   const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+  let isRaceCountdown = false;
   if (raceElement) {
     const raceStatus = raceElement.getAttribute('data-race-status');
-    if (raceStatus === 'live') {
-      // Race is running, don't allow betting
-      console.log('Cannot place bet on running race', props.raceId);
-      return;
-    }
+    // Allow betting only on countdown races (upcoming)
+    isRaceCountdown = raceStatus === 'countdown';
   }
   
+  // MUST prevent betting if race is not in countdown status
+  if (!isRaceCountdown) {
+    console.log('BLOCKED: Cannot place bet on non-countdown race', props.raceId);
+    return;
+  }
+  
+  // Check if race is expired - MUST prevent betting
   if (props.isExpired) {
-    console.log('Cannot place bet on expired race', props.raceId);
+    console.log('BLOCKED: Cannot place bet on expired race', props.raceId);
     return;
   }
   
@@ -220,7 +231,7 @@ const handleOddsClick = () => {
     }
   }
   
-  console.log('Adding runner to betslip:', props.runner);
+  console.log('ALLOWED: Adding runner to betslip:', props.runner);
   
   // Emit event to open betslip drawer
   const event = new CustomEvent('open-betslip', { 

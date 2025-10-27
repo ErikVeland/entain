@@ -58,9 +58,9 @@ export const useBetsStore = defineStore('bets', {
       this.useSimulatedData = useSimulated
     },
     
-    placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP') {
+    placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number) {
       try {
-        return this.engine.placeBet(raceId, runnerId, stake, odds)
+        return this.engine.placeBet(raceId, runnerId, stake, odds, advertisedStartMs)
       } catch (error) {
         console.error('Error placing bet:', error)
         throw error

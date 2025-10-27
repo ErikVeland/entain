@@ -53,8 +53,8 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
       // Race has started, show LIVE and mark as in progress
       isInProgress.value = true
       formattedTime.value = 'LIVE'
-      // Stop the interval as the race should be in progress
-      stop()
+      // Continue updating even after race starts to maintain proper status
+      // Don't stop the interval
     } else {
       // Format the time as MM:SS (never show negative values)
       const minutes = Math.max(0, Math.floor(timeDiff / 60000))

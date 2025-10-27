@@ -79,14 +79,21 @@ export const useSimulationStore = defineStore('simulation', {
     },
     
     resetSimulation(raceId: string) {
-      this.removeSimulationController(raceId)
+      // Ensure smooth transition by properly cleaning up before resetting
+      const controller = this.controllers.get(raceId)
+      if (controller) {
+        controller.stop()
+      }
+      this.activeRaces.delete(raceId)
       this.raceStatus.set(raceId, 'pending')
     },
     
     resetAllSimulations() {
-      for (const raceId of this.controllers.keys()) {
-        this.removeSimulationController(raceId)
+      // Ensure all simulations are properly stopped before clearing
+      for (const [raceId, controller] of this.controllers.entries()) {
+        controller.stop()
       }
+      this.controllers.clear()
       this.activeRaces.clear()
       this.raceStatus.clear()
       this.speedMultipliers.clear()

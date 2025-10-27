@@ -117,6 +117,25 @@
 .transition-normal { transition: var(--transition-normal); }
 .transition-slow { transition: var(--transition-slow); }
 
+// Animations
+@keyframes odds-change-up {
+  0% { transform: translateY(0); background-color: var(--color-success); color: var(--color-text-inverse); }
+  100% { transform: translateY(-10px); background-color: transparent; color: var(--color-text-base); }
+}
+
+@keyframes odds-change-down {
+  0% { transform: translateY(0); background-color: var(--color-danger); color: var(--color-text-inverse); }
+  100% { transform: translateY(10px); background-color: transparent; color: var(--color-text-base); }
+}
+
+.animate-odds-change-up {
+  animation: odds-change-up 0.5s ease-out;
+}
+
+.animate-odds-change-down {
+  animation: odds-change-down 0.5s ease-out;
+}
+
 // Opacity
 .bg-opacity-20 { background-color: rgba(var(--color-rgb), 0.2); }
 .bg-opacity-50 { background-color: rgba(var(--color-rgb), 0.5); }
