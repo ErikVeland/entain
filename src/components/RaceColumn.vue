@@ -41,6 +41,7 @@
       :start-time="race.advertised_start_ms"
       :is-expired="isExpired"
       :race-id="race.id"
+      :race-finished="raceFinished"
     />
     
     <!-- Simulation Controls (hidden by default, shown only in debug mode) -->
@@ -200,7 +201,9 @@ const error = ref<string | null>(null)
 // Computed race status with smooth transitions
 const raceStatus = computed(() => {
   if (props.isExpired) return 'finished'
-  // Only show 'live' status when race has actually started (countdown finished)
+  // Show 'finished' status when race has completed
+  if (raceFinished.value) return 'finished'
+  // Only show 'live' status when race has actually started (countdown finished) and not finished
   if (isInProgress.value) return 'live'
   if (isStartingSoon.value) return 'starting_soon'
   return 'countdown'
