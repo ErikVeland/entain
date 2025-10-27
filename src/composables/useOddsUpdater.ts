@@ -11,46 +11,67 @@ export function useOddsUpdater() {
   
   // Register a race as being in countdown status
   const registerCountdownRace = (raceId: string) => {
-    console.log('Registering race for odds updates:', raceId)
-    countdownRaces.value.add(raceId)
-    startOddsUpdates(raceId)
+    console.log('=== REGISTER COUNTDOWN RACE ===');
+    console.log('Registering race for odds updates:', raceId);
+    console.log('Current countdown races before:', Array.from(countdownRaces.value));
+    countdownRaces.value.add(raceId);
+    console.log('Current countdown races after:', Array.from(countdownRaces.value));
+    startOddsUpdates(raceId);
+    console.log('=== END REGISTER COUNTDOWN RACE ===');
   }
-  
+
   // Unregister a race from countdown status
   const unregisterCountdownRace = (raceId: string) => {
-    console.log('Unregistering race from odds updates:', raceId)
-    countdownRaces.value.delete(raceId)
-    stopOddsUpdates(raceId)
+    console.log('=== UNREGISTER COUNTDOWN RACE ===');
+    console.log('Unregistering race from odds updates:', raceId);
+    console.log('Current countdown races before:', Array.from(countdownRaces.value));
+    countdownRaces.value.delete(raceId);
+    console.log('Current countdown races after:', Array.from(countdownRaces.value));
+    stopOddsUpdates(raceId);
+    console.log('=== END UNREGISTER COUNTDOWN RACE ===');
   }
   
   // Start updating odds for a specific race
   const startOddsUpdates = (raceId: string) => {
+    console.log('=== START ODDS UPDATES ===');
+    console.log('Starting odds updates for race:', raceId);
+    
     // Stop any existing interval for this race
     stopOddsUpdates(raceId)
     
     // Start new interval for odds updates
     const intervalId = window.setInterval(() => {
+      console.log('Odds update interval triggered for race:', raceId);
       // Only update if race is still in countdown status
       if (countdownRaces.value.has(raceId)) {
+        console.log('Race is in countdown status, updating odds for:', raceId);
         updateRaceOdds(raceId)
       } else {
+        console.log('Race is not in countdown status, stopping updates for:', raceId);
         // Clean up if race is no longer in countdown status
         stopOddsUpdates(raceId)
       }
     }, 1000) // Update every 1 second for more responsive feel
     
     updateIntervals.set(raceId, intervalId)
-    console.log('Started odds updates for race:', raceId)
+    console.log('Started odds updates for race:', raceId, 'with interval ID:', intervalId)
+    console.log('=== END START ODDS UPDATES ===');
   }
   
   // Stop updating odds for a specific race
   const stopOddsUpdates = (raceId: string) => {
+    console.log('=== STOP ODDS UPDATES ===');
+    console.log('Stopping odds updates for race:', raceId);
     const intervalId = updateIntervals.get(raceId)
     if (intervalId) {
+      console.log('Clearing interval for race:', raceId, 'with interval ID:', intervalId);
       clearInterval(intervalId)
       updateIntervals.delete(raceId)
       console.log('Stopped odds updates for race:', raceId)
+    } else {
+      console.log('No interval found for race:', raceId);
     }
+    console.log('=== END STOP ODDS UPDATES ===');
   }
   
   // Update odds for a specific race during countdown

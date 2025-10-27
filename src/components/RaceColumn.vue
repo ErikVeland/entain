@@ -220,11 +220,15 @@ const raceStatus = computed(() => {
 
 // Watch for race status changes to manage odds updates
 watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, startingSoon, isExpired]) => {
+  console.log('=== RACE STATUS CHANGE ===');
   console.log('Race status changed for race', props.race.id, 'inProgress:', inProgress, 'startingSoon:', startingSoon, 'isExpired:', isExpired);
   
   // Check if race is in countdown status (upcoming race)
   // Odds should update only when race is upcoming (countdown) and not expired
   const isCountdown = !isExpired && !inProgress && !startingSoon && !raceFinished.value;
+  console.log('Is race in countdown status?', isCountdown);
+  console.log('betsStore.showGame:', betsStore.showGame);
+  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData);
   
   if (isCountdown && betsStore.showGame && betsStore.useSimulatedData) {
     console.log('Registering race for odds updates:', props.race.id);
@@ -235,6 +239,7 @@ watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, start
     // Unregister race from global odds updates
     unregisterCountdownRace(props.race.id);
   }
+  console.log('=== END RACE STATUS CHANGE ===');
 }, { immediate: true });
 
 // Start race simulation when countdown ends with smooth transition
@@ -286,8 +291,14 @@ const retryLoad = () => {
 
 // Initialize race simulation
 const initializeRaceSimulation = () => {
+  console.log('=== INITIALIZE RACE SIMULATION ===');
+  console.log('Initializing race simulation for race:', props.race.id);
+  console.log('betsStore.showGame:', betsStore.showGame);
+  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData);
+  
   // Only initialize in simulation mode
   if (!betsStore.showGame || !betsStore.useSimulatedData) {
+    console.log('Not in simulation mode, skipping initialization');
     return
   }
   
@@ -385,10 +396,12 @@ const initializeRaceSimulation = () => {
     error.value = `Failed to initialize race simulation: ${errorMessage}`
     console.error('Error initializing race simulation:', err)
   }
+  console.log('=== END INITIALIZE RACE SIMULATION ===');
 }
 
 // Initialize simulation on mount
 onMounted(() => {
+  console.log('=== RACE COLUMN MOUNTED ===');
   try {
     console.log('RaceColumn mounted for race', props.race.id)
     console.log('betsStore.showGame:', betsStore.showGame)
@@ -400,6 +413,7 @@ onMounted(() => {
     error.value = `Failed to mount race component: ${errorMessage}`
     console.error('Error mounting race component:', err)
   }
+  console.log('=== END RACE COLUMN MOUNTED ===');
 })
 
 // Also start race simulation when manually triggered (for testing)
@@ -526,6 +540,7 @@ const runnersForDisplay = computed(() => {
   
   // In simulation mode, show simulated runners
   const runners = getSimulatedRunners(props.race.id)
+  console.log('=== RUNNERS FOR DISPLAY ===');
   console.log('Got simulated runners for race', props.race.id, runners);
   
   const formattedRunners = runners.map(runner => ({
@@ -536,6 +551,7 @@ const runnersForDisplay = computed(() => {
   }));
   
   console.log('Updating runners for display for race', props.race.id, formattedRunners);
+  console.log('=== END RUNNERS FOR DISPLAY ===');
   
   return formattedRunners;
 })

@@ -254,7 +254,11 @@ export function useOddsSimulation() {
     progressByRunner: Record<string, number>,
     order: string[]
   ) => {
-    console.log('Updating odds for race', raceId)
+    console.log('=== UPDATE ODDS CALLED ===');
+    console.log('Updating odds for race', raceId);
+    console.log('Progress by runner:', progressByRunner);
+    console.log('Order:', order);
+    
     const simulation = simulations.value[raceId]
     if (!simulation) {
       // No simulation found, which is expected when not in simulation mode
@@ -266,7 +270,7 @@ export function useOddsSimulation() {
     const now = Date.now();
     const lastUpdate = lastUpdateTimes.get(raceId) || 0;
     if (now - lastUpdate < UPDATE_THROTTLE_MS) {
-      console.log('Throttling odds update for race', raceId)
+      console.log('Throttling odds update for race', raceId, 'last update was', now - lastUpdate, 'ms ago')
       return;
     }
     lastUpdateTimes.set(raceId, now);
@@ -356,20 +360,28 @@ export function useOddsSimulation() {
     
     // Trigger a reactive update by creating a new object reference
     console.log('Triggering reactive update for race', raceId);
-    simulations.value = { ...simulations.value };
+    // Create a deep copy to ensure reactivity
+    const updatedSimulations = { ...simulations.value };
+    updatedSimulations[raceId] = { ...updatedSimulations[raceId] };
+    simulations.value = updatedSimulations;
+    console.log('=== UPDATE ODDS COMPLETED ===');
   }
   
   // Get current simulated runners for a race
   const getSimulatedRunners = (raceId: string): SimulatedRunner[] => {
+    console.log('=== GET SIMULATED RUNNERS ===');
+    console.log('Getting simulated runners for race:', raceId);
     const simulation = simulations.value[raceId]
     if (!simulation) {
       // Return empty array when not in simulation mode
       console.log('No simulation found in getSimulatedRunners for race', raceId)
+      console.log('=== END GET SIMULATED RUNNERS (no simulation) ===');
       return []
     }
     
     const runners = Object.values(simulation.runners)
     console.log('Returning runners for race', raceId, runners)
+    console.log('=== END GET SIMULATED RUNNERS ===');
     return runners
   }
   
