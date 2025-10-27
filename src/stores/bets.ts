@@ -143,6 +143,19 @@ export const useBetsStore = defineStore('bets', {
         console.error('Error getting pending bets:', error)
         throw error
       }
+    },
+    
+    // Add method to cashout a bet
+    cashoutBet(betId: string) {
+      try {
+        const result = this.engine.requestCashout(betId)
+        // Check if player is now bankrupt after cashing out
+        this.checkGameOver()
+        return result
+      } catch (error) {
+        console.error('Error cashing out bet:', error)
+        throw error
+      }
     }
   }
 })

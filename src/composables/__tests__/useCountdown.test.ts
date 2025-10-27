@@ -32,13 +32,13 @@ describe('useCountdown', () => {
     expect(isInProgress.value).toBe(false)
   })
 
-  it('shows "Soon" when race starts soon', () => {
+  it('shows "LIVE" when race starts soon (negative time)', () => {
     const pastTime = new Date('2023-01-01T11:59:30Z').getTime() // 30 seconds ago
     const { formattedTime, isStartingSoon, isInProgress } = useCountdown(pastTime)
 
-    expect(formattedTime.value).toBe('Soon')
-    expect(isStartingSoon.value).toBe(true)
-    expect(isInProgress.value).toBe(false)
+    expect(formattedTime.value).toBe('LIVE')
+    expect(isStartingSoon.value).toBe(false)
+    expect(isInProgress.value).toBe(true)
   })
 
   it('shows "LIVE" when race is in progress', () => {

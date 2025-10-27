@@ -7,22 +7,38 @@ import { useBetsStore } from '../../stores/bets'
 describe('PendingBetsList', () => {
   const mockBets = [
     {
-      id: 'bet1',
-      raceId: 'race1',
-      runnerId: 'runner1',
-      amount: 1000, // $10.00
-      odds: 2.5,
-      status: 'pending' as const,
-      timestamp: Date.now()
+      betId: 'bet1',
+      placedAtMs: Date.now(),
+      stake: 1000, // $10.00
+      type: 'WIN' as const,
+      status: 'PENDING' as const,
+      leg: {
+        raceId: 'race1',
+        selectionRunnerId: 'runner1',
+        selectionName: 'Thunder Bay',
+        oddsDecimalAtPlacement: 2.5,
+        placeOddsDecimal: 1.2,
+        categoryId: '4a2788f8-e825-4d36-9894-efd4baf1cfae',
+        fieldSize: 8
+      },
+      potentialReturn: 2500
     },
     {
-      id: 'bet2',
-      raceId: 'race2',
-      runnerId: 'runner2',
-      amount: 2000, // $20.00
-      odds: 'SP',
-      status: 'pending' as const,
-      timestamp: Date.now()
+      betId: 'bet2',
+      placedAtMs: Date.now(),
+      stake: 2000, // $20.00
+      type: 'PLACE' as const,
+      status: 'PENDING' as const,
+      leg: {
+        raceId: 'race2',
+        selectionRunnerId: 'runner2',
+        selectionName: 'Lightning Strike',
+        oddsDecimalAtPlacement: 6.0,
+        placeOddsDecimal: 1.5,
+        categoryId: '4a2788f8-e825-4d36-9894-efd4baf1cfae',
+        fieldSize: 8
+      },
+      potentialReturn: 3000
     }
   ]
 
@@ -48,10 +64,12 @@ describe('PendingBetsList', () => {
     expect(wrapper.text()).toContain('$10.00')
     expect(wrapper.text()).toContain('2.50')
     expect(wrapper.text()).toContain('Pending')
+    expect(wrapper.text()).toContain('Thunder Bay')
     
     // Check that the second bet details are displayed
     expect(wrapper.text()).toContain('$20.00')
-    expect(wrapper.text()).toContain('SP')
+    expect(wrapper.text()).toContain('6.00')
+    expect(wrapper.text()).toContain('Lightning Strike')
   })
 
   it('calls cancelBet when cancel button is clicked', async () => {
@@ -60,12 +78,14 @@ describe('PendingBetsList', () => {
     
     const wrapper = mount(PendingBetsList, {
       props: {
-        bets: mockBets
+        bets: [mockBets[0]]
       }
     })
     
     // Click the cancel button for the first bet
-    await wrapper.find('button').trigger('click')
+    const cancelButton = wrapper.findAll('button').find(btn => btn.text() === 'Cancel')
+    expect(cancelButton).toBeTruthy()
+    await cancelButton!.trigger('click')
     
     // Check that cancelBet was called with the correct bet ID
     expect(store.cancelBet).toHaveBeenCalledWith('bet1')

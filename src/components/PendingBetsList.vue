@@ -1,3 +1,66 @@
+<template>
+  <div class="space-y-4">
+    <div 
+      v-for="bet in bets" 
+      :key="bet.betId"
+      class="bg-surface rounded-xl p-4 shadow-card"
+      role="region"
+      :aria-labelledby="`bet-title-${bet.betId}`"
+    >
+      <!-- Selection identity -->
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center mb-1">
+            <!-- Category icon or silks -->
+            <div class="w-4 h-4 rounded-sm mr-2 bg-brand-primary"></div>
+            <h4 
+  :id="`bet-title-${bet.betId}`"
+  class="font-bold text-text-base truncate"
+>
+  {{ getRunnerName(bet) }}
+</h4>
+          </div>
+          <p class="text-text-muted text-sm truncate">{{ getMeetingName(bet) }} R{{ getRaceNumber(bet) }}</p>
+        </div>
+        <div class="flex items-center space-x-2 ml-2">
+          <!-- Status badge -->
+          <span class="px-2 py-1 bg-warning bg-opacity-20 text-warning text-xs font-medium rounded-full">
+            Pending
+          </span>
+        </div>
+      </div>
+      
+      <!-- Bet details -->
+      <div class="grid grid-cols-2 gap-2 mb-3">
+        <div>
+          <p class="text-text-muted text-xs">Stake</p>
+          <p class="text-text-base font-medium">${{ (getStake(bet) / 100).toFixed(2) }}</p>
+        </div>
+        <div>
+          <p class="text-text-muted text-xs">Odds</p>
+          <p class="text-text-base font-medium">{{ formatOdds(getOdds(bet)) }}</p>
+        </div>
+      </div>
+      
+      <!-- Action buttons -->
+      <div class="flex space-x-2 mt-2">
+        <button
+          @click="cashoutBet(bet.betId)"
+          class="flex-1 py-2 text-center text-text-base text-sm bg-warning bg-opacity-20 hover:bg-opacity-30 rounded-lg focus:outline-none"
+        >
+          Cash Out
+        </button>
+        <button
+          @click="cancelBet(bet.betId)"
+          class="flex-1 py-2 text-center text-text-muted text-sm hover:text-danger hover:underline focus:outline-none"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</template>
+
 <script setup lang="ts">
 import { useBetsStore } from '../stores/bets'
 import { type Bet, type SingleBet, type MultiBet, type ExoticBet } from '../game/bettingSimulator'
@@ -67,4 +130,9 @@ const formatOdds = (odds: number | 'SP') => {
 const cancelBet = (betId: string) => {
   betsStore.cancelBet(betId)
 }
+
+const cashoutBet = (betId: string) => {
+  betsStore.cashoutBet(betId)
+}
+
 </script>

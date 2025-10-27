@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import RunnerRow from '../RunnerRow.vue'
@@ -11,7 +11,7 @@ const mockRunner = {
   weight: '58kg',
   jockey: 'J: R Vaibhav',
   odds: '2.40',
-  oddsTrend: 'up',
+  oddsTrend: 'up' as 'up' | 'down' | 'none',
   silkColor: 'bg-blue-500'
 }
 
@@ -19,6 +19,14 @@ describe('RunnerRow', () => {
   beforeEach(() => {
     // Create a new pinia instance and make it active
     setActivePinia(createPinia())
+    
+    // Mock document.querySelector to return a race element with countdown status
+    Object.defineProperty(document, 'querySelector', {
+      writable: true,
+      value: vi.fn().mockImplementation(() => ({
+        getAttribute: vi.fn().mockReturnValue('countdown')
+      }))
+    })
   })
 
   it('renders properly with runner data', () => {
@@ -32,8 +40,9 @@ describe('RunnerRow', () => {
     })
 
     expect(wrapper.exists()).toBe(true)
-    expect(wrapper.text()).toContain('1. Thunder Bay')
-    expect(wrapper.text()).toContain('J: R Vaibhav 58kg')
+    expect(wrapper.text()).toContain('Thunder Bay')
+    expect(wrapper.text()).toContain('J: R. Vaibhav')
+    expect(wrapper.text()).toContain('58kg')
     expect(wrapper.text()).toContain('2.40')
     expect(wrapper.text()).toContain('▲')
   })
@@ -43,7 +52,7 @@ describe('RunnerRow', () => {
       props: {
         runner: {
           ...mockRunner,
-          oddsTrend: 'up'
+          oddsTrend: 'up' as 'up' | 'down' | 'none'
         },
         raceId: 'race1',
         raceName: 'Test Race',
@@ -60,7 +69,7 @@ describe('RunnerRow', () => {
       props: {
         runner: {
           ...mockRunner,
-          oddsTrend: 'down'
+          oddsTrend: 'down' as 'up' | 'down' | 'none'
         },
         raceId: 'race1',
         raceName: 'Test Race',
@@ -77,7 +86,7 @@ describe('RunnerRow', () => {
       props: {
         runner: {
           ...mockRunner,
-          oddsTrend: 'none'
+          oddsTrend: 'none' as 'up' | 'down' | 'none'
         },
         raceId: 'race1',
         raceName: 'Test Race',

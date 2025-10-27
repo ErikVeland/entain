@@ -5,7 +5,15 @@ import { createRaceSimulation } from '../../game/simulatedRace'
 
 // Mock the createRaceSimulation function
 vi.mock('../../game/simulatedRace', () => ({
-  createRaceSimulation: vi.fn().mockReturnValue({ id: 'controller1' })
+  createRaceSimulation: vi.fn().mockReturnValue({
+    id: 'controller1',
+    start: vi.fn(),
+    stop: vi.fn(),
+    onTick: vi.fn(),
+    onFinish: vi.fn(),
+    getSeed: vi.fn(),
+    getPlannedDurationMs: vi.fn()
+  })
 }))
 
 describe('useRaceSimulation', () => {
@@ -30,15 +38,31 @@ describe('useRaceSimulation', () => {
     }
     
     // Create a simulation
-    const controller = createSimulation(raceInput, 12345)
+    const controller = createSimulation(raceInput, 12345, 200)
     
     // Check that the controller was created
-    expect(controller).toEqual({ id: 'controller1' })
-    expect(createRaceSimulation).toHaveBeenCalledWith(raceInput, 12345)
+    expect(controller).toEqual({
+      id: 'controller1',
+      start: expect.any(Function),
+      stop: expect.any(Function),
+      onTick: expect.any(Function),
+      onFinish: expect.any(Function),
+      getSeed: expect.any(Function),
+      getPlannedDurationMs: expect.any(Function)
+    })
+    expect(createRaceSimulation).toHaveBeenCalledWith(raceInput, 12345, 200)
     
     // Get the simulation
     const retrievedController = getSimulation('race1')
-    expect(retrievedController).toEqual({ id: 'controller1' })
+    expect(retrievedController).toEqual({
+      id: 'controller1',
+      start: expect.any(Function),
+      stop: expect.any(Function),
+      onTick: expect.any(Function),
+      onFinish: expect.any(Function),
+      getSeed: expect.any(Function),
+      getPlannedDurationMs: expect.any(Function)
+    })
     
     // Remove the simulation
     removeSimulation('race1')
