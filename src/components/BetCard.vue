@@ -153,12 +153,15 @@ const errorMessage = computed(() => {
 // Calculate estimated return based on current stake input
 const estimatedReturn = computed(() => {
   const stakeInCents = Math.round(stakeInput.value * 100)
-  return calculateEstimatedReturn(stakeInCents, props.selection.odds, props.selection.market)
+  const result = calculateEstimatedReturn(stakeInCents, props.selection.odds, props.selection.market)
+  return isNaN(result) ? 0 : result
 })
 
 // Methods
 const formatOdds = (odds: number | 'SP') => {
-  return odds === 'SP' ? 'SP' : odds.toFixed(2)
+  if (odds === 'SP') return 'SP'
+  const numericOdds = typeof odds === 'number' ? odds : parseFloat(String(odds))
+  return isNaN(numericOdds) ? 'SP' : numericOdds.toFixed(2)
 }
 
 const updateMarket = (market: 'win' | 'place' | 'each-way') => {

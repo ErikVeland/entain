@@ -44,7 +44,10 @@ const en = {
   },
   views: {
     nextFive: 'Next 5 Races',
-    meetings: 'Meetings'
+    meetings: 'Meetings',
+    nextFiveShort: 'Races',
+    meetingsShort: 'Meetings',
+    toggle: 'Toggle between races and meetings view'
   },
   theme: {
     switchToLight: 'Switch to light mode',
@@ -108,7 +111,10 @@ const es = {
   },
   views: {
     nextFive: 'Próximas 5 Carreras',
-    meetings: 'Reuniones'
+    meetings: 'Reuniones',
+    nextFiveShort: 'Carreras',
+    meetingsShort: 'Reuniones',
+    toggle: 'Alternar entre carreras y reuniones'
   },
   theme: {
     switchToLight: 'Cambiar a modo claro',
@@ -172,7 +178,10 @@ const fr = {
   },
   views: {
     nextFive: '5 prochaines courses',
-    meetings: 'Réunions'
+    meetings: 'Réunions',
+    nextFiveShort: 'Courses',
+    meetingsShort: 'Réunions',
+    toggle: 'Basculer entre courses et réunions'
   },
   theme: {
     switchToLight: 'Passer en mode clair',

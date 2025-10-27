@@ -1,4 +1,6 @@
 import { defineStore } from 'pinia'
+import { useBetsStore } from './bets'
+import { useOddsSimulation } from '../composables/useOddsSimulation'
 
 /**
  * Category IDs as specified by the task brief.
@@ -120,10 +122,12 @@ export const useRacesStore = defineStore('races', {
       
       // Apply search filter
       if (state.searchQuery) {
-        const query = state.searchQuery.toLowerCase()
+        const query = state.searchQuery.toLowerCase().trim()
         filtered = filtered.filter(r => 
           r.meeting_name.toLowerCase().includes(query) ||
-          r.race_number.toString().includes(query)
+          r.race_number.toString().includes(query) ||
+          // In simulation mode, also filter by runner names
+          (isInSimulationMode() && raceHasRunnerMatchingQuery(r, query))
         )
       }
       
@@ -165,10 +169,22 @@ export const useRacesStore = defineStore('races', {
      */
     nextFive(state): RaceSummary[] {
       const cutoffNow = now()
-      const activeRaces = state.races
+      let activeRaces = state.races
         .filter(r => state.selectedCategories.has(r.category_id))
         .filter(r => !isExpired(r, cutoffNow))
-        .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+      
+      // Apply search filter
+      if (state.searchQuery) {
+        const query = state.searchQuery.toLowerCase().trim()
+        activeRaces = activeRaces.filter(r => 
+          r.meeting_name.toLowerCase().includes(query) ||
+          r.race_number.toString().includes(query) ||
+          // In simulation mode, also filter by runner names
+          (isInSimulationMode() && raceHasRunnerMatchingQuery(r, query))
+        )
+      }
+      
+      activeRaces = activeRaces.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
   
       console.log('Computing nextFive races:')
       console.log('- Total races in store:', state.races.length)
@@ -464,4 +480,20 @@ function isExpired(r: RaceSummary, t: number): boolean {
   const result = t >= (r.advertised_start_ms + 60000);
   console.log('Race expired result for', r.id, ':', result);
   return result;
+}
+
+// Helper function to check if we're in simulation mode
+function isInSimulationMode(): boolean {
+  const betsStore = useBetsStore()
+  return betsStore.showGame && betsStore.useSimulatedData
+}
+
+// Helper function to check if a race has runners matching the search query
+function raceHasRunnerMatchingQuery(race: RaceSummary, query: string): boolean {
+  const { getSimulatedRunners } = useOddsSimulation()
+  const runners = getSimulatedRunners(race.id)
+  
+  return runners.some(runner => 
+    runner.name.toLowerCase().includes(query)
+  )
 }

@@ -223,7 +223,7 @@ export function generateRandomizedRunners(raceId: string, categoryId: string, co
 
 // Throttling for odds updates to prevent excessive re-renders
 const lastUpdateTimes = new Map<string, number>()
-const UPDATE_THROTTLE_MS = 200 // Odds simulation updates are throttled at 200ms interval
+const UPDATE_THROTTLE_MS = 150 // Odds simulation updates are throttled at 150ms interval
 
 // Initialize odds simulation for a race
 const initializeOddsSimulation = (
@@ -308,49 +308,49 @@ const updateOdds = (
     // Market dynamics: if race is near start, odds are more volatile
     const raceProgress = Math.max(...Object.values(progressByRunner));
     // Implement more sophisticated market dynamics with realistic volatility patterns:
-    // Early race (0-5%): 1.005x volatility
-    // Mid-early race (5-10%): 1.004x volatility
-    // Mid race (10-20%): 1.003x volatility
-    // Late-mid race (20-50%): 1.002x volatility
-    // End race (50%+): 1.001x volatility
+    // Early race (0-5%): 1.05x volatility (increased from 1.005)
+    // Mid-early race (5-10%): 1.04x volatility (increased from 1.004)
+    // Mid race (10-20%): 1.03x volatility (increased from 1.003)
+    // Late-mid race (20-50%): 1.02x volatility (increased from 1.002)
+    // End race (50%+): 1.01x volatility (increased from 1.001)
     let marketVolatility;
     if (raceProgress < 0.05) {
-      marketVolatility = 1.005;
+      marketVolatility = 1.05;
     } else if (raceProgress < 0.10) {
-      marketVolatility = 1.004;
+      marketVolatility = 1.04;
     } else if (raceProgress < 0.20) {
-      marketVolatility = 1.003;
+      marketVolatility = 1.03;
     } else if (raceProgress < 0.50) {
-      marketVolatility = 1.002;
+      marketVolatility = 1.02;
     } else {
-      marketVolatility = 1.001;
+      marketVolatility = 1.01;
     }
     
     // If this is the leader, odds should generally decrease (favorite)
     if (runnerId === leaderId) {
-      // Leader gets favored odds, but changes should be gradual (±0.5%)
-      const leaderFactor = 0.995 + (0.005 * (1 - progress)) * marketVolatility;
+      // Leader gets favored odds, but changes should be more visible (±5%)
+      const leaderFactor = 0.95 + (0.05 * (1 - progress)) * marketVolatility;
       newOdds = Math.max(1.1, currentOdds * leaderFactor);
       trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none';
     } 
     // If runner is in top 3 and making progress, odds may decrease
     else if (currentPosition < 3 && progress > 0.3) {
-      // Changes for top 3 runners (±0.5%)
-      const top3Factor = 0.9975 + (0.0025 * (1 - (currentPosition / 3))) * marketVolatility;
+      // Changes for top 3 runners (±5%)
+      const top3Factor = 0.95 + (0.05 * (1 - (currentPosition / 3))) * marketVolatility;
       newOdds = Math.max(1.2, currentOdds * top3Factor);
       trend = newOdds < currentOdds ? 'down' : newOdds > currentOdds ? 'up' : 'none';
     }
     // If runner is falling behind, odds may increase
     else if (currentPosition > 2 && progress < 0.7) {
-      // Increases for trailing runners (±0.5%)
-      const trailingFactor = 1.0025 + (0.0025 * (currentPosition / order.length)) * marketVolatility;
+      // Increases for trailing runners (±5%)
+      const trailingFactor = 1.05 + (0.05 * (currentPosition / order.length)) * marketVolatility;
       newOdds = currentOdds * trailingFactor;
       trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
     }
-    // For middle runners, small fluctuations (±0.5%)
+    // For middle runners, small fluctuations (±5%)
     else {
       // Random fluctuation with market volatility factor
-      const fluctuation = 0.9975 + (Math.random() * 0.005) * marketVolatility;
+      const fluctuation = 0.95 + (Math.random() * 0.10) * marketVolatility;
       newOdds = currentOdds * fluctuation;
       trend = newOdds > currentOdds ? 'up' : newOdds < currentOdds ? 'down' : 'none';
     }
@@ -360,9 +360,12 @@ const updateOdds = (
     
     // Update runner odds and trend
     // Keep more precision for comparison but display with 2 decimal places
-    const displayOdds = parseFloat(newOdds.toFixed(2));
+    // Round to 2 decimal places but ensure changes are detectable
+    const displayOdds = Math.round(newOdds * 100) / 100;
     runner.odds = displayOdds;
     runner.oddsTrend = trend;
+    
+    console.log('Calculated odds for runner', runnerId, 'newOdds:', newOdds, 'displayOdds:', displayOdds, 'change:', Math.abs(displayOdds - currentOdds));
     
     console.log('Updated odds for runner', runnerId, 'from', currentOdds, 'to', runner.odds, 'with trend', trend)
   });

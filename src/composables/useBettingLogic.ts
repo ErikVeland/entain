@@ -34,7 +34,12 @@ export function useBettingLogic() {
   
   // Calculate estimated return for a bet (simplified)
   const calculateEstimatedReturn = (stake: number, odds: number | 'SP', market: 'win' | 'place' | 'each-way'): number => {
-    const numericOdds = odds === 'SP' ? 6.0 : odds
+    const numericOdds = odds === 'SP' ? 6.0 : (typeof odds === 'number' ? odds : parseFloat(String(odds)))
+    
+    // Handle invalid odds
+    if (isNaN(numericOdds) || numericOdds <= 0) {
+      return 0
+    }
     
     switch (market) {
       case 'win':

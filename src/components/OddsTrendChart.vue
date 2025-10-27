@@ -26,7 +26,8 @@ import {
   CategoryScale,
   LinearScale,
   Filler,
-  Scale
+  Scale,
+  ChartOptions
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import { useBetsStore } from '../stores/bets'
@@ -83,20 +84,22 @@ const updateOddsHistory = () => {
   const runners = getSimulatedRunners(props.raceId)
   if (runners.length === 0) return
   
-  // ONLY update odds history for upcoming races (countdown status)
+  // ONLY update odds history for upcoming races (countdown and starting_soon status)
   // For live/running races, show locked data from race start
   const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
   let isRaceCountdown = false;
+  let isRaceStartingSoon = false;
   if (raceElement) {
     const raceStatus = raceElement.getAttribute('data-race-status');
-    // Only update for countdown races (upcoming races)
+    // Update for countdown and starting_soon races (upcoming races)
     isRaceCountdown = raceStatus === 'countdown';
+    isRaceStartingSoon = raceStatus === 'starting_soon';
   }
   
-  // DO NOT update odds history if race is not in countdown status
+  // DO NOT update odds history if race is not in countdown or starting_soon status
   // This ensures locked data is shown for live/running races
-  if (!isRaceCountdown) {
-    console.log('Skipping odds history update for non-countdown race - showing locked data', props.raceId)
+  if (!isRaceCountdown && !isRaceStartingSoon) {
+    console.log('Skipping odds history update for non-countdown/non-starting-soon race - showing locked data', props.raceId)
     return
   }
   
@@ -157,18 +160,20 @@ const startWatching = () => {
   
   // Also watch updateCounter for force updates
   watch(updateCounter, () => {
-    // ONLY update for upcoming races (countdown status)
+    // ONLY update for upcoming races (countdown and starting_soon status)
     const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
     let isRaceCountdown = false;
+    let isRaceStartingSoon = false;
     if (raceElement) {
       const raceStatus = raceElement.getAttribute('data-race-status');
-      // Only update for countdown races (upcoming races)
+      // Update for countdown and starting_soon races (upcoming races)
       isRaceCountdown = raceStatus === 'countdown';
+      isRaceStartingSoon = raceStatus === 'starting_soon';
     }
     
-    // Update only for countdown races to show live odds updates
+    // Update only for countdown and starting_soon races to show live odds updates
     // For live/running races, show locked data
-    if (isRaceCountdown) {
+    if (isRaceCountdown || isRaceStartingSoon) {
       const runners = getSimulatedRunners(props.raceId)
       if (Array.isArray(runners) && runners.length > 0) {
         updateOddsHistory()
@@ -263,9 +268,110 @@ const chartData = computed(() => {
     }
   }
   
+  // Check race status to determine if we should show live data or locked data
+  const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+  let isRaceCountdown = false;
+  let isRaceStartingSoon = false;
+  if (raceElement) {
+    const raceStatus = raceElement.getAttribute('data-race-status');
+    isRaceCountdown = raceStatus === 'countdown';
+    isRaceStartingSoon = raceStatus === 'starting_soon';
+  }
+  
   // Get fresh runners data to ensure reactivity
-  const runners = getSimulatedRunners(props.raceId)
-  console.log('Runners for chart:', runners)
+  const allRunners = getSimulatedRunners(props.raceId)
+  
+  // For starting soon races, show locked data with no trend indicators
+  if (isRaceStartingSoon) {
+    // Filter to show all runners but with no trend (locked odds)
+    const runners = allRunners.map(runner => ({
+      ...runner,
+      oddsTrend: 'none' // Lock the trend for starting soon races
+    }));
+    console.log('Runners with locked trends for starting soon race:', runners)
+    
+    if (runners.length === 0) {
+      return {
+        labels: [],
+        datasets: []
+      }
+    }
+    
+    // Create time labels (last 10 points)
+    const timeLabels: string[] = []
+    const sampleRunnerId = runners[0].id
+    
+    if (oddsHistory.value[sampleRunnerId] && oddsHistory.value[sampleRunnerId].length > 0) {
+      const dataPoints = oddsHistory.value[sampleRunnerId]
+      dataPoints.forEach((point, index) => {
+        // Show fewer labels to avoid clutter
+        if (index % 2 === 0 || index === dataPoints.length - 1) {
+          const date = new Date(point.time)
+          timeLabels.push(`${date.getMinutes()}:${date.getSeconds().toString().padStart(2, '0')}`)
+        } else {
+          timeLabels.push('')
+        }
+      })
+    }
+    
+    console.log('Time labels:', timeLabels)
+    
+    // Create datasets for each runner with locked odds
+    const datasets = runners.map((runner, index) => {
+      const colors = [
+        'rgb(249, 115, 22)', // brand-primary (orange)
+        'rgb(15, 23, 42)',   // brand-secondary (dark blue)
+        'rgb(250, 204, 21)', // brand-accent (yellow)
+        'rgb(22, 163, 74)',  // success (green)
+        'rgb(124, 58, 237)', // violet
+        'rgb(219, 39, 119)'  // pink
+      ]
+      
+      const backgroundColors = [
+        'rgba(249, 115, 22, 0.1)',
+        'rgba(15, 23, 42, 0.1)',
+        'rgba(250, 204, 21, 0.1)',
+        'rgba(22, 163, 74, 0.1)',
+        'rgba(124, 58, 237, 0.1)',
+        'rgba(219, 39, 119, 0.1)'
+      ]
+      
+      // Get odds history for this runner
+      const history = oddsHistory.value[runner.id] || []
+      const oddsData = history.map(point => point.odds)
+      
+      console.log('Runner', runner.number, 'history:', history)
+      console.log('Runner', runner.number, 'odds data:', oddsData)
+      
+      return {
+        label: `${runner.number}. ${runner.name}`,
+        data: oddsData,
+        borderColor: colors[index % colors.length],
+        backgroundColor: backgroundColors[index % backgroundColors.length],
+        borderWidth: 2,
+        pointRadius: 3,
+        pointBackgroundColor: colors[index % colors.length],
+        fill: false,
+        tension: 0.4 // Smooth curves
+      }
+    })
+    
+    console.log('Chart datasets for starting soon race:', datasets)
+    
+    return {
+      labels: timeLabels,
+      datasets
+    }
+  }
+  
+  // For countdown and starting_soon races, show runners with significant odds changes
+  // For countdown races, filter to only show runners with significant odds changes (trend is not 'none')
+  // For starting_soon races, show all runners but with locked odds (trend is 'none')
+  const runners = isRaceCountdown ? 
+    allRunners.filter(runner => runner.oddsTrend !== 'none') : 
+    allRunners.map(runner => ({ ...runner, oddsTrend: 'none' }))
+  console.log('All runners:', allRunners)
+  console.log('Runners with significant changes for chart:', runners)
   
   if (runners.length === 0) {
     return {
@@ -333,6 +439,22 @@ const chartData = computed(() => {
     }
   })
   
+  // If no runners with significant changes, show a message
+  if (datasets.length === 0 && allRunners.length > 0) {
+    return {
+      labels: ['No significant changes'],
+      datasets: [{
+        label: 'No significant odds movements',
+        data: [0],
+        borderColor: 'rgba(148, 163, 184, 0.5)',
+        backgroundColor: 'rgba(148, 163, 184, 0.1)',
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false
+      }]
+    }
+  }
+  
   console.log('Chart datasets:', datasets)
   
   return {
@@ -353,8 +475,10 @@ const chartOptions = {
       labels: {
         color: '#F8FAFC', // text-text-base
         usePointStyle: true,
-        padding: 20
-      }
+        padding: 20,
+        textAlign: 'left' as const
+      },
+      position: 'bottom' as const
     },
     tooltip: {
       backgroundColor: '#111827', // surface-raised

@@ -104,10 +104,19 @@ const toggleSimulation = () => {
   console.log('Show game:', betsStore.showGame)
   console.log('Use simulated data:', betsStore.useSimulatedData)
   
+  // Persist simulation mode to localStorage
+  localStorage.setItem('simulationMode', newMode.toString())
+  
   // Force a refresh of the races to ensure simulation is properly initialized
   if (newMode) {
     store.fetchRaces()
   }
+}
+
+// Handle view change from slider
+const handleViewChange = (event: Event) => {
+  const target = event.target as HTMLInputElement
+  currentView.value = target.value === '0' ? 'races' : 'meetings'
 }
 
 const toggleTheme = () => {
@@ -176,6 +185,14 @@ onMounted(() => {
     }
   } catch (e) {
     console.log('Could not check for simulation mode parameter')
+  }
+  
+  // Check for persisted simulation mode state
+  const savedSimulationMode = localStorage.getItem('simulationMode')
+  if (savedSimulationMode === 'true') {
+    betsStore.setShowGame(true)
+    betsStore.setUseSimulatedData(true)
+    console.log('Enabled simulation mode from localStorage')
   }
   
   console.log('App mounted')
@@ -356,20 +373,20 @@ onUnmounted(() => {
       <!-- Stunning Race Container -->
       <div class="bg-surface-raised rounded-3xl shadow-2xl overflow-hidden">
         <!-- Header with decorative elements -->
-        <div class="bg-gradient-to-r from-brand-primary to-harness p-6 rounded-t-3xl">
+        <div class="bg-gradient-to-r from-brand-primary to-harness p-6 rounded-t-3xl shadow-lg">
           <div class="flex flex-col md:flex-row md:items-center md:justify-between">
             <div>
               <!-- Increased icon and headline size -->
-              <h2 class="text-2xl font-bold text-text-inverse flex items-center">
-                <span class="mr-3 text-4xl" v-if="currentView === 'races'">🏇</span>
-                <span class="mr-3 text-4xl" v-else>🏟️</span>
+              <h2 class="text-2xl font-bold text-text-inverse flex items-center whitespace-nowrap">
+                <span class="mr-3 text-2xl" v-if="currentView === 'races'">🏇</span>
+                <span class="mr-3 text-2xl" v-else>🏟️</span>
                 <span v-if="currentView === 'races'">{{ $t('views.nextFive') }}</span>
                 <span v-else>{{ $t('views.meetings') }}</span>
                 <!-- Show specific race information instead of generic text -->
-                <span v-if="isSimulationMode && liveRaceUpdates" class="ml-2 text-lg font-normal opacity-90">
+                <span v-if="isSimulationMode && liveRaceUpdates" class="ml-2 text-lg font-normal opacity-90 truncate max-w-xs">
                   / {{ liveRaceUpdates.meetingName }} R{{ liveRaceUpdates.raceNumber }} Live
                 </span>
-                <span v-else-if="isSimulationMode && nextRaceInfo" class="ml-2 text-lg font-normal opacity-90">
+                <span v-else-if="isSimulationMode && nextRaceInfo" class="ml-2 text-lg font-normal opacity-90 truncate max-w-xs">
                   / NEXT: {{ nextRaceInfo.meetingName }} R{{ nextRaceInfo.raceNumber }}
                 </span>
               </h2>
@@ -377,27 +394,28 @@ onUnmounted(() => {
               <p v-if="isSimulationMode" class="text-text-inverse opacity-80 text-base mt-2">{{ $t('races.liveUpdates') }}</p>
               
               <!-- View toggle moved below headline -->
-              <div class="flex bg-black bg-opacity-20 rounded-lg p-1 mt-4">
-                <button
-                  @click="currentView = 'races'"
-                  class="px-4 py-2 text-base rounded-md transition-colors"
-                  :class="currentView === 'races'
-                    ? 'bg-white text-brand-primary font-medium'
-                    : 'text-white text-opacity-80 hover:bg-black hover:bg-opacity-20'"
-                  :aria-label="$t('views.nextFive')"
-                >
-                  {{ $t('views.nextFive') }}
-                </button>
-                <button
-                  @click="currentView = 'meetings'"
-                  class="px-4 py-2 text-base rounded-md transition-colors"
-                  :class="currentView === 'meetings'
-                    ? 'bg-white text-brand-primary font-medium'
-                    : 'text-white text-opacity-80 hover:bg-black hover:bg-opacity-20'"
-                  :aria-label="$t('views.meetings')"
-                >
-                  {{ $t('views.meetings') }}
-                </button>
+              <div class="mt-4">
+                <div class="relative inline-block w-48 h-10 rounded-full bg-black bg-opacity-30 shadow-inner">
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="1" 
+                    :value="currentView === 'races' ? 0 : 1"
+                    @input="handleViewChange"
+                    class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    :aria-label="$t('views.toggle')"
+                  >
+                  <div class="absolute inset-0 flex items-center justify-between px-3 text-xs font-medium text-white">
+                    <span class="w-1/2 flex items-center justify-center" :class="currentView === 'races' ? 'text-brand-primary' : 'text-white text-opacity-80'">{{ $t('views.nextFiveShort') }}</span>
+                    <span class="w-1/2 flex items-center justify-center" :class="currentView === 'meetings' ? 'text-brand-primary' : 'text-white text-opacity-80'">{{ $t('views.meetingsShort') }}</span>
+                  </div>
+                  <div 
+                    class="absolute top-1 h-8 rounded-full transition-all duration-300 shadow-md flex items-center justify-center text-xs font-medium whitespace-nowrap"
+                    :class="currentView === 'races' ? 'left-1 w-[calc(50%-4px)] bg-white text-brand-primary' : 'left-[calc(50%+3px)] w-[calc(50%-4px)] bg-white text-brand-primary'"
+                  >
+                    {{ currentView === 'races' ? $t('views.nextFiveShort') : $t('views.meetingsShort') }}
+                  </div>
+                </div>
               </div>
             </div>
             <!-- Simulation toggle button with enhanced glass effect -->

@@ -1,14 +1,16 @@
 <template>
   <div class="py-2 border-b border-surface last:border-b-0" :class="{ 'opacity-50 pointer-events-none': isExpired }">
     <div class="flex items-start">
-      <!-- Silk color icon -->
-      <div class="w-4 h-4 rounded-sm mr-3 mt-1 flex-shrink-0" :class="runner.silkColor"></div>
+      <!-- Silk color icon as circle with number inside -->
+      <div class="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0 flex items-center justify-center text-xs font-bold" :class="runner.silkColor">
+        <span class="text-text-inverse">{{ runner.number }}</span>
+      </div>
       
       <!-- Runner info and odds -->
       <div class="flex-grow min-w-0">
         <!-- Runner name full width -->
         <div class="font-medium text-text-base truncate">
-          {{ runner.number }}. {{ runner.name }}
+          {{ runner.name }}
         </div>
         
         <!-- Meta info and odds in a row below -->
@@ -76,34 +78,40 @@ const props = defineProps<{
   isExpired?: boolean
 }>()
 
-// Log when runner prop changes
-watch(() => props.runner, (newRunner, oldRunner) => {
-  console.log('Runner prop changed for runner', newRunner.id, 'from', oldRunner, 'to', newRunner);
-}, { deep: true });
-
-// Track previous odds for animation
-const previousOdds = ref<string | number>(props.runner.odds)
+// Track previous odds for animation (store as numbers for accurate comparison)
+const previousOddsNum = ref<number>(0)
 const oddsAnimation = ref('')
+
+// Initialize previous odds
+if (props.runner.odds === 'SP') {
+  previousOddsNum.value = 6.0
+} else {
+  previousOddsNum.value = typeof props.runner.odds === 'number' ? props.runner.odds : parseFloat(String(props.runner.odds))
+}
 
 // Watch for odds changes to trigger animations
 watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | number) => {
   console.log('Odds changed for runner', props.runner.id, 'from', oldOdds, 'to', newOdds);
   
-  if (newOdds !== oldOdds) {
-    // Determine if odds went up or down
-    let newNum: number, oldNum: number
+  // Convert to numbers for comparison
+  let newNum: number, oldNum: number
+  
+  // Convert to numbers for comparison
+  if (newOdds === 'SP') newNum = 6.0
+  else newNum = typeof newOdds === 'number' ? newOdds : parseFloat(String(newOdds))
+  
+  oldNum = previousOddsNum.value
+  
+  console.log('Comparing odds for runner', props.runner.id, 'newNum:', newNum, 'oldNum:', oldNum);
+  
+  // Trigger appropriate animation if there's a meaningful change
+  if (!isNaN(newNum) && !isNaN(oldNum) && newNum !== oldNum) {
+    // Check if the change is significant enough to warrant an animation
+    const changePercent = Math.abs((newNum - oldNum) / oldNum) * 100
+    console.log('Odds change percentage for runner', props.runner.id, ':', changePercent, '%');
     
-    // Convert to numbers for comparison
-    if (newOdds === 'SP') newNum = 6.0
-    else newNum = typeof newOdds === 'number' ? newOdds : parseFloat(String(newOdds))
-    
-    if (oldOdds === 'SP') oldNum = 6.0
-    else oldNum = typeof oldOdds === 'number' ? oldOdds : parseFloat(String(oldOdds))
-    
-    console.log('Comparing odds for runner', props.runner.id, 'newNum:', newNum, 'oldNum:', oldNum);
-    
-    // Trigger appropriate animation
-    if (!isNaN(newNum) && !isNaN(oldNum)) {
+    // Only trigger animation if change is at least 0.1% or 0.01 absolute difference
+    if (changePercent >= 0.1 || Math.abs(newNum - oldNum) >= 0.01) {
       if (newNum < oldNum) {
         console.log('Triggering odds change down animation for runner', props.runner.id);
         oddsAnimation.value = 'animate-odds-change-down'
@@ -121,11 +129,12 @@ watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | numb
       setTimeout(() => {
         console.log('Resetting animation for runner', props.runner.id);
         oddsAnimation.value = ''
-      }, 500)
+      }, 700)
     }
   }
   
-  previousOdds.value = newOdds
+  // Update previous odds
+  previousOddsNum.value = newNum
 })
 
 const formatJockeyName = (jockeyName: string) => {

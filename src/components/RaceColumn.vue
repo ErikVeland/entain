@@ -87,20 +87,6 @@
       <div class="border-t border-surface pt-3">
         <div class="flex items-center justify-between w-full py-2 text-text-base font-medium mb-2">
           <span>Odds Movements</span>
-          <!-- Visual indicators for significant odds changes -->
-          <div class="flex space-x-1">
-            <div 
-              v-for="runner in runnersWithSignificantChanges" 
-              :key="runner.id"
-              class="w-3 h-3 rounded-full"
-              :class="{
-                'bg-success animate-pulse': runner.oddsTrend === 'down',
-                'bg-danger animate-pulse': runner.oddsTrend === 'up',
-                'bg-warning': runner.oddsTrend === 'none'
-              }"
-              :title="`${runner.number}. ${runner.name}: ${runner.odds}`"
-            ></div>
-          </div>
         </div>
         <div class="mt-2">
           <OddsTrendChart :race-id="race.id" />
@@ -111,13 +97,15 @@
     <!-- Odds Trend Chart with dropdown curtain for non-live races -->
     <div class="px-3 pb-3 relative z-10" v-else-if="betsStore.showGame && !isExpired">
       <div class="border-t border-surface pt-3">
-        <button 
-          @click="toggleOddsChart"
-          class="flex items-center justify-between w-full py-2 text-text-base font-medium"
-        >
-          <span>Odds Movements</span>
-          <span :class="{'rotate-180': showOddsChart}" class="transition-transform">▼</span>
-        </button>
+        <div class="flex items-center justify-between w-full py-2 text-text-base font-medium mb-2">
+          <button 
+            @click="toggleOddsChart"
+            class="flex items-center"
+          >
+            <span>Odds Movements</span>
+            <span :class="{'rotate-180': showOddsChart}" class="transition-transform ml-2">▼</span>
+          </button>
+        </div>
         <div v-show="showOddsChart" class="mt-2">
           <OddsTrendChart :race-id="race.id" />
         </div>
@@ -225,8 +213,8 @@ watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, start
   
   // Check if race is in countdown status (upcoming race)
   // Odds should update only when race is upcoming (countdown) and not expired
-  // Allow odds updates even when "starting soon" as long as not in progress
-  const isCountdown = !isExpired && !inProgress && !raceFinished.value;
+  // DO NOT allow odds updates when "starting soon" - odds must be locked
+  const isCountdown = !isExpired && !inProgress && !startingSoon && !raceFinished.value;
   console.log('Is race in countdown status?', isCountdown);
   console.log('betsStore.showGame:', betsStore.showGame);
   console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData);
@@ -278,6 +266,9 @@ watch(isInProgress, (inProgress) => {
 // Compute runners with significant odds changes for visual indicators
 const runnersWithSignificantChanges = computed(() => {
   if (!betsStore.showGame || !betsStore.useSimulatedData) return []
+  
+  // For starting soon races, don't show any runners with trends (odds are locked)
+  if (raceStatus.value === 'starting_soon') return []
   
   const runners = getSimulatedRunners(props.race.id)
   // Filter to only show runners with significant odds changes (trend is not 'none')

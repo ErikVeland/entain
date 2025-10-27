@@ -97,9 +97,9 @@
                   v-for="selection in activeSelections"
                   :key="selection.id"
                   :selection="selection"
-                  @update-market="(market: 'win' | 'place' | 'each-way') => handleUpdateMarket(selection.id, market)"
-                  @update-stake="(stake: number) => handleUpdateStake(selection.id, stake)"
-                  @remove="() => handleRemoveSelection(selection.id)"
+                  @update-market="handleUpdateMarket"
+                  @update-stake="handleUpdateStake"
+                  @remove="handleRemoveSelection"
                 />
               </div>
               
@@ -182,16 +182,42 @@ const isMobile = ref(false)
 const pendingBets = computed(() => betsStore.pendingBets)
 const activeSelections = computed(() => betslipSelections.value)
 const totalStakeValue = computed(() => {
-  return betslipSelections.value.reduce((sum, selection) => sum + selection.stake, 0)
-})
-const totalEstimatedReturnValue = computed(() => {
   return betslipSelections.value.reduce((sum, selection) => {
-    const numericOdds = selection.odds === 'SP' ? 6.0 : selection.odds
-    return sum + (selection.stake * numericOdds)
+    const stake = isNaN(selection.stake) ? 0 : selection.stake
+    return sum + stake
   }, 0)
 })
+
+const totalEstimatedReturnValue = computed(() => {
+  return betslipSelections.value.reduce((sum, selection) => {
+    // Ensure stake is a valid number
+    const stake = isNaN(selection.stake) ? 0 : selection.stake
+    
+    // Handle odds conversion
+    let numericOdds
+    if (selection.odds === 'SP') {
+      numericOdds = 6.0
+    } else if (typeof selection.odds === 'number') {
+      numericOdds = selection.odds
+    } else {
+      const parsedOdds = parseFloat(String(selection.odds))
+      numericOdds = isNaN(parsedOdds) ? 6.0 : parsedOdds
+    }
+    
+    // Handle invalid odds
+    if (isNaN(numericOdds) || numericOdds <= 0) {
+      numericOdds = 6.0 // Default to SP odds
+    }
+    
+    return sum + (stake * numericOdds)
+  }, 0)
+})
+
 const canPlaceBetsValue = computed(() => {
-  return betslipSelections.value.length > 0 && betslipSelections.value.every(s => s.stake > 0)
+  return betslipSelections.value.length > 0 && betslipSelections.value.every(s => {
+    const stake = isNaN(s.stake) ? 0 : s.stake
+    return stake > 0
+  })
 })
 
 // Methods for betslip management
@@ -234,7 +260,7 @@ const handleUpdateStake = (selectionId: string, stake: number) => {
 }
 
 const handleRemoveSelection = (selectionId: string) => {
-  betslipSelections.value = betslipSelections.value.filter(s => s.id !== selectionId)
+  betslipSelections.value = betslipSelections.value.filter(s => s.id === selectionId)
 }
 
 const clearSelections = () => {
