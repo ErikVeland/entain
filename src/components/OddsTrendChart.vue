@@ -84,22 +84,20 @@ const updateOddsHistory = () => {
   const runners = getSimulatedRunners(props.raceId)
   if (runners.length === 0) return
   
-  // ONLY update odds history for upcoming races (countdown and starting_soon status)
+  // ONLY update odds history for upcoming races (countdown status)
   // For live/running races, show locked data from race start
   const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
   let isRaceCountdown = false;
-  let isRaceStartingSoon = false;
   if (raceElement) {
     const raceStatus = raceElement.getAttribute('data-race-status');
-    // Update for countdown and starting_soon races (upcoming races)
+    // Update for countdown races (upcoming races)
     isRaceCountdown = raceStatus === 'countdown';
-    isRaceStartingSoon = raceStatus === 'starting_soon';
   }
   
-  // DO NOT update odds history if race is not in countdown or starting_soon status
+  // DO NOT update odds history if race is not in countdown status
   // This ensures locked data is shown for live/running races
-  if (!isRaceCountdown && !isRaceStartingSoon) {
-    // Skipping odds history update for non-countdown/non-starting-soon race - showing locked data
+  if (!isRaceCountdown) {
+    // Skipping odds history update for non-countdown race - showing locked data
     return
   }
   
@@ -160,20 +158,18 @@ const startWatching = () => {
   
   // Also watch updateCounter for force updates
   watch(updateCounter, () => {
-    // ONLY update for upcoming races (countdown and starting_soon status)
+    // ONLY update for upcoming races (countdown status)
     const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
     let isRaceCountdown = false;
-    let isRaceStartingSoon = false;
     if (raceElement) {
       const raceStatus = raceElement.getAttribute('data-race-status');
-      // Update for countdown and starting_soon races (upcoming races)
+      // Update for countdown races (upcoming races)
       isRaceCountdown = raceStatus === 'countdown';
-      isRaceStartingSoon = raceStatus === 'starting_soon';
     }
     
-    // Update only for countdown and starting_soon races to show live odds updates
+    // Update only for countdown races to show live odds updates
     // For live/running races, show locked data
-    if (isRaceCountdown || isRaceStartingSoon) {
+    if (isRaceCountdown) {
       const runners = getSimulatedRunners(props.raceId)
       if (Array.isArray(runners) && runners.length > 0) {
         updateOddsHistory()
@@ -194,9 +190,20 @@ onMounted(() => {
     startWatching()
     
     // Periodic update to ensure chart refreshes (reduced from 2000ms to 500ms for more responsive updates)
+    // Update chart for countdown races only
     intervalId = window.setInterval(() => {
       if (showChart.value) {
-        updateCounter.value++
+        // Check if race is in countdown status before updating
+        const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
+        if (raceElement) {
+          const raceStatus = raceElement.getAttribute('data-race-status');
+          const isRaceCountdown = raceStatus === 'countdown';
+          
+          // Only update chart for countdown races
+          if (isRaceCountdown) {
+            updateCounter.value++
+          }
+        }
       }
     }, 500)
   }
