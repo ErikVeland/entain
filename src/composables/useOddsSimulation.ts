@@ -285,21 +285,21 @@ export function updateOdds(
     const progressFactor = progress
     
     // Base odds calculation
-    let newOdds = runner.odds
+    let newOdds = typeof runner.odds === 'number' ? runner.odds : 2.0 // Default to 2.0 if SP
     
     // Adjust odds based on position and progress
     // If runner is leading and making good progress, shorten odds
     if (positionFactor < 0.3 && progressFactor > 0.5) {
-      newOdds = Math.max(1.1, runner.odds * 0.98) // Shorten odds slightly
+      newOdds = Math.max(1.1, newOdds * 0.98) // Shorten odds slightly
     }
     // If runner is trailing and not making good progress, lengthen odds
     else if (positionFactor > 0.7 && progressFactor < 0.3) {
-      newOdds = runner.odds * 1.02 // Lengthen odds slightly
+      newOdds = newOdds * 1.02 // Lengthen odds slightly
     }
     // Otherwise make small random adjustments
     else {
       const randomFactor = 0.995 + (Math.random() * 0.01) // 0.995-1.005
-      newOdds = runner.odds * randomFactor
+      newOdds = newOdds * randomFactor
     }
     
     // Ensure reasonable odds range
@@ -307,11 +307,12 @@ export function updateOdds(
     
     // Determine odds trend
     let trend: OddsTrend = 'none'
-    const change = Math.abs(newOdds - runner.odds)
+    const originalOdds = typeof runner.odds === 'number' ? runner.odds : newOdds
+    const change = Math.abs(newOdds - originalOdds)
     
     // Only show trend if change is significant (> 0.01)
     if (change > 0.01) {
-      trend = newOdds < runner.odds ? 'up' : 'down'
+      trend = newOdds < originalOdds ? 'up' : 'down'
     }
     
     // Update runner with new odds
@@ -326,6 +327,7 @@ export function updateOdds(
   // Trigger reactive update
   simulations.value = { ...simulations.value }
 }
+
 
 // Get simulated runners for a race
 export function getSimulatedRunners(raceId: string): SimulatedRunner[] {
