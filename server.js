@@ -42,7 +42,6 @@ function startServer() {
   
   const server = app.listen(port, () => {
     console.log(`Server running at http://localhost:${port}`);
-    console.log(`  port: ${port}`);
   });
   
   server.on('error', (err) => {
