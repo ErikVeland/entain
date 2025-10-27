@@ -471,6 +471,11 @@ function isInSimulationMode(): boolean {
 
 // Helper function to check if a race has runners matching the search query
 function raceHasRunnerMatchingQuery(race: RaceSummary, query: string): boolean {
+  // Only check runner names in simulation mode
+  if (!isInSimulationMode()) {
+    return false
+  }
+  
   const runners = getSimulatedRunners(race.id)
   
   return runners.some((runner: any) => 

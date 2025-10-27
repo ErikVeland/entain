@@ -443,7 +443,10 @@ const initializeRaceSimulation = () => {
 onMounted(() => {
   try {
     // RaceColumn mounted for race
-    initializeRaceSimulation()
+    // Only initialize simulation in simulation mode
+    if (betsStore.showGame && betsStore.useSimulatedData) {
+      initializeRaceSimulation()
+    }
   } catch (err) {
     // Enhanced error handling with user-friendly error messages
     const errorMessage = err instanceof Error ? err.message : String(err)

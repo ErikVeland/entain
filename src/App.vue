@@ -250,10 +250,12 @@ onMounted(() => {
 
   // Start polling and ticking intervals
   store.startLoops()
-  // Initial fetch
-  store.fetchRaces().catch(error => {
-    console.error('Error during initial fetch:', error)
-  })
+  // Initial fetch with a small delay to allow UI to render first
+  setTimeout(() => {
+    store.fetchRaces().catch(error => {
+      console.error('Error during initial fetch:', error)
+    })
+  }, 100)
 
   // Watch for changes in the store
   watch(() => store.races, () => {
