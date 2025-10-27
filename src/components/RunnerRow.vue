@@ -91,7 +91,7 @@ if (props.runner.odds === 'SP') {
 
 // Watch for odds changes to trigger animations
 watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | number) => {
-  console.log('Odds changed for runner', props.runner.id, 'from', oldOdds, 'to', newOdds);
+  // Odds changed for runner from oldOdds to newOdds
   
   // Convert to numbers for comparison
   let newNum: number, oldNum: number
@@ -102,32 +102,32 @@ watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | numb
   
   oldNum = previousOddsNum.value
   
-  console.log('Comparing odds for runner', props.runner.id, 'newNum:', newNum, 'oldNum:', oldNum);
+  // Comparing odds for runner newNum: newNum oldNum: oldNum
   
   // Trigger appropriate animation if there's a meaningful change
   if (!isNaN(newNum) && !isNaN(oldNum) && newNum !== oldNum) {
     // Check if the change is significant enough to warrant an animation
     const changePercent = Math.abs((newNum - oldNum) / oldNum) * 100
-    console.log('Odds change percentage for runner', props.runner.id, ':', changePercent, '%');
+    // Odds change percentage for runner: changePercent %
     
     // Only trigger animation if change is at least 0.1% or 0.01 absolute difference
     if (changePercent >= 0.1 || Math.abs(newNum - oldNum) >= 0.01) {
       if (newNum < oldNum) {
-        console.log('Triggering odds change down animation for runner', props.runner.id);
+        // Triggering odds change down animation for runner
         oddsAnimation.value = 'animate-odds-change-down'
       } else if (newNum > oldNum) {
-        console.log('Triggering odds change up animation for runner', props.runner.id);
+        // Triggering odds change up animation for runner
         oddsAnimation.value = 'animate-odds-change-up'
       }
       
       // Log when animation is applied
       if (oddsAnimation.value) {
-        console.log('Applied animation class', oddsAnimation.value, 'to runner', props.runner.id);
+        // Applied animation class to runner
       }
       
       // Reset animation after it completes
       setTimeout(() => {
-        console.log('Resetting animation for runner', props.runner.id);
+        // Resetting animation for runner
         oddsAnimation.value = ''
       }, 700)
     }
@@ -227,13 +227,13 @@ const handleOddsClick = () => {
   
   // MUST prevent betting if race is not in countdown status
   if (!isRaceCountdown) {
-    console.log('BLOCKED: Cannot place bet on non-countdown race', props.raceId);
+    // BLOCKED: Cannot place bet on non-countdown race
     return;
   }
   
   // Check if race is expired - MUST prevent betting
   if (props.isExpired) {
-    console.log('BLOCKED: Cannot place bet on expired race', props.raceId);
+    // BLOCKED: Cannot place bet on expired race
     return;
   }
   
@@ -254,7 +254,7 @@ const handleOddsClick = () => {
     }
   }
   
-  console.log('ALLOWED: Adding runner to betslip:', props.runner);
+  // ALLOWED: Adding runner to betslip
   
   // Emit event to open betslip drawer
   const event = new CustomEvent('open-betslip', { 

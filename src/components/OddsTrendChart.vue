@@ -31,7 +31,7 @@ import {
 } from 'chart.js'
 import { Line } from 'vue-chartjs'
 import { useBetsStore } from '../stores/bets'
-import { useOddsSimulation } from '../composables/useOddsSimulation'
+import { getSimulatedRunners } from '../composables/useOddsSimulation'
 
 ChartJS.register(Title, Tooltip, Legend, LineElement, PointElement, CategoryScale, LinearScale, Filler)
 
@@ -40,7 +40,7 @@ const props = defineProps<{
 }>()
 
 const betsStore = useBetsStore()
-const { getSimulatedRunners } = useOddsSimulation()
+
 
 // Only show chart in simulation mode
 const showChart = computed(() => {
@@ -60,7 +60,7 @@ const initializeOddsHistory = () => {
   if (runners.length === 0) return
   
   // Initialize history for each runner
-  runners.forEach(runner => {
+  runners.forEach((runner) => {
     if (!oddsHistory.value[runner.id]) {
       oddsHistory.value[runner.id] = []
     }
@@ -99,13 +99,13 @@ const updateOddsHistory = () => {
   // DO NOT update odds history if race is not in countdown or starting_soon status
   // This ensures locked data is shown for live/running races
   if (!isRaceCountdown && !isRaceStartingSoon) {
-    console.log('Skipping odds history update for non-countdown/non-starting-soon race - showing locked data', props.raceId)
+    // Skipping odds history update for non-countdown/non-starting-soon race - showing locked data
     return
   }
   
   const now = Date.now()
   
-  runners.forEach(runner => {
+  runners.forEach((runner) => {
     // Runners should already be initialized with numeric odds values
     const currentOdds = typeof runner.odds === 'number' ? runner.odds : 6.0 // Fallback to 6.0 if somehow 'SP'
     const oddsValue = currentOdds
@@ -128,7 +128,7 @@ const updateOddsHistory = () => {
   
   // Force chart update
   updateCounter.value++
-  console.log('Updated odds history for countdown race', props.raceId, 'with', runners.length, 'runners')
+  // Updated odds history for countdown race with runners
 }
 
 // Watch for runner changes to update odds history
@@ -183,8 +183,8 @@ const startWatching = () => {
 }
 
 onMounted(() => {
-  console.log('OddsTrendChart mounted for race', props.raceId)
-  console.log('showChart.value:', showChart.value)
+  // OddsTrendChart mounted for race
+  // showChart.value:
   
   if (showChart.value) {
     // Initialize history
@@ -205,7 +205,7 @@ onMounted(() => {
   const handleSimulationInitialized = (event: Event) => {
     const customEvent = event as CustomEvent<{ raceId: string }>;
     if (customEvent.detail.raceId === props.raceId) {
-      console.log('Simulation initialized for race', props.raceId);
+      // Simulation initialized for race
       if (showChart.value) {
         initializeOddsHistory();
         startWatching();
@@ -224,7 +224,7 @@ onMounted(() => {
 
 // Clean up watcher and interval
 onUnmounted(() => {
-  console.log('OddsTrendChart unmounted for race', props.raceId)
+  // OddsTrendChart unmounted for race
   
   if (watchStopper) {
     watchStopper()
@@ -236,17 +236,17 @@ onUnmounted(() => {
 
 // Watch for simulation mode changes
 watch(showChart, (newVal, oldVal) => {
-  console.log('showChart changed for race', props.raceId, 'from', oldVal, 'to', newVal)
+  // showChart changed for race from oldVal to newVal
   
   if (newVal && !oldVal) {
     // Enable chart
-    console.log('Enabling chart for race', props.raceId)
+    // Enabling chart for race
     initializeOddsHistory()
     startWatching()
     loaded.value = true // Make sure loaded is set to true when chart is enabled
   } else if (!newVal && oldVal) {
     // Disable chart
-    console.log('Disabling chart for race', props.raceId)
+    // Disabling chart for race
     if (watchStopper) {
       watchStopper()
       watchStopper = null
@@ -256,10 +256,10 @@ watch(showChart, (newVal, oldVal) => {
 }, { immediate: true })
 
 const chartData = computed(() => {
-  console.log('Computing chart data for race', props.raceId)
-  console.log('loaded.value:', loaded.value)
-  console.log('showChart.value:', showChart.value)
-  console.log('oddsHistory.value:', oddsHistory.value)
+  // Computing chart data for race
+  // loaded.value:
+  // showChart.value:
+  // oddsHistory.value:
   
   if (!loaded.value || !showChart.value) {
     return {
@@ -284,11 +284,11 @@ const chartData = computed(() => {
   // For starting soon races, show locked data with no trend indicators
   if (isRaceStartingSoon) {
     // Filter to show all runners but with no trend (locked odds)
-    const runners = allRunners.map(runner => ({
+    const runners = allRunners.map((runner) => ({
       ...runner,
       oddsTrend: 'none' // Lock the trend for starting soon races
     }));
-    console.log('Runners with locked trends for starting soon race:', runners)
+    // Runners with locked trends for starting soon race:
     
     if (runners.length === 0) {
       return {
@@ -314,7 +314,7 @@ const chartData = computed(() => {
       })
     }
     
-    console.log('Time labels:', timeLabels)
+    // Time labels:
     
     // Create datasets for each runner with locked odds
     const datasets = runners.map((runner, index) => {
@@ -340,8 +340,8 @@ const chartData = computed(() => {
       const history = oddsHistory.value[runner.id] || []
       const oddsData = history.map(point => point.odds)
       
-      console.log('Runner', runner.number, 'history:', history)
-      console.log('Runner', runner.number, 'odds data:', oddsData)
+      // Runner history:
+      // Runner odds data:
       
       return {
         label: `${runner.number}. ${runner.name}`,
@@ -356,7 +356,7 @@ const chartData = computed(() => {
       }
     })
     
-    console.log('Chart datasets for starting soon race:', datasets)
+    // Chart datasets for starting soon race:
     
     return {
       labels: timeLabels,
@@ -368,10 +368,10 @@ const chartData = computed(() => {
   // For countdown races, filter to only show runners with significant odds changes (trend is not 'none')
   // For starting_soon races, show all runners but with locked odds (trend is 'none')
   const runners = isRaceCountdown ? 
-    allRunners.filter(runner => runner.oddsTrend !== 'none') : 
-    allRunners.map(runner => ({ ...runner, oddsTrend: 'none' }))
-  console.log('All runners:', allRunners)
-  console.log('Runners with significant changes for chart:', runners)
+    allRunners.filter((runner) => runner.oddsTrend !== 'none') : 
+    allRunners.map((runner) => ({ ...runner, oddsTrend: 'none' }))
+  // All runners:
+  // Runners with significant changes for chart:
   
   if (runners.length === 0) {
     return {
@@ -397,7 +397,7 @@ const chartData = computed(() => {
     })
   }
   
-  console.log('Time labels:', timeLabels)
+  // Time labels:
   
   // Create datasets for each runner
   const datasets = runners.map((runner, index) => {
@@ -423,8 +423,8 @@ const chartData = computed(() => {
     const history = oddsHistory.value[runner.id] || []
     const oddsData = history.map(point => point.odds)
     
-    console.log('Runner', runner.number, 'history:', history)
-    console.log('Runner', runner.number, 'odds data:', oddsData)
+    // Runner history:
+    // Runner odds data:
     
     return {
       label: `${runner.number}. ${runner.name}`,
@@ -455,7 +455,7 @@ const chartData = computed(() => {
     }
   }
   
-  console.log('Chart datasets:', datasets)
+  // Chart datasets:
   
   return {
     labels: timeLabels,

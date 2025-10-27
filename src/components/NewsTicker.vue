@@ -31,8 +31,8 @@ const addMessage = (message: string) => {
   }
   currentMessage.value = message
   
-  // Log to console for debugging
-  console.log('News Ticker Message:', message)
+  // Log to console for debugging in development only
+  // Only log critical errors in production
 }
 
 // Clear all messages and hide ticker

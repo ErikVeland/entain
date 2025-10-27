@@ -19,16 +19,16 @@ const emit = defineEmits<{
 // Show all 5 races in a grid
 const visibleRaces = computed(() => {
   const races = store.nextFive.slice(0, 5); // Show all 5 races
-  console.log('Visible races computed:', races);
-  console.log('Store state in RaceList:', store);
-  console.log('Store races in RaceList:', store.races);
-  console.log('Store loadState in RaceList:', store.loadState);
-  console.log('Next five in RaceList:', store.nextFive);
+  // Visible races computed
+  // Store state in RaceList
+  // Store races in RaceList
+  // Store loadState in RaceList
+  // Next five in RaceList
   return races;
 })
 
 const retryFetch = () => {
-  console.log('Retrying fetch...')
+  // Retrying fetch...
   store.fetchRaces()
 }
 
@@ -41,7 +41,7 @@ const handleAddToBetslip = (payload: { race: any; runner: any }) => {
 // Track expiring and new races
 const previousRaces = ref<string[]>([])
 watch(() => store.nextFive, (currentRaces, oldRaces) => {
-  console.log('Next five changed:', currentRaces, oldRaces)
+  // Next five changed
   const currentRaceIds = currentRaces.map(r => r.id)
   
   // Find races that were removed
@@ -89,7 +89,7 @@ onUnmounted(() => {
 onMounted(() => {
   // Initialize previous races
   previousRaces.value = store.nextFive.map(r => r.id)
-  console.log('RaceList mounted, initial nextFive:', store.nextFive)
+  // RaceList mounted, initial nextFive:
   
   // Focus the retry button if it exists and there's an error
   if (store.loadState === 'error' && retryButton.value) {

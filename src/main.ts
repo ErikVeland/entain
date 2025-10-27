@@ -8,7 +8,7 @@ import './assets/styles/theme-init.css'
 import './assets/styles/tailwind.css'
 
 // Add some debugging
-console.log('Creating app...');
+// Creating app...
 
 try {
   const app = createApp(App)
@@ -17,9 +17,9 @@ try {
   app.use(pinia)
   app.use(i18n)
   
-  console.log('Mounting app...');
+  // Mounting app...
   app.mount('#app')
-  console.log('App mounted successfully!');
+  // App mounted successfully!
 } catch (error) {
-  console.error('Error creating app:', error);
+  // Error creating app: error
 }

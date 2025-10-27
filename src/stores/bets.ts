@@ -53,13 +53,11 @@ export const useBetsStore = defineStore('bets', {
   
   actions: {
     setShowGame(show: boolean) {
-      console.log('Setting showGame to', show)
       this.showGame = show
     },
     
     // Add action to toggle data mode
     setUseSimulatedData(useSimulated: boolean) {
-      console.log('Setting useSimulatedData to', useSimulated)
       this.useSimulatedData = useSimulated
     },
     
@@ -75,9 +73,7 @@ export const useBetsStore = defineStore('bets', {
     
     placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number) {
       try {
-        console.log('BetsStore.placeBet called with:', { raceId, runnerId, stake, odds, advertisedStartMs });
         const result = this.engine.placeBet(raceId, runnerId, stake, odds, advertisedStartMs)
-        console.log('BettingEngine.placeBet returned:', result);
         // Check if player is now bankrupt after placing the bet
         this.checkGameOver()
         return result

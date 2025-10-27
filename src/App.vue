@@ -113,9 +113,6 @@ const toggleSimulation = () => {
   const newMode = !isSimulationMode.value
   betsStore.setShowGame(newMode)
   betsStore.setUseSimulatedData(newMode)
-  console.log('Simulation mode toggled:', newMode)
-  console.log('Show game:', betsStore.showGame)
-  console.log('Use simulated data:', betsStore.useSimulatedData)
   
   // Persist simulation mode to localStorage
   localStorage.setItem('simulationMode', newMode.toString())
@@ -198,11 +195,10 @@ onMounted(() => {
       if (urlParams.has('simulation')) {
         betsStore.setShowGame(true)
         betsStore.setUseSimulatedData(true)
-        console.log('Enabled simulation mode via URL parameter')
       }
     }
   } catch (e) {
-    console.log('Could not check for simulation mode parameter')
+    // Silent fail
   }
   
   // Check for persisted simulation mode state
@@ -210,13 +206,7 @@ onMounted(() => {
   if (savedSimulationMode === 'true') {
     betsStore.setShowGame(true)
     betsStore.setUseSimulatedData(true)
-    console.log('Enabled simulation mode from localStorage')
   }
-  
-  console.log('App mounted')
-  console.log('betsStore.showGame:', betsStore.showGame)
-  console.log('betsStore.useSimulatedData:', betsStore.useSimulatedData)
-  console.log('isSimulationMode:', isSimulationMode.value)
   
   // Theme initialization
   const savedTheme = localStorage.getItem('theme')
@@ -261,26 +251,17 @@ onMounted(() => {
   // Start polling and ticking intervals
   store.startLoops()
   // Initial fetch
-  console.log('Fetching initial races...')
-  store.fetchRaces().then(() => {
-    console.log('Initial fetch completed')
-    console.log('Store state after fetch:', store)
-    console.log('Store races count:', store.races.length)
-    console.log('Next five races count:', store.nextFive.length)
-  }).catch(error => {
+  store.fetchRaces().catch(error => {
     console.error('Error during initial fetch:', error)
   })
 
-  // Log store state for debugging
-  console.log('Initial store state:', store)
-
   // Watch for changes in the store
-  watch(() => store.races, (newRaces) => {
-    console.log('Races updated in store:', newRaces.length)
+  watch(() => store.races, () => {
+    // Silent update
   })
 
-  watch(() => store.nextFive, (newNextFive) => {
-    console.log('Next five updated:', newNextFive.length)
+  watch(() => store.nextFive, () => {
+    // Silent update
   })
 })
 

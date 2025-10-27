@@ -24,18 +24,18 @@ import { onMounted } from 'vue'
 const store = useRacesStore()
 
 const fetchRaces = async () => {
-  console.log('Manually fetching races...')
+  // Manually fetching races...
   try {
     await store.fetchRaces()
-    console.log('Fetch completed, races count:', store.races.length)
+    // Fetch completed, races count: store.races.length
   } catch (error) {
-    console.error('Error fetching races:', error)
+    // Error fetching races: error
   }
 }
 
 onMounted(() => {
-  console.log('TestRaces component mounted')
-  console.log('Initial store state:', store)
+  // TestRaces component mounted
+  // Initial store state: store
   
   // Try to fetch races on mount
   fetchRaces()

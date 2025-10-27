@@ -1,10 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { useOddsSimulation } from '../composables/useOddsSimulation'
+import { initializeOddsSimulation, updateOdds, getSimulatedRunners } from '../composables/useOddsSimulation'
 
 describe('Odds Simulation', () => {
   it('should initialize odds simulation correctly', () => {
-    const { initializeOddsSimulation, getSimulatedRunners } = useOddsSimulation()
-    
     const runners = [
       {
         id: 'runner-1',
@@ -39,8 +37,6 @@ describe('Odds Simulation', () => {
   })
   
   it('should update odds based on race progress', () => {
-    const { initializeOddsSimulation, updateOdds, getSimulatedRunners } = useOddsSimulation()
-    
     const runners = [
       {
         id: 'runner-1',

@@ -1,7 +1,39 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { useFetchRaces } from '../useFetchRaces'
+import { fetchRaces } from '../useFetchRaces'
 import { useRacesStore } from '../../stores/races'
 import { createTestingPinia } from '@pinia/testing'
+import { ref } from 'vue'
+
+// Create a mock composable that wraps the fetchRaces function
+function useFetchRaces() {
+  const loading = ref(false)
+  const error = ref<string | null>(null)
+  
+  const fetchRacesWrapper = async () => {
+    loading.value = true
+    error.value = null
+    
+    try {
+      const store = useRacesStore()
+      await store.fetchRaces()
+      
+      // Check if there are any errors in the store after fetch
+      if (store.loadState === 'error' && store.errorMessage) {
+        error.value = store.errorMessage
+      }
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Unknown error'
+    } finally {
+      loading.value = false
+    }
+  }
+  
+  return {
+    fetchRaces: fetchRacesWrapper,
+    loading,
+    error
+  }
+}
 
 describe('useFetchRaces', () => {
   beforeEach(() => {

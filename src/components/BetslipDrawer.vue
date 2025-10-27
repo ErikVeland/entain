@@ -235,7 +235,6 @@ const canPlaceBetsValue = computed(() => {
     const stake = isNaN(s.stake) ? 0 : s.stake
     return stake > 0
   })
-  console.log('canPlaceBetsValue computed:', result, 'Selections length:', betslipSelections.value.length, 'Selections:', betslipSelections.value)
   return result
 })
 
@@ -298,12 +297,7 @@ const clearSelections = () => {
 }
 
 const placeBets = () => {
-  console.log('Place Bets button clicked!')
-  console.log('Betslip selections:', betslipSelections.value)
-  console.log('Has valid stakes:', hasValidStakes.value)
-  
   if (betslipSelections.value.length === 0 || !hasValidStakes.value) {
-    console.log('Cannot place bets - no selections or invalid stakes')
     return
   }
   
@@ -321,24 +315,13 @@ const placeBets = () => {
     setTimeout(() => {
       // Ensure stake is a valid number
       const stake = isNaN(selection.stake) ? 0 : selection.stake
-      console.log('Processing selection:', selection, 'Stake:', stake)
       
       if (stake > 0) {
         // Find the race to get the advertised start time
         const race = racesStore.races.find(r => r.id === selection.raceId)
         const advertisedStartMs = race ? race.advertised_start_ms : undefined
         
-        console.log('Race found:', race, 'Advertised start time:', advertisedStartMs)
-        
         try {
-          console.log('Attempting to place bet with parameters:', {
-            raceId: selection.raceId,
-            runnerId: selection.runnerId,
-            stake: stake,
-            odds: selection.odds,
-            advertisedStartMs: advertisedStartMs
-          })
-          
           const result = betsStore.placeBet(
             selection.raceId,
             selection.runnerId,
@@ -347,20 +330,16 @@ const placeBets = () => {
             advertisedStartMs
           )
           
-          console.log('Bet placed successfully:', result)
-          
           // Remove the selection from the placing animation tracking
           delete placingBets.value[selection.id]
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.error('Error placing bet:', error)
           // Show error in a more user-friendly way
           alert(`Error placing bet: ${errorMessage}`)
           // Remove the selection from the placing animation tracking
           delete placingBets.value[selection.id]
         }
       } else {
-        console.log('Skipping selection with zero or invalid stake')
         // Remove the selection from the placing animation tracking
         delete placingBets.value[selection.id]
       }
@@ -370,7 +349,6 @@ const placeBets = () => {
   // Clear selections after placing (but keep the animation tracking)
   setTimeout(() => {
     clearSelections()
-    console.log('Bets placed and selections cleared')
   }, betslipSelections.value.length * 200 + 500)
 }
 

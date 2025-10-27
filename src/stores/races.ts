@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { useBetsStore } from './bets'
-import { useOddsSimulation } from '../composables/useOddsSimulation'
+import { getSimulatedRunners } from '../composables/useOddsSimulation'
 
 /**
  * Category IDs as specified by the task brief.
@@ -63,7 +63,6 @@ const now = () => Date.now()
  * Normalize raw API race to internal model.
  */
 function normalizeRace(raw: NedsApiRaceRaw): RaceSummary {
-  console.log('Normalizing race:', raw)
   const secs = typeof raw.advertised_start?.seconds === 'string'
     ? parseInt(raw.advertised_start.seconds, 10)
     : Number(raw.advertised_start?.seconds ?? 0)
@@ -76,7 +75,6 @@ function normalizeRace(raw: NedsApiRaceRaw): RaceSummary {
     category_id: raw.category_id
   }
   
-  console.log('Normalized race result:', result)
   return result
 }
 
@@ -161,7 +159,6 @@ export const useRacesStore = defineStore('races', {
           break
       }
       
-      console.log('Active races computed:', filtered.length, 'total races:', state.races.length);
       return filtered
     },
     /**
@@ -186,12 +183,6 @@ export const useRacesStore = defineStore('races', {
       
       activeRaces = activeRaces.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
   
-      console.log('Computing nextFive races:')
-      console.log('- Total races in store:', state.races.length)
-      console.log('- Races after category filter:', state.races.filter(r => state.selectedCategories.has(r.category_id)).length)
-      console.log('- Races after expiration filter:', state.races.filter(r => state.selectedCategories.has(r.category_id)).filter(r => !isExpired(r, cutoffNow)).length)
-      console.log('- Sorted active races:', activeRaces.length)
-      console.log('- Next five races:', activeRaces.slice(0, 5))
       return activeRaces.slice(0, 5)
     },
     /**
@@ -236,12 +227,10 @@ export const useRacesStore = defineStore('races', {
         // Use cached data
         this.races = cached.data
         this.loadState = 'ready'
-        console.log('Using cached races data')
         return
       }
       
       try {
-        console.log('Fetching races from API...')
         const res = await fetch('https://api.neds.com.au/rest/v1/racing/?method=nextraces&count=10', {
           headers: { 'Content-Type': 'application/json' },
           cache: 'no-store'
@@ -283,8 +272,6 @@ export const useRacesStore = defineStore('races', {
           .filter(Boolean)
           .map(normalizeRace)
 
-        console.log('Fetched races:', items);
-
         // Merge unique by id (prefer newest attributes)
         const map = new Map<string, RaceSummary>()
         for (const existing of this.races) {
@@ -311,16 +298,13 @@ export const useRacesStore = defineStore('races', {
         
         this.loadState = 'ready'
         
-        console.log('Updated races state:', this.races);
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : String(err)
-        console.error('Error fetching races:', err)
         
         // Implement retry mechanism for transient errors
         if (retryCount < 3 && (msg.includes('500') || msg.includes('503') || msg.includes('network') || msg.includes('fetch'))) {
           // Exponential backoff: 1s, 2s, 4s
           const delay = Math.pow(2, retryCount) * 1000
-          console.log(`Retrying fetch in ${delay}ms (attempt ${retryCount + 1})`)
           setTimeout(() => {
             // Use the action directly
             this.fetchRaces(retryCount + 1)
@@ -475,10 +459,7 @@ export const useRacesStore = defineStore('races', {
  * A race is considered expired 60,000ms after its advertised start time.
  */
 function isExpired(r: RaceSummary, t: number): boolean {
-  // Log for debugging
-  console.log('Checking if race is expired:', r.id, 'Start time:', r.advertised_start_ms, 'Current time:', t, 'Difference:', t - r.advertised_start_ms);
   const result = t >= (r.advertised_start_ms + 60000);
-  console.log('Race expired result for', r.id, ':', result);
   return result;
 }
 
@@ -490,10 +471,9 @@ function isInSimulationMode(): boolean {
 
 // Helper function to check if a race has runners matching the search query
 function raceHasRunnerMatchingQuery(race: RaceSummary, query: string): boolean {
-  const { getSimulatedRunners } = useOddsSimulation()
   const runners = getSimulatedRunners(race.id)
   
-  return runners.some(runner => 
+  return runners.some((runner: any) => 
     runner.name.toLowerCase().includes(query)
   )
 }
