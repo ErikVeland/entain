@@ -184,6 +184,10 @@ const showDebugControls = computed(() => {
 // Race simulation controller
 let simulationController: any = null
 
+// Limit the number of concurrent simulations to prevent browser lockup
+const MAX_CONCURRENT_SIMULATIONS = 5;
+let activeSimulationCount = 0;
+
 // Race result - only shown after simulation completes
 const raceResult = ref<{ placings: string[] } | null>(null)
 
@@ -304,6 +308,12 @@ const initializeRaceSimulation = () => {
     return
   }
   
+  // Check concurrent simulation limit
+  if (activeSimulationCount >= MAX_CONCURRENT_SIMULATIONS) {
+    // Too many active simulations, skipping initialization for now
+    return
+  }
+  
   try {
     // Initializing race simulation for race
     // Clean up any existing simulation
@@ -331,11 +341,14 @@ const initializeRaceSimulation = () => {
     }
     
     // Calculate tick interval based on number of active races for better performance
-    // Increased tick interval for more realistic simulation
+    // Increased tick interval for more realistic simulation and better performance
     const activeRaces = document.querySelectorAll('[data-race-id]').length;
-    const tickMs = activeRaces > 3 ? 1000 : activeRaces > 1 ? 500 : 250;
+    const tickMs = activeRaces > 3 ? 1000 : activeRaces > 1 ? 750 : 500;
     
     simulationController = createSimulation(raceInput, undefined, tickMs)
+    
+    // Increment active simulation count
+    activeSimulationCount++;
     
     // Set up tick handler for odds updates
     simulationController.onTick((tick: Tick) => {
@@ -373,6 +386,9 @@ const initializeRaceSimulation = () => {
         // Mark race as finished
         raceFinished.value = true
         raceLive.value = false
+        
+        // Decrement active simulation count
+        activeSimulationCount = Math.max(0, activeSimulationCount - 1);
         
         // Emit race finished event
         emit('race-finished')
@@ -444,8 +460,17 @@ const startRaceSimulation = () => {
   // Manual start race simulation requested for race
   
   if (betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value && !raceLive.value) {
+    // Check concurrent simulation limit
+    if (activeSimulationCount >= MAX_CONCURRENT_SIMULATIONS) {
+      // Too many active simulations, cannot start another one
+      error.value = 'Too many active simulations. Please wait for some to finish.';
+      return;
+    }
+    
     // Mark race as live
     raceLive.value = true
+    // Increment active simulation count
+    activeSimulationCount++;
     // Emit race started event
     emit('race-started')
   }
@@ -497,6 +522,13 @@ watch(() => betsStore.showGame && betsStore.useSimulatedData, (newVal, oldVal) =
   if (newVal && !oldVal) {
     // Switching to simulation mode
     try {
+      // Check concurrent simulation limit
+      if (activeSimulationCount >= MAX_CONCURRENT_SIMULATIONS) {
+        // Too many active simulations, cannot switch to simulation mode
+        error.value = 'Too many active simulations. Please wait for some to finish.';
+        return;
+      }
+      
       // Initializing race simulation for race
       initializeRaceSimulation()
       // Make sure the chart knows the simulation is available

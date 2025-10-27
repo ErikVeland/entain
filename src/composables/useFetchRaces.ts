@@ -30,7 +30,7 @@ export async function fetchRaces(retryCount = 0): Promise<ApiResponse> {
   
   try {
     const response = await fetch(
-      'https://api.neds.com.au/rest/v1/racing/?method=nextraces&count=10',
+      '/api/rest/v1/racing/?method=nextraces&count=10',
       {
         headers: {
           'Content-Type': 'application/json',

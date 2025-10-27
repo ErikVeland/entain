@@ -51,7 +51,7 @@ export function useOddsUpdater() {
         // Clean up if race is no longer in countdown status
         stopOddsUpdates(raceId)
       }
-    }, 200) // Update every 200ms for more responsive feel
+    }, 500) // Update every 500ms instead of 200ms for better performance
     
     updateIntervals.set(raceId, intervalId)
     // Started odds updates for race: raceId with interval ID: intervalId

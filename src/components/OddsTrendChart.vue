@@ -189,7 +189,7 @@ onMounted(() => {
     // Start watching for changes
     startWatching()
     
-    // Periodic update to ensure chart refreshes (reduced from 2000ms to 500ms for more responsive updates)
+    // Periodic update to ensure chart refreshes (reduced from 500ms to 1000ms for better performance)
     // Update chart for countdown races only
     intervalId = window.setInterval(() => {
       if (showChart.value) {
@@ -205,7 +205,7 @@ onMounted(() => {
           }
         }
       }
-    }, 500)
+    }, 1000)
   }
   
   // Listen for simulation initialization

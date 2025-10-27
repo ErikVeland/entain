@@ -15,5 +15,15 @@ export default defineConfig({
         // Removed the automatic import to avoid circular dependencies
       }
     }
+  },
+  server: {
+    proxy: {
+      '/api': {
+        target: 'https://api.neds.com.au',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        secure: true
+      }
+    }
   }
 })
