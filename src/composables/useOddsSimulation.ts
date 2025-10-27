@@ -324,8 +324,8 @@ export function updateOdds(
     }
   }
   
-  // Trigger reactive update
-  simulations.value = { ...simulations.value }
+  // No need to trigger reactive update here as Vue will react to individual property changes
+  // The individual runner updates above will trigger reactivity automatically
 }
 
 

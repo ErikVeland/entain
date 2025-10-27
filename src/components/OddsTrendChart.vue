@@ -41,6 +41,8 @@ const props = defineProps<{
 
 const betsStore = useBetsStore()
 
+// Add a ref to track chart updates
+const isUpdatingChart = ref(false)
 
 // Only show chart in simulation mode
 const showChart = computed(() => {
@@ -146,18 +148,34 @@ const startWatching = () => {
     return getSimulatedRunners(props.raceId)
   })
   
+  // Use a flag to prevent recursive updates
+  let isUpdating = false
+  
   watchStopper = watch(
     simulatedRunners,
     (newRunners, oldRunners) => {
+      // Prevent recursive updates
+      if (isUpdating) return
+      isUpdating = true
+      
       if (Array.isArray(newRunners) && newRunners.length > 0) {
         updateOddsHistory()
       }
+      
+      // Reset the flag after a short delay to allow future updates
+      setTimeout(() => {
+        isUpdating = false
+      }, 100)
     },
     { deep: true, immediate: true }
   )
   
   // Also watch updateCounter for force updates
   watch(updateCounter, () => {
+    // Prevent recursive updates
+    if (isUpdating) return
+    isUpdating = true
+    
     // ONLY update for upcoming races (countdown status)
     const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
     let isRaceCountdown = false;
@@ -175,6 +193,11 @@ const startWatching = () => {
         updateOddsHistory()
       }
     }
+    
+    // Reset the flag after a short delay to allow future updates
+    setTimeout(() => {
+      isUpdating = false
+    }, 100)
   }, { immediate: true })
 }
 
@@ -201,7 +224,14 @@ onMounted(() => {
           
           // Only update chart for countdown races
           if (isRaceCountdown) {
-            updateCounter.value++
+            // Use a flag to prevent recursive updates
+            if (!isUpdatingChart.value) {
+              isUpdatingChart.value = true
+              updateCounter.value++
+              setTimeout(() => {
+                isUpdatingChart.value = false
+              }, 100)
+            }
           }
         }
       }
