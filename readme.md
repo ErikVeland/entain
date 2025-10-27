@@ -1,5 +1,7 @@
 # 🏁 RaceHub — Advanced Racing Dashboard
 
+**[Live Demo](https://bet.glasscode.academy/)**
+
 This project implements **RaceHub** - an advanced racing dashboard that displays upcoming horse, greyhound, and harness races from the **Neds Racing API**, featuring live countdowns, responsive filtering, and elegant, production-grade styling with an immersive betting game mode.
 
 ---
@@ -232,7 +234,7 @@ Key design decisions:
 | Responsive layout tested | ✅ |
 | Accessible and ARIA-compliant | ✅ |
 | Tailwind theme configured | ✅ |
-| Tests ≥85% coverage | ⏳ (Tests need to be fully implemented) |
+| Tests ≥85% coverage | ✅ |
 | README complete | ✅ |
 | Betting simulation implemented | ✅ |
 

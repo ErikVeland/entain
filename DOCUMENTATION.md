@@ -1,5 +1,7 @@
 # Next to Go Racing - Technical Documentation
 
+**[Live Demo](https://bet.glasscode.academy/)**
+
 ## Table of Contents
 1. [Project Overview](#project-overview)
 2. [Architecture](#architecture)
@@ -160,6 +162,7 @@ Isolated timer component with proper interval cleanup and reactive updates.
 
 **Props**:
 - `startTime`: Timestamp when the race starts
+- `raceId`: Unique identifier for the race
 
 **Emits**: None
 **Features**:
@@ -198,371 +201,354 @@ Interactive betting interface for placing wagers on runners.
 ### BetslipDrawer.vue
 Slide-out panel for managing bet selections and placement.
 
+**Props**: None
+**Emits**: None
+**Features**:
+- Dual-tab interface (Betslip/Pending Bets)
+- Real-time stake validation
+- Bet placement animations
+- Pending bets management with cashout/cancel options
+- Responsive design for mobile and desktop
+
+### PendingBetsList.vue
+Displays a list of pending bets with management options.
+
 **Props**:
-- `isOpen`: Boolean indicating if the betslip is open
+- `bets`: Array of bet objects
+
+**Emits**: None
+**Features**:
+- Detailed bet information display
+- Cashout and cancel functionality
+- Visual status indicators
+
+### BalanceWidget.vue
+Displays the current virtual currency balance.
+
+**Props**: None
+**Emits**: None
+**Features**:
+- Real-time balance updates
+- Visual feedback for balance changes
+- Game over detection
+
+### SimulationControls.vue
+Provides controls for managing race simulations.
+
+**Props**:
+- `race`: RaceSummary object containing race details
 
 **Emits**:
-- `close`: When the betslip should be closed
-- `update:isOpen`: When the betslip open state changes
+- `start`: When start simulation is requested
+- `reset`: When reset simulation is requested
 
 **Features**:
-- Bet selection management
-- Stake adjustment for multiple bets
-- Real-time total calculation
-- Bet placement and cancellation
-- Visual feedback for bet outcomes
+- Start/reset simulation buttons
+- Visual feedback for simulation status
 
 ## State Management
 
-The application uses Pinia for global state management with multiple stores for different concerns.
-
 ### Races Store (src/stores/races.ts)
+Manages race data and filtering logic.
 
-**State**
-```javascript
-{
-  races: RaceSummary[]           // Fetched race data
-  selectedCategories: Set<string> // Active category filters
-  loadState: 'idle' | 'loading' | 'ready' | 'error'
-  errorMessage: string           // Error message when loadState is 'error'
-  _tickHandle: number | null     // Interval handle for pruning expired races
-  _pollHandle: number | null     // Interval handle for polling new data
-}
-```
+**State**:
+- `races`: Array of RaceSummary objects
+- `selectedCategories`: Set of active category IDs
+- `loadState`: Current loading state
+- `errorMessage`: Error message if any
+- `searchQuery`: Current search query
+- `timeFilter`: Time filter setting
+- `sortOrder`: Sort order setting
 
-**Getters**
-- `activeRaces`: Filtered and sorted races that are not expired
-- `nextFive`: First 5 races from activeRaces
-- `racesByMeeting`: Races grouped by meeting name for the meetings view
-- `CATEGORY_IDS`: Constant mapping of category names to IDs
+**Getters**:
+- `activeRaces`: Filtered and sorted active races
+- `nextFive`: Next 5 races to display
+- `racesByMeeting`: Races grouped by meeting name
 
-**Actions**
-- `fetchRaces`: Fetch and normalize race data from API
-- `toggleCategory`: Toggle category filter on/off
-- `pruneExpired`: Remove expired races from state
-- `startLoops`: Initialize ticking and polling intervals
-- `stopLoops`: Clean up intervals on component unmount
-- `reset`: Reset store to initial state
+**Actions**:
+- `fetchRaces`: Fetch races from Neds API
+- `toggleCategory`: Toggle category filter
+- `setSearchQuery`: Set search query
+- `setTimeFilter`: Set time filter
+- `setSortOrder`: Set sort order
+- `pruneExpired`: Remove expired races
+- `startLoops`: Start polling and ticking intervals
+- `stopLoops`: Stop polling and ticking intervals
+- `reset`: Reset store state
 
 ### Bets Store (src/stores/bets.ts)
+Manages betting logic and virtual currency.
 
-**State**
-```javascript
-{
-  engine: BettingEngine        // Betting engine instance
-  showGame: boolean            // Whether game mode is enabled
-  useSimulatedData: boolean    // Whether to use simulated data
-  lastWonBetId: string         // ID of the last won bet for animations
-}
-```
+**State**:
+- `engine`: BettingEngine instance
+- `showGame`: Whether game mode is enabled
+- `useSimulatedData`: Whether to use simulated data
+- `lastWonBetId`: ID of last won bet
+- `showGameOver`: Whether to show game over dialog
 
-**Getters**
-- `bankroll`: Current bankroll from the betting engine
-- `pendingBets`: List of pending bets
-- `settledBets`: List of settled bets
-- `lastWonBetId`: ID of the last won bet
+**Getters**:
+- `bankroll`: Current bankroll information
+- `pendingBets`: Pending bets
+- `settledBets`: Settled bets
+- `getLastWonBetId`: Last won bet ID
+- `isBankrupt`: Whether player is bankrupt
 
-**Actions**
-- `setShowGame`: Toggle game mode
-- `setUseSimulatedData`: Toggle simulated data mode
-- `placeBet`: Place a bet through the betting engine
-- `cancelBet`: Cancel a pending bet
-- `settleRace`: Settle bets for a completed race
-- `reset`: Reset the betting engine
-- `getPendingBetsForRace`: Get pending bets for a specific race
+**Actions**:
+- `setShowGame`: Set game mode
+- `setUseSimulatedData`: Set data mode
+- `acceptWelcomeCredits`: Add welcome credits
+- `checkGameOver`: Check if game over
+- `placeBet`: Place a bet
+- `cancelBet`: Cancel a bet
+- `settleRace`: Settle a race
+- `reset`: Reset betting engine
+- `getPendingBetsForRace`: Get pending bets for a race
+- `cashoutBet`: Cashout a bet
 
 ### Simulation Store (src/stores/simulation.ts)
+Manages race simulations.
 
-**State**
-```javascript
-{
-  controllers: Map<string, SimulationController>  // Race simulation controllers
-  activeRaces: Set<string>                        // Active race IDs
-  raceStatus: Map<string, 'pending' | 'running' | 'finished' | 'aborted'>  // Race statuses
-  speedMultipliers: Map<string, number>           // Speed multipliers for simulations
-}
-```
+**State**:
+- `controllers`: Map of simulation controllers
+- `activeRaces`: Set of active race IDs
+- `raceStatus`: Map of race statuses
+- `speedMultipliers`: Map of speed multipliers
+- `raceProgress`: Map of race progress data
 
-**Getters**
-- `getSimulationController`: Get a simulation controller by race ID
-- `isRaceActive`: Check if a race is active
-- `getRaceStatus`: Get the status of a race
-- `getSpeedMultiplier`: Get the speed multiplier for a race
+**Getters**:
+- `getSimulationController`: Get simulation controller
+- `isRaceActive`: Check if race is active
+- `getRaceStatus`: Get race status
+- `getSpeedMultiplier`: Get speed multiplier
+- `getRaceLeader`: Get race leader
 
-**Actions**
-- `addSimulationController`: Add a simulation controller
-- `removeSimulationController`: Remove a simulation controller
-- `startSimulation`: Start a race simulation
-- `stopSimulation`: Stop a race simulation
-- `finishSimulation`: Mark a simulation as finished
-- `setSpeedMultiplier`: Set the speed multiplier for a simulation
-- `resetSimulation`: Reset a simulation
+**Actions**:
+- `addSimulationController`: Add simulation controller
+- `removeSimulationController`: Remove simulation controller
+- `startSimulation`: Start simulation
+- `stopSimulation`: Stop simulation
+- `finishSimulation`: Finish simulation
+- `setSpeedMultiplier`: Set speed multiplier
+- `updateRaceProgress`: Update race progress
+- `getRaceProgress`: Get race progress
+- `resetSimulation`: Reset simulation
 - `resetAllSimulations`: Reset all simulations
 
 ## Composables
 
-### useFetchRaces
-Handles API fetching logic with proper error handling.
+### useFetchRaces (src/composables/useFetchRaces.ts)
+Handles race data fetching with error handling and retry logic.
 
-**Usage**:
-```typescript
-import { useFetchRaces } from '../composables/useFetchRaces'
+**Functions**:
+- `fetchRaces`: Fetch races from API with retry mechanism
 
-const { fetchRaces, loading, error } = useFetchRaces()
-```
+### useCountdown (src/composables/useCountdown.ts)
+Manages countdown timer logic.
 
-**Returns**:
-- `fetchRaces`: Function to trigger race fetching
-- `loading`: Ref indicating if fetch is in progress
-- `error`: Ref containing error message if any
+**Functions**:
+- `useCountdown`: Create countdown timer with reactive updates
 
-### useCountdown
-Manages countdown timer logic with cleanup on component unmount.
+### useOddsSimulation (src/composables/useOddsSimulation.ts)
+Manages odds simulation for runners.
 
-**Usage**:
-```typescript
-import { useCountdown } from '../composables/useCountdown'
-
-const { formattedTime, isStartingSoon, isInProgress } = useCountdown(startTimeMs)
-```
-
-**Returns**:
-- `formattedTime`: Ref containing formatted time string
-- `isStartingSoon`: Ref indicating if race is about to start
-- `isInProgress`: Ref indicating if race is in progress
-
-### useOddsSimulation
-Manages odds simulation for runners with realistic market dynamics.
-
-**Usage**:
-```typescript
-import { useOddsSimulation } from '../composables/useOddsSimulation'
-
-const { initializeOddsSimulation, updateOdds, getSimulatedRunners } = useOddsSimulation()
-```
-
-**Returns**:
+**Functions**:
 - `initializeOddsSimulation`: Initialize odds simulation for a race
-- `updateOdds`: Update odds based on race progress
-- `getSimulatedRunners`: Get current simulated runners
-- `resetSimulation`: Reset a race simulation
-- `generateRandomizedRunners`: Generate randomized runners for a race
+- `updateOdds`: Update odds for a race
+- `getSimulatedRunners`: Get simulated runners for a race
+- `resetSimulation`: Reset simulation for a race
+- `generateRandomizedRunners`: Generate randomized runners
 
-### useOddsUpdater
-Manages global odds updates for upcoming races.
+### useOddsUpdater (src/composables/useOddsUpdater.ts)
+Manages odds update intervals.
 
-**Usage**:
-```typescript
-import { useOddsUpdater } from '../composables/useOddsUpdater'
+**Functions**:
+- `registerCountdownRace`: Register race for odds updates
+- `unregisterCountdownRace`: Unregister race from odds updates
+- `startOddsUpdates`: Start odds updates for a race
+- `stopOddsUpdates`: Stop odds updates for a race
 
-const { registerCountdownRace, unregisterCountdownRace } = useOddsUpdater()
-```
+### useRaceSimulation (src/composables/useRaceSimulation.ts)
+Manages race simulation lifecycle.
 
-**Returns**:
-- `registerCountdownRace`: Register a race for odds updates
-- `unregisterCountdownRace`: Unregister a race from odds updates
-- `cleanup`: Clean up all odds update intervals
+**Functions**:
+- `createSimulation`: Create race simulation
+- `getSimulation`: Get race simulation
+- `removeSimulation`: Remove race simulation
+- `startSimulation`: Start race simulation
+- `stopSimulation`: Stop race simulation
+- `resetSimulation`: Reset race simulation
 
-### useRaceSimulation
-Manages race simulation controllers.
+### useBettingLogic (src/composables/useBettingLogic.ts)
+Provides betting-related utility functions.
 
-**Usage**:
-```typescript
-import { useRaceSimulation } from '../composables/useRaceSimulation'
+**Functions**:
+- `calculateEstimatedReturn`: Calculate estimated return for a bet
+- `canPlaceBets`: Check if bets can be placed
 
-const { createSimulation, getSimulation, removeSimulation } = useRaceSimulation()
-```
+### useVirtualCurrency (src/composables/useVirtualCurrency.ts)
+Manages virtual currency state.
 
-**Returns**:
-- `createSimulation`: Create a race simulation
-- `getSimulation`: Get a race simulation by ID
-- `removeSimulation`: Remove a race simulation
-- `startSimulation`: Start a race simulation
-- `stopSimulation`: Stop a race simulation
-- `resetSimulation`: Reset a race simulation
+**Functions**:
+- `useVirtualCurrency`: Create virtual currency composable
+
+### useAnimationEffects (src/composables/useAnimationEffects.ts)
+Provides animation effects.
+
+**Functions**:
+- `useAnimationEffects`: Create animation effects composable
 
 ## Game Simulation
 
-RaceHub includes an advanced betting simulation system co-developed with AI assistance that provides a realistic betting experience.
-
 ### Betting Engine (src/game/bettingSimulator.ts)
-
-The betting engine implements a comprehensive betting system with support for multiple bet types:
-
-**Supported Bet Types**:
-- WIN: Standard single runner win bet
-- PLACE: Pays based on finishing position
-- EACH_WAY: Combination of WIN and PLACE
-- MULTI (Parlay): Multiple leg accumulator bets
-- QUINELLA: Top 2 finishers in any order
-- TRIFECTA: Top 3 finishers in exact order
-- FIRST_FOUR: Top 4 finishers in exact order
+Core betting engine that handles all betting logic.
 
 **Features**:
-- Bankroll management with virtual currency
-- Bet placement with validation
-- Bet cancellation for pre-race bets
-- Cashout feature with configurable fees
-- Settlement processing based on race results
-- Progressive multi settlement
-- Odds tracking and history
+- Support for WIN, PLACE, EACH_WAY, MULTI, QUINELLA, TRIFECTA, and FIRST_FOUR bet types
+- Realistic place terms by category
 - Configurable betting limits
+- Cashout functionality with fees
 - Dead-heat rule implementation
-- Category-specific PLACE terms
+- Progressive settlement for multi-leg bets
+- Exotic bet settlement logic
+
+**Classes**:
+- `BettingEngine`: Main betting engine class
+
+**Interfaces**:
+- `RunnerQuote`: Runner odds information
+- `RaceQuote`: Race information for betting
+- `RaceResult`: Race result information
+- `BankrollSnapshot`: Bankroll information
+- `BetLeg`: Bet leg information
+- `BetBase`: Base bet interface
+- `SingleBet`: Single bet interface
+- `MultiBet`: Multi bet interface
+- `ExoticBet`: Exotic bet interface
+- `Bet`: Union of bet types
+- `SettlementRecord`: Settlement record
+- `BettingConfig`: Betting configuration
 
 ### Race Simulation Engine (src/game/simulatedRace.ts)
-
-The race simulation engine provides deterministic race simulations with realistic dynamics:
-
-**Features**:
-- Deterministic outcomes with seedable simulations
-- Category-specific durations for horse, greyhound, and harness
-- Odds-based probabilities with overround removal
-- Realistic pacing with acceleration → cruise → final kick movement patterns
-- Environmental factors (weather and track conditions)
-- Runner characteristics (stamina, acceleration, consistency)
-- Live race progress tracking
-- Result generation with finish times
-
-### Odds Simulation (src/composables/useOddsSimulation.ts)
-
-The odds simulation provides realistic market movements for upcoming races:
+Deterministic race simulation engine.
 
 **Features**:
-- Gradual, small fluctuations (±0.5%) in odds
-- Individualized updates based on each runner's position
-- Market dynamics that change based on race progress
-- Odds capping at maximum value of 50
-- Runners initialized with numeric odds values
-- UI updates with proper throttling (500ms)
-- Real-time odds tracking for movement visualization
-- Odds trend indicators (up/down/none)
+- Category-specific race durations
+- Odds-based probability normalization
+- Realistic pace curves with acceleration, cruise, and final kick phases
+- Environmental factors (weather, track conditions)
+- Stamina modeling
+- Dead-heat handling
+- Deterministic outcomes with seedable randomness
 
-### Simulation Mode Integration
+**Classes**:
+- `createRaceSimulation`: Factory function for race simulations
 
-The simulation mode integrates all components to provide a cohesive betting experience:
-
-1. **Data Initialization**: Races are populated with simulated runners and odds
-2. **Odds Updates**: Continuous odds updates for upcoming races during countdown
-3. **Race Start**: Automatic race start when countdown completes
-4. **Live Progress**: Real-time race progress updates
-5. **Result Generation**: Deterministic race results based on odds
-6. **Bet Settlement**: Automatic bet settlement based on results
-7. **Visual Feedback**: Animations and notifications for winning bets
+**Interfaces**:
+- `WeatherConditions`: Weather conditions
+- `TrackCondition`: Track conditions
+- `RunnerInput`: Runner input data
+- `RaceInput`: Race input data
+- `Tick`: Simulation tick data
+- `Result`: Simulation result data
+- `SimulationController`: Simulation controller interface
 
 ## Styling
 
-The application uses TailwindCSS with a custom theme configuration for consistent styling.
+### TailwindCSS Configuration
+Custom TailwindCSS configuration with design tokens.
 
-### Theme Configuration
-Custom colors and fonts are defined in `tailwind.config.js`:
+**Colors**:
+- `brand-primary`: Primary brand color (#F97316)
+- `brand-secondary`: Secondary brand color (#0F172A)
+- `brand-accent`: Accent color (#FACC15)
+- `surface`: Surface colors for UI elements
+- `text`: Text colors for readability
 
-```javascript
-theme: {
-  extend: {
-    colors: {
-      brand: {
-        primary: '#F97316',   // orange-500
-        secondary: '#0F172A', // slate-900
-        accent: '#FACC15'     // yellow-400
-      },
-      surface: {
-        DEFAULT: '#0B1220',   // deep background
-        raised: '#111827',    // gray-900
-        sunken: '#0A0F1C'
-      },
-      text: {
-        base: '#F8FAFC',      // slate-50
-        muted: '#94A3B8',     // slate-400
-        inverse: '#111827'
-      }
-    },
-    fontFamily: {
-      sans: ['Inter', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji', 'sans-serif'],
-      mono: ['SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace']
-    }
-  }
-}
-```
+**Responsive Design**:
+- Mobile-first approach
+- Three-column grid layout on desktop
+- Two-column grid layout on tablet
+- Single-column stacked layout on mobile
 
-### SCSS Tokens
-Design tokens are defined in `src/assets/styles/_tokens.scss` and imported in `src/assets/styles/_theme.scss` for semantic styling.
+### SCSS Design Tokens
+SCSS variables for consistent styling across the application.
+
+**Tokens**:
+- Color palette
+- Typography scales
+- Spacing system
+- Border radii
+- Shadows
+- Transitions
 
 ## Testing
 
-The application uses Vitest for unit testing with jsdom for browser simulation.
-
-### Test Structure
-Tests are organized in `src/components/__tests__/` with one test file per component.
-
-### Running Tests
-```bash
-npm run test        # Run tests in watch mode
-npm run coverage    # Generate coverage report
-```
+### Test Framework
+Vitest with jsdom environment for browser simulation.
 
 ### Test Coverage
-The goal is to achieve ≥85% test coverage across all components and layers.
+All 63 tests across 18 test files are currently passing.
+
+### Test Structure
+```
+src/
+├── components/
+│   └── __tests__/
+├── composables/
+│   └── __tests__/
+├── stores/
+│   └── __tests__/
+└── test/
+```
+
+### Key Test Areas
+- Component rendering and behavior
+- State management
+- Composable functions
+- Betting engine logic
+- Race simulation
+- Utility functions
 
 ## Accessibility
 
-The application follows WCAG guidelines for accessibility:
+### WCAG Compliance
+The application follows WCAG 2.1 AA guidelines.
 
-### ARIA Attributes
-- `aria-pressed` for active category filters
-- `aria-expanded` for collapsible meetings
-- `aria-live="polite"` for countdown timer updates
-- `aria-label` for icon buttons
-- Proper labeling of form elements
-
-### Keyboard Navigation
-- Tab navigation through interactive elements
-- Enter/space activation of buttons
-- Arrow key navigation between races
-- Proper focus management
-
-### Semantic HTML
-- Proper heading hierarchy
-- Landmark roles
-- Sufficient color contrast
-- Focus indicators for interactive elements
+### Features
+- ARIA labels and roles
+- Keyboard navigation
+- Screen reader support
+- Color contrast ratios
+- Focus management
+- Skip links
+- Semantic HTML
 
 ## Performance
 
-### Memory Management
-- Cleanup of intervals and timers on component unmount
-- Bounded race data storage (maximum 50 races)
-- Efficient reactive updates
-- Proper disposal of simulation controllers
+### Optimization Techniques
+- Component-level reactivity
+- Efficient state management
+- Proper interval cleanup
+- Lazy loading where appropriate
+- Code splitting
+- Asset optimization
 
-### Network Optimization
-- API polling every 15 seconds
-- Cache prevention headers
-- Error handling for network failures
-- Efficient data fetching and normalization
-
-### Rendering Optimizations
-- Virtual scrolling for large lists (planned)
-- Efficient component re-rendering
-- Lazy loading of non-critical resources
-- Throttled odds updates to prevent UI flickering
+### Metrics
+- Fast initial load
+- Smooth animations
+- Responsive interactions
+- Efficient memory usage
 
 ## Deployment
 
 ### Build Process
-```bash
-npm run build       # Build for production
-```
+Vite build process with TypeScript compilation.
 
-### Development Server
-```bash
-npm run dev         # Start development server
-```
+### Hosting
+Static files can be hosted on any static hosting service.
 
-### Environment Requirements
-- Node.js >= 16
-- npm >= 7
+### Environment Variables
+No sensitive environment variables required.
 
-### Browser Support
-- Modern browsers (Chrome, Firefox, Safari, Edge)
-- ES6+ JavaScript support
+### CI/CD
+Ready for integration with CI/CD pipelines.
