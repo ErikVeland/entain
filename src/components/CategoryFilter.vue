@@ -1,10 +1,10 @@
 <template>
-  <div class="flex flex-wrap gap-3 mb-8" role="group" :aria-label="$t('categories.selectAll')">
+  <div class="flex flex-wrap gap-3 mb-8 w-full" role="group" :aria-label="$t('categories.selectAll')">
     <button
       v-for="category in categories"
       :key="category.id"
       @click="toggleCategory(category.id)"
-      class="px-6 py-3 rounded-xl2 font-medium transition-all duration-300 flex items-center focus:outline-none focus:ring-2 focus:ring-brand-primary transform hover:scale-105 min-w-[120px] justify-between"
+      class="px-4 py-3 rounded-xl2 font-medium transition-all duration-300 flex items-center focus:outline-none focus:ring-2 focus:ring-brand-primary transform hover:scale-105 min-w-[100px] justify-between flex-1"
       :class="[
         category.active 
           ? 'text-text-inverse shadow-card' 
@@ -32,7 +32,7 @@
           :class="category.active ? 'text-white' : 'text-harness'"
         >🛞</span>
         
-        <span>{{ $t(`categories.${category.name}`) }}</span>
+        <span class="truncate">{{ $t(`categories.${category.name}`) }}</span>
       </div>
       
       <!-- Emoji tickbox -->

@@ -78,6 +78,25 @@
               class="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary"
             ></div>
           </button>
+          <button
+            @click="activeTab = 'history'"
+            class="px-4 py-3 text-sm font-medium relative"
+            :class="activeTab === 'history' ? 'text-brand-primary' : 'text-text-muted'"
+            :aria-selected="activeTab === 'history'"
+            role="tab"
+          >
+            History
+            <span 
+              v-if="betHistory.length > 0"
+              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-brand-primary bg-opacity-20 text-brand-primary"
+            >
+              {{ betHistory.length }}
+            </span>
+            <div 
+              v-if="activeTab === 'history'" 
+              class="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-primary"
+            ></div>
+          </button>
         </div>
         
         <!-- Content -->
@@ -153,6 +172,67 @@
               <PendingBetsList :bets="pendingBets" />
             </div>
           </div>
+          
+          <!-- Bet history tab -->
+          <div v-if="activeTab === 'history'" class="p-4">
+            <div v-if="betHistory.length === 0" class="text-center py-8">
+              <div class="text-text-muted">No bet history yet</div>
+            </div>
+            
+            <div v-else class="space-y-4">
+              <div 
+                v-for="bet in betHistory" 
+                :key="bet.id"
+                class="bg-surface rounded-xl p-4 shadow-card"
+              >
+                <div class="flex items-start justify-between mb-2">
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center mb-1">
+                      <div class="w-4 h-4 rounded-sm mr-2 bg-brand-primary"></div>
+                      <h4 class="font-bold text-text-base truncate">
+                        {{ bet.runnerNumber }}. {{ bet.runnerName }}
+                      </h4>
+                    </div>
+                    <p class="text-text-muted text-sm truncate">{{ bet.raceName }} R{{ bet.raceNumber }}</p>
+                  </div>
+                  <div class="flex items-center space-x-2 ml-2">
+                    <span 
+                      class="px-3 py-1 bg-surface-sunken text-text-base text-sm font-medium rounded-full"
+                      :class="bet.result === 'WON' ? 'text-success' : bet.result === 'LOST' ? 'text-danger' : 'text-text-muted'"
+                    >
+                      {{ bet.odds }}
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="flex justify-between items-center text-sm">
+                  <div>
+                    <span class="text-text-muted">Stake: </span>
+                    <span class="font-medium">${{ (bet.stake / 100).toFixed(2) }}</span>
+                  </div>
+                  <div>
+                    <span class="text-text-muted">Return: </span>
+                    <span 
+                      class="font-medium"
+                      :class="bet.result === 'WON' ? 'text-success' : bet.result === 'LOST' ? 'text-danger' : 'text-text-muted'"
+                    >
+                      ${{ (bet.payout / 100).toFixed(2) }}
+                    </span>
+                  </div>
+                </div>
+                
+                <div class="mt-2 flex justify-between items-center text-xs">
+                  <span class="text-text-muted">{{ new Date(bet.timestamp).toLocaleString() }}</span>
+                  <span 
+                    class="px-2 py-1 rounded-full text-xs font-medium"
+                    :class="bet.result === 'WON' ? 'bg-success bg-opacity-20 text-success' : bet.result === 'LOST' ? 'bg-danger bg-opacity-20 text-danger' : 'bg-surface-sunken text-text-muted'"
+                  >
+                    {{ bet.result }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -164,12 +244,14 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBettingLogic } from '../composables/useBettingLogic'
 import { useBetsStore } from '../stores/bets'
 import { useRacesStore } from '../stores/races'
+import { useBettingFeedback } from '../composables/useBettingFeedback'
 import type { BetSelection } from '../stores/bets'
 import BetCard from './BetCard.vue'
 import PendingBetsList from './PendingBetsList.vue'
 
 const betsStore = useBetsStore()
 const racesStore = useRacesStore()
+const { initAudio, playSuccessSound, playErrorSound, showToast } = useBettingFeedback()
 const {
   activeBets,
   totalStake,
@@ -189,11 +271,14 @@ const stakeInputs = ref<Record<string, number>>({})
 
 // State
 const isOpen = ref(false)
-const activeTab = ref<'betslip' | 'pending'>('betslip')
+const activeTab = ref<'betslip' | 'pending' | 'history'>('betslip')
 const isMobile = ref(false)
 
 // Track which bets are being placed with animation
 const placingBets = ref<Record<string, boolean>>({})
+
+// Bet history state
+const betHistory = ref<any[]>([])
 
 // Computed
 const pendingBets = computed(() => betsStore.pendingBets)
@@ -298,6 +383,8 @@ const clearSelections = () => {
 
 const placeBets = () => {
   if (betslipSelections.value.length === 0 || !hasValidStakes.value) {
+    playErrorSound()
+    showToast('Please add at least one bet with a valid stake', 'error')
     return
   }
   
@@ -309,7 +396,13 @@ const placeBets = () => {
   // Switch to pending bets tab to show the animation
   activeTab.value = 'pending'
   
+  // Play success sound when placing bets
+  playSuccessSound()
+  
   // Place each selection as a bet with a slight delay for animation
+  let totalStake = 0
+  const placedBets: any[] = []
+  
   betslipSelections.value.forEach((selection, index) => {
     // Add a small delay for each bet to create a sequential animation effect
     setTimeout(() => {
@@ -317,12 +410,13 @@ const placeBets = () => {
       const stake = isNaN(selection.stake) ? 0 : selection.stake
       
       if (stake > 0) {
+        totalStake += stake
         // Find the race to get the advertised start time
         const race = racesStore.races.find(r => r.id === selection.raceId)
         const advertisedStartMs = race ? race.advertised_start_ms : undefined
         
         try {
-          const result = betsStore.placeBet(
+          const betId = betsStore.placeBet(
             selection.raceId,
             selection.runnerId,
             stake,
@@ -330,12 +424,28 @@ const placeBets = () => {
             advertisedStartMs
           )
           
+          // Add to placed bets for history tracking
+          placedBets.push({
+            id: betId,
+            raceId: selection.raceId,
+            raceName: selection.raceName,
+            raceNumber: selection.raceNumber,
+            runnerId: selection.runnerId,
+            runnerNumber: selection.runnerNumber,
+            runnerName: selection.runnerName,
+            odds: selection.odds,
+            market: selection.market,
+            stake: stake,
+            timestamp: Date.now()
+          })
+          
           // Remove the selection from the placing animation tracking
           delete placingBets.value[selection.id]
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           // Show error in a more user-friendly way
-          alert(`Error placing bet: ${errorMessage}`)
+          playErrorSound()
+          showToast(`Error placing bet: ${errorMessage}`, 'error')
           // Remove the selection from the placing animation tracking
           delete placingBets.value[selection.id]
         }
@@ -345,6 +455,14 @@ const placeBets = () => {
       }
     }, index * 200) // 200ms delay between each bet placement
   })
+  
+  // Add placed bets to history after a delay
+  setTimeout(() => {
+    betHistory.value = [...betHistory.value, ...placedBets]
+  }, betslipSelections.value.length * 200 + 1000)
+  
+  // Show success message
+  showToast(`Bets placed successfully! Total stake: $${(totalStake / 100).toFixed(2)}`, 'success')
   
   // Clear selections after placing (but keep the animation tracking)
   setTimeout(() => {
@@ -448,6 +566,9 @@ onMounted(() => {
   window.addEventListener('keydown', handleEscape)
   window.addEventListener('keydown', trapFocus)
   window.addEventListener('open-betslip', handleOpenBetslip as EventListener)
+  
+  // Initialize audio for betting feedback
+  initAudio()
 })
 
 onUnmounted(() => {
@@ -497,6 +618,33 @@ defineExpose({
 
 .success-message {
   animation: fadeInOut 3s ease-in-out forwards;
+}
+
+/* Flash animations for betting feedback */
+.flash {
+  animation: flash-animation 1s;
+}
+
+.flash-green {
+  background-color: rgba(76, 175, 80, 0.3) !important;
+}
+
+.flash-red {
+  background-color: rgba(244, 67, 54, 0.3) !important;
+}
+
+.flash-blue {
+  background-color: rgba(33, 150, 243, 0.3) !important;
+}
+
+.flash-yellow {
+  background-color: rgba(255, 193, 7, 0.3) !important;
+}
+
+@keyframes flash-animation {
+  0% { opacity: 1; }
+  50% { opacity: 0.7; }
+  100% { opacity: 1; }
 }
 
 /* Add any additional styles if needed */

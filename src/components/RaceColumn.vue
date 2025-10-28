@@ -44,74 +44,34 @@
       :race-finished="raceFinished"
     />
     
-    <!-- Simulation Controls (hidden by default, shown only in debug mode) -->
-    <div class="px-3 pt-2" v-if="showDebugControls">
-      <SimulationControls 
-        :race="race"
-        @start="startRaceSimulation"
-        @reset="resetRaceSimulation"
-      />
-    </div>
+    <SimulationControlsSection
+      :race="race"
+      :show-game="betsStore.showGame"
+      :use-simulated-data="betsStore.useSimulatedData"
+      :show-debug-controls="showDebugControls"
+      @start-race-simulation="startRaceSimulation"
+      @reset-race-simulation="resetRaceSimulation"
+    />
     
-    <div class="p-3 flex-grow relative z-10">
-      <div class="space-y-2">
-        <!-- We need to convert the odds to string for RunnerRow -->
-        <RunnerRow 
-          v-for="(runner, index) in runnersForDisplay"
-          :key="runner.id"
-          :runner="runner"
-          :race-id="race.id"
-          :race-name="race.meeting_name"
-          :race-number="race.race_number"
-          :is-expired="isExpired"
-          :tabindex="0"
-        />
-        <!-- Show a message when no runners are available (not in simulation mode) -->
-        <div 
-          v-if="(!betsStore.showGame || !betsStore.useSimulatedData) && runnersForDisplay.length === 0" 
-          class="text-center py-4 text-text-muted"
-        >
-          Runner information not available in API mode
-        </div>
-        <!-- Show a message when runners are missing in simulation mode -->
-        <div 
-          v-else-if="betsStore.showGame && betsStore.useSimulatedData && runnersForDisplay.length === 0" 
-          class="text-center py-4 text-text-muted"
-        >
-          No runners available for this race
-        </div>
-      </div>
-    </div>
+    <RunnersSection
+      :race-id="race.id"
+      :race-name="race.meeting_name"
+      :race-number="race.race_number"
+      :is-expired="!!isExpired"
+      :show-game="betsStore.showGame"
+      :use-simulated-data="betsStore.useSimulatedData"
+      :runners-for-display="runnersForDisplay"
+      @add-to-betslip="handleAddToBetslip"
+    />
     
-    <!-- Odds Trend Chart - Always visible for active races in simulation mode -->
-    <div class="px-3 pb-3 relative z-10" v-if="betsStore.showGame && !isExpired && raceStatus === 'live'">
-      <div class="border-t border-surface pt-3">
-        <div class="flex items-center justify-between w-full py-2 text-text-base font-medium mb-2">
-          <span>Odds Movements</span>
-        </div>
-        <div class="mt-2">
-          <OddsTrendChart :race-id="race.id" />
-        </div>
-      </div>
-    </div>
-
-    <!-- Odds Trend Chart with dropdown curtain for non-live races -->
-    <div class="px-3 pb-3 relative z-10" v-else-if="betsStore.showGame && !isExpired">
-      <div class="border-t border-surface pt-3">
-        <div class="flex items-center justify-between w-full py-2 text-text-base font-medium mb-2">
-          <button 
-            @click="toggleOddsChart"
-            class="flex items-center"
-          >
-            <span>Odds Movements</span>
-            <span :class="{'rotate-180': showOddsChart}" class="transition-transform ml-2">▼</span>
-          </button>
-        </div>
-        <div v-show="showOddsChart" class="mt-2">
-          <OddsTrendChart :race-id="race.id" />
-        </div>
-      </div>
-    </div>
+    <OddsTrendSection
+      :race-id="race.id"
+      :show-game="betsStore.showGame"
+      :is-expired="isExpired"
+      :race-status="raceStatus"
+      :show-odds-chart="showOddsChart"
+      @toggle-odds-chart="toggleOddsChart"
+    />
     
     <RaceResults 
       v-if="raceResult && !isExpired && betsStore.showGame && raceFinished"
@@ -141,13 +101,14 @@ import { useBetsStore } from '../stores/bets'
 import { initializeOddsSimulation, updateOdds, getSimulatedRunners, resetSimulation, generateRandomizedRunners, type SimulatedRunner } from '../composables/useOddsSimulation'
 import { useOddsUpdater } from '../composables/useOddsUpdater'
 import { useRaceSimulation } from '../composables/useRaceSimulation'
+import { useSimulationManager } from '../composables/useSimulationManager'
 import { useCountdown } from '../composables/useCountdown'
 import { type Tick, type Result } from '../game/simulatedRace'
 import RaceHeader from './RaceHeader.vue'
-import RunnerRow from './RunnerRow.vue'
 import RaceResults from './RaceResults.vue'
-import OddsTrendChart from './OddsTrendChart.vue'
-import SimulationControls from './SimulationControls.vue'
+import OddsTrendSection from './OddsTrendSection.vue'
+import RunnersSection from './RunnersSection.vue'
+import SimulationControlsSection from './SimulationControlsSection.vue'
 import { useSimulationStore } from '../stores/simulation'
 
 const props = defineProps<{
@@ -168,6 +129,7 @@ const emit = defineEmits<{
 const betsStore = useBetsStore()
 const { registerCountdownRace, unregisterCountdownRace } = useOddsUpdater()
 const { createSimulation, getSimulation, removeSimulation, startSimulation, stopSimulation, resetSimulation: resetRaceSimulationStore } = useRaceSimulation()
+const { canStartSimulation, incrementSimulationCount, decrementSimulationCount, calculateOptimalTickInterval } = useSimulationManager()
 const { formattedTime, isStartingSoon, isInProgress } = useCountdown(props.race.advertised_start_ms)
 
 // State for odds chart dropdown
@@ -184,9 +146,7 @@ const showDebugControls = computed(() => {
 // Race simulation controller
 let simulationController: any = null
 
-// Limit the number of concurrent simulations to prevent browser lockup
-const MAX_CONCURRENT_SIMULATIONS = 5;
-let activeSimulationCount = 0;
+// Use global simulation manager for concurrent simulation limit
 
 // Race result - only shown after simulation completes
 const raceResult = ref<{ placings: string[] } | null>(null)
@@ -308,8 +268,8 @@ const initializeRaceSimulation = () => {
     return
   }
   
-  // Check concurrent simulation limit
-  if (activeSimulationCount >= MAX_CONCURRENT_SIMULATIONS) {
+  // Check concurrent simulation limit using global manager
+  if (!canStartSimulation()) {
     // Too many active simulations, skipping initialization for now
     return
   }
@@ -340,15 +300,13 @@ const initializeRaceSimulation = () => {
       }))
     }
     
-    // Calculate tick interval based on number of active races for better performance
-    // Increased tick interval for more realistic simulation and better performance
-    const activeRaces = document.querySelectorAll('[data-race-id]').length;
-    const tickMs = activeRaces > 3 ? 1000 : activeRaces > 1 ? 750 : 500;
+    // Calculate optimal tick interval using global simulation manager
+    const tickMs = calculateOptimalTickInterval();
     
     simulationController = createSimulation(raceInput, undefined, tickMs)
     
-    // Increment active simulation count
-    activeSimulationCount++;
+    // Increment active simulation count using global manager
+    incrementSimulationCount();
     
     // Set up tick handler for odds updates
     simulationController.onTick((tick: Tick) => {
@@ -387,8 +345,8 @@ const initializeRaceSimulation = () => {
         raceFinished.value = true
         raceLive.value = false
         
-        // Decrement active simulation count
-        activeSimulationCount = Math.max(0, activeSimulationCount - 1);
+        // Decrement active simulation count using global manager
+        decrementSimulationCount();
         
         // Emit race finished event
         emit('race-finished')
@@ -463,8 +421,8 @@ const startRaceSimulation = () => {
   // Manual start race simulation requested for race
   
   if (betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value && !raceLive.value) {
-    // Check concurrent simulation limit
-    if (activeSimulationCount >= MAX_CONCURRENT_SIMULATIONS) {
+    // Check concurrent simulation limit using global manager
+    if (!canStartSimulation()) {
       // Too many active simulations, cannot start another one
       error.value = 'Too many active simulations. Please wait for some to finish.';
       return;
@@ -472,8 +430,8 @@ const startRaceSimulation = () => {
     
     // Mark race as live
     raceLive.value = true
-    // Increment active simulation count
-    activeSimulationCount++;
+    // Increment active simulation count using global manager
+    incrementSimulationCount();
     // Emit race started event
     emit('race-started')
   }
@@ -507,6 +465,9 @@ const cleanupSimulation = () => {
     raceResult.value = null
     raceFinished.value = false
     raceLive.value = false
+    
+    // Decrement active simulation count using global manager
+    decrementSimulationCount();
   } catch (err) {
     // Enhanced error handling with user-friendly error messages
     const errorMessage = err instanceof Error ? err.message : String(err)
@@ -525,8 +486,8 @@ watch(() => betsStore.showGame && betsStore.useSimulatedData, (newVal, oldVal) =
   if (newVal && !oldVal) {
     // Switching to simulation mode
     try {
-      // Check concurrent simulation limit
-      if (activeSimulationCount >= MAX_CONCURRENT_SIMULATIONS) {
+      // Check concurrent simulation limit using global manager
+      if (!canStartSimulation()) {
         // Too many active simulations, cannot switch to simulation mode
         error.value = 'Too many active simulations. Please wait for some to finish.';
         return;

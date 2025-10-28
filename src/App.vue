@@ -14,6 +14,7 @@ import ControlBar from './components/ControlBar.vue'
 import GameModeDialog from './components/GameModeDialog.vue'
 import GameOverDialog from './components/GameOverDialog.vue'
 import TestRaces from './components/TestRaces.vue'
+import CelebrationAnimation from './components/CelebrationAnimation.vue'
 
 const { locale, t } = useI18n()
 const store = useRacesStore()
@@ -277,6 +278,9 @@ onUnmounted(() => {
   <div class="min-h-screen bg-surface text-text-base transition-colors duration-200 flex flex-col">
     <!-- Debug Panel -->
     <DebugPanel :show-debug="showDebug" @close="showDebug = false" />
+    
+    <!-- Celebration Animation -->
+    <CelebrationAnimation />
 
     <!-- Skip Links for Accessibility -->
     <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-brand-primary focus:text-white">
@@ -399,7 +403,7 @@ onUnmounted(() => {
               <p v-if="isSimulationMode" class="text-text-inverse opacity-80 text-base mt-2">{{ $t('races.liveUpdates') }}</p>
               
               <!-- View toggle moved below headline -->
-              <div class="mt-4">
+              <div class="mt-4 w-full">
                 <div class="relative inline-block w-48 h-10 rounded-full bg-black bg-opacity-30 shadow-inner">
                   <input 
                     type="range" 
@@ -423,17 +427,19 @@ onUnmounted(() => {
                 </div>
               </div>
             </div>
-            <!-- Simulation toggle button with enhanced glass effect -->
-            <button
-              @click="toggleSimulation"
-              class="mt-6 md:mt-0 px-5 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary backdrop-blur-md bg-brand-primary bg-opacity-20 border border-brand-primary border-opacity-30 flex items-center justify-center hover:bg-opacity-30 hover:border-opacity-40 text-lg"
-              :aria-pressed="isSimulationMode"
-              :aria-label="isSimulationMode ? 'Switch to API mode' : 'Start simulation mode'"
-            >
-              <span v-if="!isSimulationMode" class="mr-2 text-xl">▶️</span>
-              <span v-if="isSimulationMode">API Mode</span>
-              <span v-else>Start Simulation</span>
-            </button>
+            <!-- Simulation toggle button with enhanced glass effect - centered and full width on mobile -->
+            <div class="mt-6 md:mt-0 w-full md:w-auto">
+              <button
+                @click="toggleSimulation"
+                class="w-full px-5 py-3 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-brand-primary backdrop-blur-md bg-brand-primary bg-opacity-20 border border-brand-primary border-opacity-30 flex items-center justify-center hover:bg-opacity-30 hover:border-opacity-40 text-lg"
+                :aria-pressed="isSimulationMode"
+                :aria-label="isSimulationMode ? 'Switch to API mode' : 'Start simulation mode'"
+              >
+                <span v-if="!isSimulationMode" class="mr-2 text-xl">▶️</span>
+                <span v-if="isSimulationMode">API Mode</span>
+                <span v-else>Start Simulation</span>
+              </button>
+            </div>
           </div>
         </div>
 

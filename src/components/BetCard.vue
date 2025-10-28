@@ -111,6 +111,7 @@ import { type BetSelection } from '../stores/bets'
 import { useVirtualCurrency } from '../composables/useVirtualCurrency'
 import { useBettingLogic } from '../composables/useBettingLogic'
 import { useAnimationEffects } from '../composables/useAnimationEffects'
+import { useBettingFeedback } from '../composables/useBettingFeedback'
 
 const props = defineProps<{
   selection: BetSelection
@@ -125,6 +126,7 @@ const emit = defineEmits<{
 const { availableBalance } = useVirtualCurrency()
 const { calculateEstimatedReturn } = useBettingLogic()
 const { flashElement } = useAnimationEffects()
+const { flashElement: flashElementFeedback } = useBettingFeedback()
 
 // Refs
 const cardElement = ref<HTMLElement | null>(null)

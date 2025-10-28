@@ -1,13 +1,32 @@
 <template>
-  <div v-if="showChart && loaded" class="h-64 w-full">
-    <Line 
-      :data="chartData" 
-      :options="chartOptions"
-      ref="chartRef"
-    />
-  </div>
-  <div v-else-if="showChart" class="h-64 w-full flex items-center justify-center">
-    <div class="text-text-muted">Loading chart data...</div>
+  <div v-if="showChart" class="h-64 w-full flex flex-col">
+    <!-- Time range controls -->
+    <div v-if="loaded" class="flex justify-end mb-2">
+      <div class="flex bg-surface-sunken rounded-lg p-1">
+        <button
+          v-for="range in timeRanges"
+          :key="range.value"
+          @click="timeRange = range.value as '5m' | '15m' | '30m'"
+          class="px-3 py-1 text-xs rounded-md transition-colors"
+          :class="timeRange === range.value 
+            ? 'bg-brand-primary text-text-inverse' 
+            : 'text-text-muted hover:bg-surface-raised'"
+        >
+          {{ range.label }}
+        </button>
+      </div>
+    </div>
+    
+    <div v-if="loaded" class="flex-grow">
+      <Line 
+        :data="chartData" 
+        :options="chartOptions"
+        ref="chartRef"
+      />
+    </div>
+    <div v-else class="h-full flex items-center justify-center">
+      <div class="text-text-muted">Loading chart data...</div>
+    </div>
   </div>
   <div v-else class="h-64 w-full flex items-center justify-center">
     <div class="text-text-muted">Chart not available in API mode</div>
@@ -50,6 +69,13 @@ const showChart = computed(() => {
 })
 
 const timeRange = ref<'5m' | '15m' | '30m'>('15m')
+
+// Time range options
+const timeRanges = [
+  { label: '5m', value: '5m' as const },
+  { label: '15m', value: '15m' as const },
+  { label: '30m', value: '30m' as const }
+]
 const oddsHistory = ref<Record<string, { time: number; odds: number }[]>>({})
 const loaded = ref(false)
 const updateCounter = ref(0) // Force updates
@@ -417,12 +443,33 @@ const chartData = computed(() => {
     }
   }
   
-  // Create time labels (last 10 points)
+  // Filter data points based on selected time range
+  const getTimeRangeMs = () => {
+    switch (timeRange.value) {
+      case '5m': return 5 * 60 * 1000
+      case '15m': return 15 * 60 * 1000
+      case '30m': return 30 * 60 * 1000
+      default: return 15 * 60 * 1000
+    }
+  }
+  
+  // Create time labels based on selected time range
   const timeLabels: string[] = []
   const sampleRunnerId = runners[0].id
   
   if (oddsHistory.value[sampleRunnerId] && oddsHistory.value[sampleRunnerId].length > 0) {
-    const dataPoints = oddsHistory.value[sampleRunnerId]
+    // Filter data points based on time range
+    const now = Date.now()
+    const rangeMs = getTimeRangeMs()
+    const filteredDataPoints = oddsHistory.value[sampleRunnerId].filter(point => 
+      now - point.time <= rangeMs
+    )
+    
+    // Take last 20 points or all filtered points if less than 20
+    const dataPoints = filteredDataPoints.length > 20 
+      ? filteredDataPoints.slice(-20) 
+      : filteredDataPoints
+    
     dataPoints.forEach((point, index) => {
       // Show fewer labels to avoid clutter
       if (index % 2 === 0 || index === dataPoints.length - 1) {
@@ -456,9 +503,27 @@ const chartData = computed(() => {
       'rgba(219, 39, 119, 0.1)'
     ]
     
-    // Get odds history for this runner
+    // Get odds history for this runner and filter based on time range
     const history = oddsHistory.value[runner.id] || []
-    const oddsData = history.map(point => point.odds)
+    
+    // Filter data points based on time range
+    const now = Date.now()
+    const rangeMs = {
+      '5m': 5 * 60 * 1000,
+      '15m': 15 * 60 * 1000,
+      '30m': 30 * 60 * 1000
+    }[timeRange.value]
+    
+    const filteredHistory = history.filter(point => 
+      now - point.time <= rangeMs
+    )
+    
+    // Take last 20 points or all filtered points if less than 20
+    const dataPoints = filteredHistory.length > 20 
+      ? filteredHistory.slice(-20) 
+      : filteredHistory
+    
+    const oddsData = dataPoints.map(point => point.odds)
     
     // Runner history:
     // Runner odds data:
@@ -525,7 +590,34 @@ const chartOptions = {
       borderColor: '#F97316', // brand-primary
       borderWidth: 1,
       padding: 12,
-      usePointStyle: true
+      usePointStyle: true,
+      callbacks: {
+        label: function(context: any) {
+          let label = context.dataset.label || '';
+          if (label) {
+            label += ': ';
+          }
+          if (context.parsed.y !== null) {
+            label += context.parsed.y.toFixed(2);
+          }
+          return label;
+        },
+        title: function(context: any) {
+          // Show time information in tooltip title
+          if (context.length > 0) {
+            const point = context[0];
+            const timeIndex = point.dataIndex;
+            const sampleRunnerId = Object.keys(oddsHistory.value)[0];
+            if (sampleRunnerId && oddsHistory.value[sampleRunnerId] && 
+                oddsHistory.value[sampleRunnerId][timeIndex]) {
+              const time = oddsHistory.value[sampleRunnerId][timeIndex].time;
+              const date = new Date(time);
+              return date.toLocaleTimeString();
+            }
+          }
+          return '';
+        }
+      }
     }
   },
   scales: {

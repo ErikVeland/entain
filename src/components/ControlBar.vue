@@ -1,9 +1,9 @@
 <template>
   <div class="bg-surface-raised shadow-card p-4 mb-6 transition-all duration-300">
-    <!-- Main control bar with simplified flex layout -->
-    <div class="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between flex-wrap w-full">
-      <!-- Search section -->
-      <div class="relative flex-1 min-w-[200px]">
+    <!-- Main control bar with responsive layout -->
+    <div class="flex flex-col gap-4 w-full">
+      <!-- Search section - full width on mobile -->
+      <div class="relative w-full">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <span class="text-text-muted text-sm">🔍</span>
         </div>
@@ -20,15 +20,15 @@
         </div>
       </div>
       
-      <!-- Filter and control sections with equal spacing -->
-      <div class="flex flex-wrap gap-3 items-center">
-        <!-- Compact Category filters -->
-        <div class="flex flex-wrap gap-2">
+      <!-- Filter and control sections - stacked on mobile, horizontal on larger screens -->
+      <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center sm:justify-between w-full">
+        <!-- Category filters - one line on mobile -->
+        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
           <button
             v-for="category in categories"
             :key="category.id"
             @click="toggleCategory(category.id)"
-            class="px-3 py-1 rounded-lg font-medium transition-all duration-200 flex items-center focus:outline-none focus:ring-2 focus:ring-brand-primary text-sm min-w-[80px] justify-between"
+            class="px-3 py-1 rounded-lg font-medium transition-all duration-200 flex items-center focus:outline-none focus:ring-2 focus:ring-brand-primary text-sm min-w-[80px] justify-between flex-1 sm:flex-none"
             :class="[
               category.active 
                 ? 'text-text-inverse shadow-sm' 
@@ -69,34 +69,35 @@
           </button>
         </div>
         
-        <!-- Time filter -->
-        <div class="relative">
-          <select
-            v-model="localTimeFilter"
-            @change="updateTimeFilter"
-            class="appearance-none bg-surface text-text-base rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-200 cursor-pointer"
-            :aria-label="$t('races.sortBy')"
-          >
-            <option value="all">{{ $t('races.allTimes') }}</option>
-            <option value="next-hour">{{ $t('races.nextHour') }}</option>
-            <option value="next-2-hours">{{ $t('races.next2Hours') }}</option>
-            <option value="next-4-hours">{{ $t('races.next4Hours') }}</option>
-          </select>
-        </div>
-        
-        <!-- Sort order -->
-        <div class="relative">
-          <select
-            v-model="localSortOrder"
-            @change="updateSortOrder"
-            class="appearance-none bg-surface text-text-base rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-200 cursor-pointer"
-            :aria-label="$t('races.sortBy')"
-          >
-            <option value="time-asc">{{ $t('races.timeSoonest') }}</option>
-            <option value="time-desc">{{ $t('races.timeLatest') }}</option>
-            <option value="name-asc">{{ $t('races.nameAZ') }}</option>
-            <option value="name-desc">{{ $t('races.nameZA') }}</option>
-          </select>
+        <!-- Time filter and sort order - stacked on mobile -->
+        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+          <div class="relative w-full sm:w-auto">
+            <select
+              v-model="localTimeFilter"
+              @change="updateTimeFilter"
+              class="appearance-none bg-surface text-text-base rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-200 cursor-pointer w-full"
+              :aria-label="$t('races.sortBy')"
+            >
+              <option value="all">{{ $t('races.allTimes') }}</option>
+              <option value="next-hour">{{ $t('races.nextHour') }}</option>
+              <option value="next-2-hours">{{ $t('races.next2Hours') }}</option>
+              <option value="next-4-hours">{{ $t('races.next4Hours') }}</option>
+            </select>
+          </div>
+          
+          <div class="relative w-full sm:w-auto">
+            <select
+              v-model="localSortOrder"
+              @change="updateSortOrder"
+              class="appearance-none bg-surface text-text-base rounded-lg py-2 pl-3 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-brand-primary transition-all duration-200 cursor-pointer w-full"
+              :aria-label="$t('races.sortBy')"
+            >
+              <option value="time-asc">{{ $t('races.timeSoonest') }}</option>
+              <option value="time-desc">{{ $t('races.timeLatest') }}</option>
+              <option value="name-asc">{{ $t('races.nameAZ') }}</option>
+              <option value="name-desc">{{ $t('races.nameZA') }}</option>
+            </select>
+          </div>
         </div>
       </div>
     </div>

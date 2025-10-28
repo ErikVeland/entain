@@ -97,7 +97,7 @@ const progressPercentage = computed(() => {
 })
 
 // Enhanced race status computation
-const raceStatus = computed(() => {
+const raceStatus = computed<'finished' | 'live' | 'starting_soon' | 'countdown'>(() => {
   if (props.isExpired) return 'finished'
   if (isInProgress.value) return 'live'
   if (isStartingSoon.value) return 'starting_soon'
@@ -143,6 +143,14 @@ const countdownDisplay = computed(() => {
   return formattedTime.value
 })
 
+// Get class for countdown element
+const getCountdownClass = () => {
+  return {
+    'bg-danger': isFlashingRed.value,
+    'bg-warning': raceStatus.value === 'starting_soon'
+  }
+}
+
 // Clean up intervals
 onUnmounted(() => {
   if (flashInterval.value) {
@@ -169,7 +177,12 @@ onUnmounted(() => {
     <!-- Meeting name with ellipsis - properly spaced -->
     <div 
       class="relative z-10 font-bold uppercase text-text-base flex-grow text-left min-w-0 ml-8 mr-2" 
-      :class="{ 'opacity-50': isExpired }"
+      :class="{ 
+        'opacity-50': isExpired,
+        'text-success': raceStatus === 'live',
+        'text-warning': raceStatus === 'starting_soon',
+        'text-text-muted': raceStatus === 'finished'
+      }"
       :title="meetingName"
     >
       <div class="truncate">{{ meetingName }}</div>
@@ -178,33 +191,36 @@ onUnmounted(() => {
     <div class="relative z-10 flex items-center">
       <div 
         v-if="raceStatus === 'live'" 
-        class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-brand-primary animate-pulse"
+        class="px-3 py-1 rounded-full text-xs font-bold bg-danger text-text-inverse flex items-center border-2 border-danger shadow-lg transform scale-105"
         style="margin-right: 0; transform: translateX(3px);"
       >
-        <span class="mr-1">●</span>
-        <span class="hidden sm:inline">LIVE</span>
+        <span class="mr-1 animate-ping">●</span>
+        <span class="hidden sm:inline font-extrabold">LIVE</span>
         <span class="sm:hidden">●</span>
       </div>
       <div 
         v-else-if="raceStatus === 'finished'"
-        class="px-3 py-1 rounded-full text-xs font-bold text-text-muted border-2 border-brand-primary"
+        class="px-3 py-1 rounded-full text-xs font-bold text-text-muted bg-surface-raised border-2 border-text-muted opacity-75"
         style="margin-right: 0; transform: translateX(3px);"
       >
-        Over
+        <span class="font-medium">OVER</span>
       </div>
       <div 
         v-else-if="raceStatus === 'starting_soon'"
-        class="px-3 py-1 rounded-full text-xs font-bold bg-warning text-text-inverse flex items-center border-2 border-brand-primary"
+        class="px-3 py-1 rounded-full text-xs font-bold bg-warning text-text-inverse flex items-center border-2 border-warning shadow-md"
         style="margin-right: 0; transform: translateX(3px);"
       >
-        <span class="mr-1">●</span>
-        <span class="hidden sm:inline">Starting</span>
+        <span class="mr-1 animate-bounce">●</span>
+        <span class="hidden sm:inline font-bold">SOON</span>
         <span class="sm:hidden">●</span>
       </div>
       <div 
         v-else
         class="relative h-6 border-2 border-brand-primary flex items-center rounded-full overflow-hidden"
-        :class="{ 'bg-danger': isFlashingRed, 'bg-warning': raceStatus === 'starting_soon' }"
+        :class="{
+          'bg-danger': isFlashingRed,
+          'bg-warning': raceStatus === 'starting_soon'
+        }"
         style="width: 64px; margin-right: 0; transform: translateX(3px);"
       >
         <!-- Progress bar background -->
