@@ -1,61 +1,24 @@
 import { defineStore } from 'pinia'
 import { BettingEngine } from '../game/bettingSimulator'
-
-// Define transaction types
-export interface Transaction {
-  id: string
-  type: 'initial_credit' | 'bet_placed' | 'bet_cancelled' | 'bet_won' | 'bet_lost'
-  amount: number
-  balanceBefore: number
-  balanceAfter: number
-  timestamp: number
-  description: string
-  betId?: string
-  raceId?: string
-}
-
-// Define bet selection for the betslip
-export interface BetSelection {
-  id: string
-  raceId: string
-  raceName: string
-  raceNumber: number
-  runnerId: string
-  runnerNumber: number
-  runnerName: string
-  odds: number | 'SP'
-  market: 'win' | 'place' | 'each-way'
-  stake: number
-  estimatedReturn: number
-}
+import type { BankrollSnapshot } from '../game/bettingSimulator'
 
 export const useBetsStore = defineStore('bets', {
   state: () => ({
-    engine: new BettingEngine(1000),
     showGame: false,
-    // App should start in API mode, so useSimulatedData should be false by default
     useSimulatedData: false,
-    // Track last won bet for animations
-    lastWonBetId: '',
-    // Track if game over dialog should be shown
-    showGameOver: false
+    engine: new BettingEngine(1000), // $1000 initial bankroll
+    showGameOver: false,
+    lastWonBetId: null as string | null
   }),
   
   getters: {
-    bankroll: (state) => state.engine.getBankroll(),
-    pendingBets: (state) => state.engine.listBets().filter(bet => bet.status === 'PENDING'),
-    settledBets: (state) => state.engine.listBets().filter(bet => bet.status !== 'PENDING'),
-    // Rename the getter to avoid conflict with state property
-    getLastWonBetId: (state) => state.lastWonBetId,
-    // Check if bankroll is zero or negative AND no pending bets exist
-    isBankrupt: (state) => {
-      const bankroll = state.engine.getBankroll()
-      const pendingBets = state.engine.listBets().filter(bet => bet.status === 'PENDING')
-      return bankroll.balance <= 0 && pendingBets.length === 0
+    bankroll(): BankrollSnapshot {
+      return this.engine.getBankroll()
     }
   },
   
   actions: {
+    // Add action to toggle game mode
     setShowGame(show: boolean) {
       this.showGame = show
     },
@@ -72,10 +35,18 @@ export const useBetsStore = defineStore('bets', {
     
     // Method to check if game over dialog should be shown
     // Game over should only occur when balance is zero/negative AND no pending bets exist
+    // AND all pending bets have been settled (lost or won)
     checkGameOver() {
       const bankroll = this.engine.getBankroll()
-      const pendingBets = this.engine.listBets().filter(bet => bet.status === 'PENDING')
-      this.showGameOver = bankroll.balance <= 0 && pendingBets.length === 0
+      const allBets = this.engine.listBets()
+      const pendingBets = allBets.filter(bet => bet.status === 'PENDING')
+      const settledBets = allBets.filter(bet => bet.status === 'WON' || bet.status === 'LOST' || bet.status === 'SETTLED_PARTIAL' || bet.status === 'VOID')
+      
+      // Game over only if:
+      // 1. Bankroll is zero or negative
+      // 2. No pending bets remain
+      // 3. At least one bet has been settled (to avoid triggering on initial state)
+      this.showGameOver = bankroll.balance <= 0 && pendingBets.length === 0 && settledBets.length > 0
     },
     
     placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: string) {

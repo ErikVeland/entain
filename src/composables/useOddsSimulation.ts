@@ -185,18 +185,18 @@ export function updateOdds(
     // Base odds calculation
     let newOdds = typeof runner.odds === 'number' ? runner.odds : 2.0 // Default to 2.0 if SP
     
-    // Adjust odds based on position and progress with smaller changes for realism
+    // Adjust odds based on position and progress with moderate changes for realism
     // If runner is leading and making good progress, shorten odds
     if (positionFactor < 0.3 && progressFactor > 0.5) {
-      newOdds = Math.max(1.1, newOdds * 0.99) // Very slight shortening for realism
+      newOdds = Math.max(1.1, newOdds * 0.97) // Moderate shortening for leaders
     }
     // If runner is trailing and not making good progress, lengthen odds
     else if (positionFactor > 0.7 && progressFactor < 0.3) {
-      newOdds = newOdds * 1.01 // Very slight lengthening for realism
+      newOdds = newOdds * 1.03 // Moderate lengthening for trailers
     }
-    // Otherwise make very small random adjustments
+    // Otherwise make small random adjustments
     else {
-      const randomFactor = 0.999 + (Math.random() * 0.002) // 0.999-1.001 for subtle changes
+      const randomFactor = 0.98 + (Math.random() * 0.04) // 0.98-1.02 for small changes
       newOdds = newOdds * randomFactor
     }
     
@@ -208,8 +208,8 @@ export function updateOdds(
     const originalOdds = typeof runner.odds === 'number' ? runner.odds : 2.0 // Default to 2.0 if SP
     const change = Math.abs(newOdds - originalOdds)
     
-    // Only show trend if change is significant (> 0.05)
-    if (change > 0.05) {
+    // Only show trend if change is significant (> 0.02)
+    if (change > 0.02) {
       trend = newOdds < originalOdds ? 'up' : 'down'
     }
     

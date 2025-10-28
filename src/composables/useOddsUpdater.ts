@@ -91,8 +91,8 @@ export function useOddsUpdater() {
           // Favorites (lower numbers) start with higher progress
           // But add random market fluctuations to simulate real betting activity
           const baseProgress = 1 - (runner.number / (runners.length + 2))
-          // Reduce market volatility from ±10% to ±5% for more stable odds
-          const marketFluctuation = (Math.random() - 0.5) * 0.1
+          // Reduce market volatility from ±10% to ±8% for more stable odds
+          const marketFluctuation = (Math.random() - 0.5) * 0.16
           progressByRunner[runner.id] = Math.max(0, Math.min(1, baseProgress + marketFluctuation))
           order.push(runner.id)
         })
