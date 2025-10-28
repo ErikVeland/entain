@@ -5,8 +5,8 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="light"] {
-  background-color: #111827;
-  color: #0B1220;
+  background-color: #F8FAFC;
+  color: #0F172A;
 }
 
 html[data-theme="high-contrast"] {

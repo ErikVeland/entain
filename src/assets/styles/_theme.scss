@@ -29,6 +29,9 @@
   // Typography
   --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
   --font-family-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-weight-base: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
   
   // Spacing
   --spacing-xs: 0.25rem; // 4px
@@ -65,7 +68,7 @@
   --color-surface-raised: #FFFFFF; // white (raised elements)
   --color-surface-sunken: #E2E8F0; // slate-200 (sunken elements)
   
-  --color-text-base: #0B1220; // deep background (dark text)
+  --color-text-base: #0F172A; // slate-900 (dark text)
   --color-text-muted: #64748B; // slate-500 (muted text)
   --color-text-inverse: #F8FAFC; // slate-50 (light text)
   
@@ -75,32 +78,55 @@
   --color-info: #2563EB;
   
   // Race type colors
-  --color-horse: #F97316; // Orange (same as brand-primary)
-  --color-greyhound: #C0C0C0; // Coppery silver
-  --color-harness: #DC2626; // Red (more red than orangey red)
+  --color-horse: #EA580C; // Warm orange
+  --color-greyhound: #4B5563; // Cool gray
+  --color-harness: #DC2626; // Red
+  
+  // Typography
+  --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font-family-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-weight-base: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+  
+  // Shadows (lighter for light theme)
+  --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.08);
+  
+  // Borders (darker for better contrast)
+  --border-color: #CBD5E1;
 }
 
 // High Contrast Theme
 [data-theme="high-contrast"] {
-  --color-brand-primary: #FF6B00; // Vibrant orange for better contrast
+  --color-brand-primary: #005fcc; // High contrast blue
   --color-brand-secondary: #000000;
-  --color-brand-accent: #FFD700; // Bright yellow
+  --color-brand-accent: #d4af00; // High contrast gold
   
   --color-surface: #ffffff;
   --color-surface-raised: #ffffff;
   --color-surface-sunken: #f0f0f0;
   
   --color-text-base: #000000;
-  --color-text-muted: #444444;
+  --color-text-muted: #333333;
   --color-text-inverse: #ffffff;
   
-  --color-success: #008000; // Standard green
-  --color-warning: #FF8C00; // Bright orange
-  --color-danger: #FF0000; // Pure red
-  --color-info: #0000FF; // Pure blue
+  --color-success: #006600; // Dark green
+  --color-warning: #993300; // Dark orange
+  --color-danger: #cc0000; // Dark red
+  --color-info: #003399; // Dark blue
   
-  // Race type colors
-  --color-horse: #FF6B00; // Vibrant orange
-  --color-greyhound: #808080; // Gray
-  --color-harness: #FF0000; // Pure red
+  // Race type colors with high contrast
+  --color-horse: #005a00; // Dark green
+  --color-greyhound: #000000; // Pure black
+  --color-harness: #000099; // Dark blue
+  
+  // Shadows (minimal for high contrast)
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.3);
+  
+  // Borders (strong for better definition)
+  --border-color: #000000;
+  
+  // Increase font weights for better readability
+  --font-weight-base: 500;
+  --font-weight-bold: 700;
 }
