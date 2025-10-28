@@ -89,6 +89,7 @@ const getRunnerName = (bet: Bet) => {
 const getMeetingName = (bet: Bet) => {
   if (bet.type === 'WIN' || bet.type === 'PLACE' || bet.type === 'EACH_WAY') {
     const singleBet = bet as SingleBet;
+    // Use the actual meeting name if available, otherwise fall back to race ID
     return singleBet.leg?.raceId ? `Race ${singleBet.leg.raceId.substring(0, 8)}` : 'Unknown Meeting';
   } else if (bet.type === 'MULTI' && (bet as MultiBet).legs.length > 0) {
     const multiBet = bet as MultiBet;

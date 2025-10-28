@@ -47,8 +47,12 @@ export const useBetsStore = defineStore('bets', {
     settledBets: (state) => state.engine.listBets().filter(bet => bet.status !== 'PENDING'),
     // Rename the getter to avoid conflict with state property
     getLastWonBetId: (state) => state.lastWonBetId,
-    // Check if bankroll is zero or negative
-    isBankrupt: (state) => state.engine.getBankroll().balance <= 0
+    // Check if bankroll is zero or negative AND no pending bets exist
+    isBankrupt: (state) => {
+      const bankroll = state.engine.getBankroll()
+      const pendingBets = state.engine.listBets().filter(bet => bet.status === 'PENDING')
+      return bankroll.balance <= 0 && pendingBets.length === 0
+    }
   },
   
   actions: {
@@ -67,13 +71,16 @@ export const useBetsStore = defineStore('bets', {
     },
     
     // Method to check if game over dialog should be shown
+    // Game over should only occur when balance is zero/negative AND no pending bets exist
     checkGameOver() {
-      this.showGameOver = this.engine.getBankroll().balance <= 0
+      const bankroll = this.engine.getBankroll()
+      const pendingBets = this.engine.listBets().filter(bet => bet.status === 'PENDING')
+      this.showGameOver = bankroll.balance <= 0 && pendingBets.length === 0
     },
     
-    placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number) {
+    placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: string) {
       try {
-        const result = this.engine.placeBet(raceId, runnerId, stake, odds, advertisedStartMs)
+        const result = this.engine.placeBet(raceId, runnerId, stake, odds, advertisedStartMs, meetingName, raceNumber, runnerName, categoryId)
         // Check if player is now bankrupt after placing the bet
         this.checkGameOver()
         return result

@@ -308,21 +308,21 @@ export class BettingEngine {
 		return bet
 	}
 
-	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number): string {
+	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: CategoryId): string {
 		// BettingEngine.placeBet called with: { raceId, runnerId, stake, odds, advertisedStartMs }
 		
-		// Create a minimal RaceQuote for the bet
+		// Create a RaceQuote with actual race information if provided, otherwise use minimal version
 		const rq: RaceQuote = {
 			raceId: raceId,
-			meetingName: 'Unknown Meeting',
-			raceNumber: 1,
-			categoryId: '4a2788f8-e825-4d36-9894-efd4baf1cfae', // Default to horse racing
+			meetingName: meetingName || 'Unknown Meeting',
+			raceNumber: raceNumber || 1,
+			categoryId: categoryId || '4a2788f8-e825-4d36-9894-efd4baf1cfae', // Default to horse racing
 			advertisedStartMs: advertisedStartMs || Date.now() + 300000, // 5 minutes from now if not provided
 			runners: [
 				{
 					runnerId: runnerId,
-					number: 1,
-					name: 'Selected Runner',
+					number: 1, // This should ideally come from actual runner data
+					name: runnerName || 'Selected Runner',
 					decimalOdds: odds === 'SP' ? null : odds
 				}
 			]

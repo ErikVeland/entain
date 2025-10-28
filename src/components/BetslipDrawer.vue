@@ -421,7 +421,11 @@ const placeBets = () => {
             selection.runnerId,
             stake,
             selection.odds,
-            advertisedStartMs
+            advertisedStartMs,
+            selection.raceName,
+            selection.raceNumber,
+            selection.runnerName,
+            undefined // categoryId will be determined by the betting engine
           )
           
           // Add to placed bets for history tracking
