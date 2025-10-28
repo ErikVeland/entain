@@ -23,7 +23,7 @@
       <!-- Filter and control sections - horizontal on desktop -->
       <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full sm:w-auto">
         <!-- Category filters - one line on desktop -->
-        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+        <div class="flex flex-wrap sm:flex-nowrap gap-2 w-full sm:w-auto">
           <button
             v-for="category in categories"
             :key="category.id"

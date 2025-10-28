@@ -40,7 +40,7 @@ export function useOddsUpdater() {
     stopOddsUpdates(raceId)
     
     // Start new interval for odds updates
-    // Changed from 1500ms to 5000ms (5 seconds) for more realistic market movements
+    // Changed from 5000ms to 1500ms (1.5 seconds) to match documented behavior
     const intervalId = window.setInterval(() => {
       // Odds update interval triggered for race: raceId
       // Only update if race is still in countdown status
@@ -52,7 +52,7 @@ export function useOddsUpdater() {
         // Clean up if race is no longer in countdown status
         stopOddsUpdates(raceId)
       }
-    }, 5000) // Update every 5 seconds for more realistic market movements
+    }, 1500) // Update every 1.5 seconds for realistic market movements
     
     updateIntervals.set(raceId, intervalId)
     // Started odds updates for race: raceId with interval ID: intervalId

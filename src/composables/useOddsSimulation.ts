@@ -158,8 +158,9 @@ export function updateOdds(
     return
   }
   
-  // Throttle updates to 1000ms intervals to prevent excessive updates (increased from 200ms)
-  if (now - simulation.lastUpdate < 1000) {
+  // Throttle updates to 1200ms intervals to prevent excessive updates (increased from 200ms)
+  // This is slightly less than the 1500ms update interval to avoid unnecessary blocking
+  if (now - simulation.lastUpdate < 1200) {
     return
   }
   
