@@ -40,6 +40,7 @@ export function useOddsUpdater() {
     stopOddsUpdates(raceId)
     
     // Start new interval for odds updates
+    // Changed from 1500ms to 5000ms (5 seconds) for more realistic market movements
     const intervalId = window.setInterval(() => {
       // Odds update interval triggered for race: raceId
       // Only update if race is still in countdown status
@@ -51,7 +52,7 @@ export function useOddsUpdater() {
         // Clean up if race is no longer in countdown status
         stopOddsUpdates(raceId)
       }
-    }, 1500) // Update every 1.5 seconds for more realistic market movements
+    }, 5000) // Update every 5 seconds for more realistic market movements
     
     updateIntervals.set(raceId, intervalId)
     // Started odds updates for race: raceId with interval ID: intervalId
@@ -90,8 +91,8 @@ export function useOddsUpdater() {
           // Favorites (lower numbers) start with higher progress
           // But add random market fluctuations to simulate real betting activity
           const baseProgress = 1 - (runner.number / (runners.length + 2))
-          // Add market volatility (±10% random movement) for more realistic fluctuations
-          const marketFluctuation = (Math.random() - 0.5) * 0.2
+          // Reduce market volatility from ±10% to ±5% for more stable odds
+          const marketFluctuation = (Math.random() - 0.5) * 0.1
           progressByRunner[runner.id] = Math.max(0, Math.min(1, baseProgress + marketFluctuation))
           order.push(runner.id)
         })

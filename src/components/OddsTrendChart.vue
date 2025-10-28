@@ -238,8 +238,9 @@ onMounted(() => {
     // Start watching for changes
     startWatching()
     
-    // Periodic update to ensure chart refreshes (reduced from 500ms to 1000ms for better performance)
+    // Periodic update to ensure chart refreshes
     // Update chart for countdown races only
+    // Changed from 1000ms to 5000ms to match odds update timing
     intervalId = window.setInterval(() => {
       if (showChart.value) {
         // Check if race is in countdown status before updating
@@ -261,7 +262,7 @@ onMounted(() => {
           }
         }
       }
-    }, 1000)
+    }, 5000) // Update every 5 seconds to match odds update timing
   }
   
   // Listen for simulation initialization
