@@ -21,6 +21,13 @@
   --color-danger: #DC2626;
   --color-info: #2563EB;
 
+  // Focus states for accessibility
+  --focus-ring-color: #F97316;
+  --focus-ring-offset: #0B1220;
+  --focus-ring-width: 2px;
+  --focus-ring-style: solid;
+  --focus-ring-spacing: 2px;
+
   // Typography
   // ----------
   --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;

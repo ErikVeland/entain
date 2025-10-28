@@ -120,8 +120,6 @@ const toggleSimulation = () => {
   betsStore.setShowGame(newMode)
   betsStore.setUseSimulatedData(newMode)
   
-  // Persist simulation mode to localStorage
-  localStorage.setItem('simulationMode', newMode.toString())
   
   // Force a refresh of the races to ensure simulation is properly initialized
   if (newMode) {
@@ -208,13 +206,6 @@ onMounted(() => {
   }
   
   // Check for persisted simulation mode state
-  const savedSimulationMode = localStorage.getItem('simulationMode')
-  if (savedSimulationMode === 'true') {
-    betsStore.setShowGame(true)
-    betsStore.setUseSimulatedData(true)
-  }
-  
-  // Theme initialization
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme) {
     if (savedTheme === 'high-contrast') {

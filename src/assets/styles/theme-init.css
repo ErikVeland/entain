@@ -5,11 +5,16 @@ html[data-theme="dark"] {
 }
 
 html[data-theme="light"] {
-  background-color: #F8FAFC;
+  background-color: #FFFFFF;
   color: #0F172A;
 }
 
 html[data-theme="high-contrast"] {
   background-color: #ffffff;
   color: #000000;
+}
+
+/* Ensure smooth transition when switching themes */
+html {
+  transition: background-color 300ms ease, color 300ms ease;
 }
