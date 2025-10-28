@@ -147,7 +147,7 @@ const countdownDisplay = computed(() => {
 const getCountdownClass = () => {
   return {
     'bg-danger': isFlashingRed.value,
-    'bg-warning': raceStatus.value === 'starting_soon'
+    'bg-warning': isStartingSoon
   }
 }
 
@@ -163,7 +163,7 @@ onUnmounted(() => {
 <template>
   <div class="bg-surface-sunken px-3 py-2 flex items-center justify-between relative rounded-t-xl2 overflow-hidden">
     <!-- Background category icon (full card) -->
-    <div class="absolute bottom-0 right-0 opacity-10 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
+    <div class="absolute bottom-0 right-0 opacity-20 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
       <span v-if="categoryIcon === 'horse'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🏇</span>
       <span v-else-if="categoryIcon === 'greyhound'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🐕</span>
       <span v-else-if="categoryIcon === 'harness'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🛞</span>
@@ -219,7 +219,7 @@ onUnmounted(() => {
         class="relative h-6 border-2 border-brand-primary flex items-center rounded-full overflow-hidden"
         :class="{
           'bg-danger': isFlashingRed,
-          'bg-warning': raceStatus === 'starting_soon'
+          'bg-warning': isStartingSoon
         }"
         style="width: 64px; margin-right: 0; transform: translateX(3px);"
       >
