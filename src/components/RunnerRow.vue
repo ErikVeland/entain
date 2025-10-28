@@ -228,18 +228,21 @@ const handleOddsClick = () => {
   // MUST prevent betting if race is not in countdown status
   if (!isRaceCountdown) {
     // BLOCKED: Cannot place bet on non-countdown race
+    console.log('Blocked: Race is not in countdown status', raceElement?.getAttribute('data-race-status'));
     return;
   }
   
   // Check if race is expired - MUST prevent betting
   if (props.isExpired) {
     // BLOCKED: Cannot place bet on expired race
+    console.log('Blocked: Race is expired');
     return;
   }
   
   // Check if game mode is enabled
   if (!betsStore.showGame) {
     // Emit event to show game mode dialog
+    console.log('Game mode not enabled, showing dialog');
     const event = new CustomEvent('show-game-mode-dialog')
     window.dispatchEvent(event)
     return
@@ -253,6 +256,19 @@ const handleOddsClick = () => {
       odds = oddsNum
     }
   }
+  
+  console.log('ALLOWED: Adding runner to betslip', {
+    race: {
+      id: props.raceId,
+      meeting_name: props.raceName,
+      race_number: props.raceNumber
+    },
+    runner: {
+      ...props.runner,
+      raceName: props.raceName,
+      raceNumber: props.raceNumber
+    }
+  });
   
   // ALLOWED: Adding runner to betslip
   

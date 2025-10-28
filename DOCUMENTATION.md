@@ -389,7 +389,7 @@ Manages odds update intervals with a fully decoupled system that operates indepe
 
 **Features**:
 - Fully decoupled from race simulation
-- Updates odds every 1.5 seconds for realistic market movements
+- Updates odds every 3 seconds for more stable market movements
 - Reduces market volatility from ±15% to ±10% for more realistic fluctuations
 - Only updates odds during countdown phase, not during live races
 - Automatic cleanup of intervals when races are no longer in countdown status
