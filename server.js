@@ -20,6 +20,13 @@ app.use('/api', createProxyMiddleware({
   changeOrigin: true,
   pathRewrite: {
     '^/api': '', // Remove /api prefix
+  },
+  onProxyRes: function (proxyRes, req, res) {
+    const contentType = proxyRes.headers['content-type'];
+    if (contentType && contentType.includes('text/plain')) {
+      // Change content-type to application/json for proper parsing
+      proxyRes.headers['content-type'] = 'application/json';
+    }
   }
 }));
 
