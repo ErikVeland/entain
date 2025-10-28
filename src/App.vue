@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useRacesStore, CATEGORY_IDS } from './stores/races'
 import { useBetsStore } from './stores/bets'
 import { useSimulationStore } from './stores/simulation'
+import { getSimulatedRunners } from './composables/useOddsSimulation'
 import RaceList from './components/RaceList.vue'
 import MeetingsView from './components/MeetingsView.vue'
 import NewsTicker from './components/NewsTicker.vue'
@@ -67,8 +68,12 @@ const liveRaceUpdates = computed(() => {
         if (progress && progress.order.length > 0) {
           // Get the first runner in the order (the leader)
           const leaderId = progress.order[0]
-          // We would need to get the runner name from the race data
-          leader = "Leading runner" // Placeholder
+          // Get the runner name from the simulated runners
+          const runners = getSimulatedRunners(raceId)
+          const leaderRunner = runners.find((r: any) => r.id === leaderId)
+          if (leaderRunner) {
+            leader = leaderRunner.name
+          }
         }
         
         return {

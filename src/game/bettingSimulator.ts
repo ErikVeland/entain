@@ -311,18 +311,27 @@ export class BettingEngine {
 	placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: CategoryId): string {
 		// BettingEngine.placeBet called with: { raceId, runnerId, stake, odds, advertisedStartMs }
 		
-		// Create a RaceQuote with actual race information if provided, otherwise use minimal version
+		// Validate required parameters - throw error if not provided
+		if (!raceId) throw new Error('Race ID is required')
+		if (!runnerId) throw new Error('Runner ID is required')
+		if (!meetingName) throw new Error('Meeting name is required')
+		if (!raceNumber) throw new Error('Race number is required')
+		if (!runnerName) throw new Error('Runner name is required')
+		if (!categoryId) throw new Error('Category ID is required')
+		if (!advertisedStartMs) throw new Error('Advertised start time is required')
+		
+		// Create a RaceQuote with actual race information
 		const rq: RaceQuote = {
 			raceId: raceId,
-			meetingName: meetingName || 'Unknown Meeting',
-			raceNumber: raceNumber || 1,
-			categoryId: categoryId || '4a2788f8-e825-4d36-9894-efd4baf1cfae', // Default to horse racing
-			advertisedStartMs: advertisedStartMs || Date.now() + 300000, // 5 minutes from now if not provided
+			meetingName: meetingName,
+			raceNumber: raceNumber,
+			categoryId: categoryId,
+			advertisedStartMs: advertisedStartMs,
 			runners: [
 				{
 					runnerId: runnerId,
-					number: 1, // This should ideally come from actual runner data
-					name: runnerName || 'Selected Runner',
+					number: 1, // This should be updated with actual runner data
+					name: runnerName,
 					decimalOdds: odds === 'SP' ? null : odds
 				}
 			]

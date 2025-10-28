@@ -416,6 +416,10 @@ const placeBets = () => {
         const advertisedStartMs = race ? race.advertised_start_ms : undefined
         
         try {
+          // Get the categoryId from the race
+          const race = racesStore.races.find(r => r.id === selection.raceId)
+          const categoryId = race ? race.category_id : undefined
+          
           const betId = betsStore.placeBet(
             selection.raceId,
             selection.runnerId,
@@ -425,7 +429,7 @@ const placeBets = () => {
             selection.raceName,
             selection.raceNumber,
             selection.runnerName,
-            undefined // categoryId will be determined by the betting engine
+            categoryId
           )
           
           // Add to placed bets for history tracking
@@ -533,7 +537,8 @@ const trapFocus = (e: KeyboardEvent) => {
 
 // Handle opening betslip with runner data
 const handleOpenBetslip = (event: CustomEvent) => {
-  const { raceId, runner } = event.detail
+  const { race, runner } = event.detail
+  const raceId = race?.id
   
   // If runner data is provided, add it to the betslip
   if (runner) {
@@ -549,8 +554,8 @@ const handleOpenBetslip = (event: CustomEvent) => {
     // Add to betslip
     addSelection({
       raceId: raceId,
-      raceName: runner.raceName || 'Unknown Race',
-      raceNumber: runner.raceNumber || 1,
+      raceName: race?.meeting_name || runner.raceName || 'Unknown Race',
+      raceNumber: race?.race_number || runner.raceNumber || 1,
       runnerId: runner.id,
       runnerNumber: runner.number,
       runnerName: runner.name,

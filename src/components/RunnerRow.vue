@@ -259,7 +259,11 @@ const handleOddsClick = () => {
   // Emit event to open betslip drawer
   const event = new CustomEvent('open-betslip', { 
     detail: { 
-      raceId: props.raceId,
+      race: {
+        id: props.raceId,
+        meeting_name: props.raceName,
+        race_number: props.raceNumber
+      },
       runner: {
         ...props.runner,
         raceName: props.raceName,

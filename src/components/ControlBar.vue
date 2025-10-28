@@ -1,9 +1,9 @@
 <template>
   <div class="bg-surface-raised shadow-card p-4 mb-6 transition-all duration-300">
     <!-- Main control bar with responsive layout -->
-    <div class="flex flex-col gap-4 w-full">
-      <!-- Search section - full width on mobile -->
-      <div class="relative w-full">
+    <div class="flex flex-col sm:flex-row gap-4 w-full items-start sm:items-center">
+      <!-- Search section - full width on mobile, auto on desktop -->
+      <div class="relative w-full sm:w-auto flex-grow">
         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
           <span class="text-text-muted text-sm">🔍</span>
         </div>
@@ -20,9 +20,9 @@
         </div>
       </div>
       
-      <!-- Filter and control sections - stacked on mobile, horizontal on larger screens -->
-      <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center sm:justify-between w-full">
-        <!-- Category filters - one line on mobile -->
+      <!-- Filter and control sections - horizontal on desktop -->
+      <div class="flex flex-col sm:flex-row gap-3 items-start sm:items-center w-full sm:w-auto">
+        <!-- Category filters - one line on desktop -->
         <div class="flex flex-wrap gap-2 w-full sm:w-auto">
           <button
             v-for="category in categories"
@@ -69,8 +69,8 @@
           </button>
         </div>
         
-        <!-- Time filter and sort order - stacked on mobile -->
-        <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+        <!-- Time filter and sort order - horizontal on desktop -->
+        <div class="flex flex-row gap-3 w-full sm:w-auto">
           <div class="relative w-full sm:w-auto">
             <select
               v-model="localTimeFilter"

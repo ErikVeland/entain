@@ -308,13 +308,11 @@ const initializeRaceSimulation = () => {
     // Increment active simulation count using global manager
     incrementSimulationCount();
     
-    // Set up tick handler for odds updates
+    // Set up tick handler for race progress updates only
+    // DO NOT update odds during live race - odds are locked once race starts
     simulationController.onTick((tick: Tick) => {
       try {
         // Race tick for race with progress and order
-        
-        // DO NOT update odds during live race - odds are locked once race starts
-        // Odds should only update for upcoming races (in countdown status)
         
         // Update race progress in the simulation store
         updateRaceProgress(props.race.id, {

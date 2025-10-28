@@ -29,6 +29,8 @@ The "Next to Go Racing" application is a real-time racing event dashboard that d
 - Dark/light mode toggle
 - Meetings view with grouped races by venue
 - Betting simulation mode with realistic odds and market dynamics (AI-assisted development)
+- Live race commentary updates in header during simulation
+- Fully decoupled odds updating system that operates independently of race simulation
 
 ## Architecture
 
@@ -53,6 +55,8 @@ src/
 4. **User Interaction**: User actions trigger store mutations or API calls
 5. **Real-time Updates**: Timers and polling keep the data fresh
 6. **Simulation Mode**: In simulation mode, the betting engine and race simulation provide dynamic data
+7. **Odds Updating**: Odds are updated independently for upcoming races with a realistic market movement simulation
+8. **Live Updates**: During race simulation, live commentary updates are displayed in the header
 
 ## Components
 
@@ -66,8 +70,9 @@ The root component that provides the main layout structure and coordinates betwe
 - View switching (races vs meetings)
 - Category filtering controls
 - Simulation mode toggle
-- Live race updates in header
+- Live race updates in header with actual runner names
 - Next race information display
+- Responsive design with proper desktop and mobile layouts
 
 ### RaceList.vue
 Orchestrates the display of active races in a grid layout, applying sorting and expiry logic.
@@ -103,6 +108,7 @@ Displays individual race information in a card format with header, runners, and 
 - Odds movement visualization charts
 - Responsive design
 - Race simulation integration
+- Proper display of category icons in simulation mode
 
 ### RaceHeader.vue
 Displays the header section for each race with category icon and countdown timer.
@@ -156,6 +162,19 @@ Handles toggling between racing categories with visual indication of active stat
 - Keyboard navigation support
 - ARIA attributes for screen readers
 - Responsive design
+
+### ControlBar.vue
+Provides filtering controls including search, category filters, and sorting options with responsive layout.
+
+**Props**: None
+**Emits**: None
+**Features**:
+- Search functionality with debounced input
+- Category filtering with visual feedback
+- Time filtering options
+- Sorting controls
+- Responsive layout with one-line format on desktop and stacked columns on mobile
+- Proper alignment and spacing of controls
 
 ### CountdownTimer.vue
 Isolated timer component with proper interval cleanup and reactive updates.
@@ -298,7 +317,7 @@ Manages betting logic and virtual currency.
 - `setUseSimulatedData`: Set data mode
 - `acceptWelcomeCredits`: Add welcome credits
 - `checkGameOver`: Check if game over
-- `placeBet`: Place a bet
+- `placeBet`: Place a bet with required parameters
 - `cancelBet`: Cancel a bet
 - `settleRace`: Settle a race
 - `reset`: Reset betting engine
@@ -349,7 +368,7 @@ Manages countdown timer logic.
 - `useCountdown`: Create countdown timer with reactive updates
 
 ### useOddsSimulation (src/composables/useOddsSimulation.ts)
-Manages odds simulation for runners.
+Manages odds simulation for runners with realistic market movements.
 
 **Functions**:
 - `initializeOddsSimulation`: Initialize odds simulation for a race
@@ -359,13 +378,21 @@ Manages odds simulation for runners.
 - `generateRandomizedRunners`: Generate randomized runners
 
 ### useOddsUpdater (src/composables/useOddsUpdater.ts)
-Manages odds update intervals.
+Manages odds update intervals with a fully decoupled system that operates independently of race simulation.
 
 **Functions**:
 - `registerCountdownRace`: Register race for odds updates
 - `unregisterCountdownRace`: Unregister race from odds updates
-- `startOddsUpdates`: Start odds updates for a race
+- `startOddsUpdates`: Start odds updates for a race with 1.5 second intervals
 - `stopOddsUpdates`: Stop odds updates for a race
+- `updateRaceOdds`: Update odds for a race with realistic market movements (±10% volatility)
+
+**Features**:
+- Fully decoupled from race simulation
+- Updates odds every 1.5 seconds for realistic market movements
+- Reduces market volatility from ±15% to ±10% for more realistic fluctuations
+- Only updates odds during countdown phase, not during live races
+- Automatic cleanup of intervals when races are no longer in countdown status
 
 ### useRaceSimulation (src/composables/useRaceSimulation.ts)
 Manages race simulation lifecycle.
@@ -400,7 +427,7 @@ Provides animation effects.
 ## Game Simulation
 
 ### Betting Engine (src/game/bettingSimulator.ts)
-Core betting engine that handles all betting logic.
+Core betting engine that handles all betting logic with required parameters for all betting methods.
 
 **Features**:
 - Support for WIN, PLACE, EACH_WAY, MULTI, QUINELLA, TRIFECTA, and FIRST_FOUR bet types
@@ -410,6 +437,7 @@ Core betting engine that handles all betting logic.
 - Dead-heat rule implementation
 - Progressive settlement for multi-leg bets
 - Exotic bet settlement logic
+- All betting methods now require all parameters (no more hardcoded defaults)
 
 **Classes**:
 - `BettingEngine`: Main betting engine class
@@ -427,6 +455,11 @@ Core betting engine that handles all betting logic.
 - `Bet`: Union of bet types
 - `SettlementRecord`: Settlement record
 - `BettingConfig`: Betting configuration
+
+**Key Changes**:
+- The [placeBet](file:///Users/veland/Downloads/entain/src/game/bettingSimulator.ts#L334-334) method now requires all parameters (raceId, runnerId, stake, odds, advertisedStartMs, meetingName, raceNumber, runnerName, categoryId) instead of using defaults
+- Enhanced validation to ensure all required betting information is provided
+- Improved error handling for invalid parameters
 
 ### Race Simulation Engine (src/game/simulatedRace.ts)
 Deterministic race simulation engine.
@@ -469,6 +502,7 @@ Custom TailwindCSS configuration with design tokens.
 - Three-column grid layout on desktop
 - Two-column grid layout on tablet
 - Single-column stacked layout on mobile
+- Responsive filter bar with one-line layout on desktop and stacked columns on mobile
 
 ### SCSS Design Tokens
 SCSS variables for consistent styling across the application.
@@ -480,6 +514,22 @@ SCSS variables for consistent styling across the application.
 - Border radii
 - Shadows
 - Transitions
+
+### Utility Classes
+Additional CSS utility classes for consistent styling.
+
+**Features**:
+- Background color utilities for all theme colors
+- Text color utilities for all theme colors
+- Border color utilities for all theme colors
+- Fill color utilities for SVG icons
+- Spacing utilities (padding and margin)
+- Border radius utilities
+- Shadow utilities
+- Transition utilities
+- Animation utilities for odds changes
+- Opacity utilities
+- Focus style utilities
 
 ## Testing
 

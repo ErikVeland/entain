@@ -307,7 +307,7 @@ export function updateOdds(
     
     // Determine odds trend
     let trend: OddsTrend = 'none'
-    const originalOdds = typeof runner.odds === 'number' ? runner.odds : newOdds
+    const originalOdds = typeof runner.odds === 'number' ? runner.odds : 2.0 // Default to 2.0 if SP
     const change = Math.abs(newOdds - originalOdds)
     
     // Only show trend if change is significant (> 0.01)
