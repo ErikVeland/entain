@@ -165,24 +165,9 @@ export const useRacesStore = defineStore('races', {
      * Slice of the next five races.
      */
     nextFive(state): RaceSummary[] {
-      const cutoffNow = now()
-      let activeRaces = state.races
-        .filter(r => state.selectedCategories.has(r.category_id))
-        .filter(r => !isExpired(r, cutoffNow))
+      // Use the activeRaces getter which already applies all filters and sorting
+      const activeRaces = this.activeRaces
       
-      // Apply search filter
-      if (state.searchQuery) {
-        const query = state.searchQuery.toLowerCase().trim()
-        activeRaces = activeRaces.filter(r => 
-          r.meeting_name.toLowerCase().includes(query) ||
-          r.race_number.toString().includes(query) ||
-          // In simulation mode, also filter by runner names
-          (isInSimulationMode() && raceHasRunnerMatchingQuery(r, query))
-        )
-      }
-      
-      activeRaces = activeRaces.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
-  
       return activeRaces.slice(0, 5)
     },
     /**

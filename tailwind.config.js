@@ -10,38 +10,38 @@ module.exports = {
 		extend: {
 			colors: {
 				brand: {
-					primary: '#F97316',   // orange-500
-					secondary: '#0F172A', // slate-900
-					accent: '#FACC15'     // yellow-400
+					primary: 'var(--color-brand-primary)',
+					secondary: 'var(--color-brand-secondary)',
+					accent: 'var(--color-brand-accent)'
 				},
 				surface: {
-					DEFAULT: '#0B1220',   // deep background
-					raised: '#111827',    // gray-900
-					sunken: '#0A0F1C'
+					DEFAULT: 'var(--color-surface)',
+					raised: 'var(--color-surface-raised)',
+					sunken: 'var(--color-surface-sunken)'
 				},
 				text: {
-					base: '#F8FAFC',      // slate-50
-					muted: '#94A3B8',     // slate-404
-					inverse: '#111827'
+					base: 'var(--color-text-base)',
+					muted: 'var(--color-text-muted)',
+					inverse: 'var(--color-text-inverse)'
 				},
-				success: '#16A34A',
-				warning: '#F59E0B',
-				danger: '#DC2626',
-				info: '#2563EB',
+				success: 'var(--color-success)',
+				warning: 'var(--color-warning)',
+				danger: 'var(--color-danger)',
+				info: 'var(--color-info)',
 				// Race type colors
-				horse: '#F97316',     // Orange (same as brand-primary)
-				greyhound: '#C0C0C0', // Coppery silver
-				harness: '#DC2626'    // Red (more red than orangey red)
+				horse: 'var(--color-horse)',
+				greyhound: 'var(--color-greyhound)',
+				harness: 'var(--color-harness)'
 			},
 			fontFamily: {
 				sans: ['Inter', 'system-ui', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'Apple Color Emoji', 'Segoe UI Emoji', 'sans-serif'],
 				mono: ['SFMono-Regular', 'Menlo', 'Monaco', 'Consolas', 'Liberation Mono', 'Courier New', 'monospace']
 			},
 			borderRadius: {
-				'xl2': '1.25rem'
+				'xl2': 'var(--border-radius-xl2)'
 			},
 			boxShadow: {
-				card: '0 6px 24px rgba(0,0,0,0.18)'
+				card: 'var(--shadow-card)'
 			},
 			keyframes: {
 				shimmer: {
@@ -220,6 +220,22 @@ module.exports = {
 				'odds-change-up': 'odds-change-up 0.5s ease-out',
 				'odds-change-down': 'odds-change-down 0.5s ease-out',
 				'race-finish': 'race-finish 1s ease-out'
+			},
+			borderRadius: {
+				sm: 'var(--border-radius-sm)',
+				md: 'var(--border-radius-md)',
+				lg: 'var(--border-radius-lg)',
+				xl: 'var(--border-radius-xl)',
+				xl2: 'var(--border-radius-xl2)'
+			},
+			spacing: {
+				xs: 'var(--spacing-xs)',
+				sm: 'var(--spacing-sm)',
+				md: 'var(--spacing-md)',
+				lg: 'var(--spacing-lg)',
+				xl: 'var(--spacing-xl)',
+				'2xl': 'var(--spacing-2xl)',
+				'3xl': 'var(--spacing-3xl)'
 			}
 		}
 	},

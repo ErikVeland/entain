@@ -28,8 +28,7 @@ const en = {
     nameAZ: 'Meeting Name (A-Z)',
     nameZA: 'Meeting Name (Z-A)',
     previous: 'Previous',
-    next: 'Next',
-    liveUpdates: 'Live Race Updates'
+    next: 'Next'
   },
   meetings: {
     noMeetings: 'No meetings available',
@@ -95,8 +94,7 @@ const es = {
     nameAZ: 'Nombre de la reunión (A-Z)',
     nameZA: 'Nombre de la reunión (Z-A)',
     previous: 'Anterior',
-    next: 'Siguiente',
-    liveUpdates: 'Actualizaciones de Carreras en Vivo'
+    next: 'Siguiente'
   },
   meetings: {
     noMeetings: 'No hay reuniones disponibles',
@@ -162,8 +160,7 @@ const fr = {
     nameAZ: 'Nom de la réunion (A-Z)',
     nameZA: 'Nom de la réunion (Z-A)',
     previous: 'Précédent',
-    next: 'Suivant',
-    liveUpdates: 'Mises à jour des courses en direct'
+    next: 'Suivant'
   },
   meetings: {
     noMeetings: 'Aucune réunion disponible',

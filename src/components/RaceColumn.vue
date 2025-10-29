@@ -27,11 +27,11 @@
       }"
     ></div>
     
-    <!-- Full card background category icon -->
-    <div class="absolute bottom-0 right-0 opacity-25 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
-      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-[-20%] right-[-10%]">🏇</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-[-20%] right-[-10%]">🐕</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-[-20%] right-[-10%]">🛞</span>
+    <!-- Full card background category icon - moved outside conditional to prevent disappearing -->
+    <div class="absolute inset-0 opacity-30 w-full h-full pointer-events-none select-none">
+      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-4 right-4 z-0">🏇</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-4 right-4 z-0">🐕</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-4 right-4 z-0">🛞</span>
     </div>
     
     <RaceHeader 
@@ -182,11 +182,16 @@ watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, start
   // DO NOT allow odds updates when "starting soon" - odds must be locked
   const isCountdown = !isExpired && !inProgress && !startingSoon && !raceFinished.value;
   
-  if (isCountdown && betsStore.showGame && betsStore.useSimulatedData) {
+  // Explicitly check if we're in simulation mode
+  const isInSimulationMode = betsStore.showGame && betsStore.useSimulatedData;
+  
+  if (isCountdown && isInSimulationMode) {
     // Register race for global odds updates
+    // console.log('Registering race for odds updates:', props.race.id);
     registerCountdownRace(props.race.id);
   } else {
     // Unregister race from global odds updates
+    // console.log('Unregistering race from odds updates:', props.race.id);
     unregisterCountdownRace(props.race.id);
   }
 }, { immediate: true });
@@ -330,10 +335,44 @@ const initializeRaceSimulation = () => {
           return runner ? { id: runner.id, name: runner.name, number: runner.number } : null;
         }).filter(Boolean);
         
+        // Generate commentary based on race progress
+        let commentary = "";
+        if (tick.order.length > 0) {
+          const leaderId = tick.order[0];
+          const leaderRunner = runners.find(r => r.id === leaderId);
+          
+          if (leaderRunner) {
+            // Check for close competition
+            if (tick.order.length > 1 && tick.gaps) {
+              const secondId = tick.order[1];
+              const gap = Math.abs(tick.gaps[leaderId] - tick.gaps[secondId]);
+              
+              if (gap < 0.1) {
+                const secondRunner = runners.find(r => r.id === secondId);
+                if (secondRunner) {
+                  commentary = `${leaderRunner.name} and ${secondRunner.name} are neck and neck!`;
+                }
+              } else if (gap < 0.3) {
+                commentary = `${leaderRunner.name} holds a narrow lead`;
+              } else {
+                commentary = `${leaderRunner.name} has opened up a clear lead`;
+              }
+            } else {
+              const commentaryOptions = [
+                `${leaderRunner.name} takes the lead!`,
+                `${leaderRunner.name} moves to the front!`,
+                `${leaderRunner.name} surges ahead!`
+              ];
+              commentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)];
+            }
+          }
+        }
+        
         const updateEvent = new CustomEvent('race-update', {
           detail: {
             raceId: props.race.id,
             message: `${props.race.meeting_name} R${props.race.race_number} in progress`,
+            commentary: commentary,
             leaderboard: leaderboard,
             progress: tick.progressByRunner,
             order: tick.order,

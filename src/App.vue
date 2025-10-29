@@ -54,7 +54,7 @@ const isSimulationMode = computed(() => {
 // Get live race updates
 const liveRaceUpdates = computed(() => {
   if (!isSimulationMode.value) return null
-  
+
   // Find the first running race with a smooth transition
   for (const [raceId, status] of simulationStore.raceStatus.entries()) {
     if (status === 'running') {
@@ -64,7 +64,7 @@ const liveRaceUpdates = computed(() => {
         // Get the race progress to determine the current leader
         const progress = simulationStore.getRaceProgress(raceId)
         let leader = "Race in progress"
-        
+
         if (progress && progress.order.length > 0) {
           // Get the first runner in the order (the leader)
           const leaderId = progress.order[0]
@@ -75,7 +75,7 @@ const liveRaceUpdates = computed(() => {
             leader = leaderRunner.name
           }
         }
-        
+
         return {
           raceId: race.id,
           meetingName: race.meeting_name,
@@ -86,23 +86,23 @@ const liveRaceUpdates = computed(() => {
       }
     }
   }
-  
+
   return null
 })
 
 // Get next race information when no races are live
 const nextRaceInfo = computed(() => {
   if (!isSimulationMode.value) return null
-  
+
   // If there are live races, don't show next race info
   if (liveRaceUpdates.value) return null
-  
+
   // Find the next upcoming race
   const now = Date.now()
   const upcomingRaces = store.races
     .filter(r => r.advertised_start_ms > now)
     .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
-  
+
   if (upcomingRaces.length > 0) {
     const nextRace = upcomingRaces[0]
     return {
@@ -111,7 +111,7 @@ const nextRaceInfo = computed(() => {
       startTime: new Date(nextRace.advertised_start_ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     }
   }
-  
+
   return null
 })
 
@@ -119,8 +119,8 @@ const toggleSimulation = () => {
   const newMode = !isSimulationMode.value
   betsStore.setShowGame(newMode)
   betsStore.setUseSimulatedData(newMode)
-  
-  
+
+
   // Force a refresh of the races to ensure simulation is properly initialized
   if (newMode) {
     store.fetchRaces()
@@ -204,7 +204,7 @@ onMounted(() => {
   } catch (e) {
     // Silent fail
   }
-  
+
   // Check for persisted simulation mode state
   const savedTheme = localStorage.getItem('theme')
   if (savedTheme) {
@@ -242,7 +242,7 @@ onMounted(() => {
     });
     window.dispatchEvent(celebrationEvent);
   };
-  
+
   window.addEventListener('win-celebration', handleWinCelebration);
 
   // Start polling and ticking intervals
@@ -274,7 +274,7 @@ onUnmounted(() => {
   <div class="min-h-screen bg-surface text-text-base transition-colors duration-200 flex flex-col">
     <!-- Debug Panel -->
     <DebugPanel :show-debug="showDebug" @close="showDebug = false" />
-    
+
     <!-- Celebration Animation -->
     <CelebrationAnimation />
 
@@ -395,16 +395,14 @@ onUnmounted(() => {
                   / NEXT: {{ nextRaceInfo.meetingName }} R{{ nextRaceInfo.raceNumber }}
                 </span>
               </h2>
-              <!-- Show live updates text only in simulation mode -->
-              <p v-if="isSimulationMode" class="text-text-inverse opacity-80 text-base mt-2">{{ $t('races.liveUpdates') }}</p>
-              
+
               <!-- View toggle moved below headline -->
               <div class="mt-4 w-full">
                 <div class="relative inline-block w-48 h-10 rounded-full bg-black bg-opacity-30 shadow-inner">
-                  <input 
-                    type="range" 
-                    min="0" 
-                    max="1" 
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
                     :value="currentView === 'races' ? 0 : 1"
                     @input="handleViewChange"
                     class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
@@ -414,7 +412,7 @@ onUnmounted(() => {
                     <span class="w-1/2 flex items-center justify-center" :class="currentView === 'races' ? 'text-brand-primary' : 'text-white text-opacity-80'">{{ $t('views.nextFiveShort') }}</span>
                     <span class="w-1/2 flex items-center justify-center" :class="currentView === 'meetings' ? 'text-brand-primary' : 'text-white text-opacity-80'">{{ $t('views.meetingsShort') }}</span>
                   </div>
-                  <div 
+                  <div
                     class="absolute top-1 h-8 rounded-full transition-all duration-300 shadow-md flex items-center justify-center text-xs font-medium whitespace-nowrap"
                     :class="currentView === 'races' ? 'left-1 w-[calc(50%-4px)] bg-white text-brand-primary' : 'left-[calc(50%+3px)] w-[calc(50%-4px)] bg-white text-brand-primary'"
                   >

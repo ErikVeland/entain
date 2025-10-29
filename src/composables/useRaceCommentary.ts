@@ -1,5 +1,162 @@
-import { ref, Ref } from 'vue'
+import { ref, Ref, watch } from 'vue'
 import { getSimulatedRunners } from './useOddsSimulation'
+import type { RaceProgress } from '../stores/simulation'
+
+interface RaceCommentary {
+  message: string
+  timestamp: number
+  type: 'leader' | 'overtake' | 'position' | 'finish' | 'start'
+}
+
+interface UseRaceCommentaryReturn {
+  commentary: Ref<RaceCommentary[]>
+  addCommentary: (message: string, type: RaceCommentary['type']) => void
+  generateLeaderUpdate: (raceId: string, progress: RaceProgress) => void
+  generateOvertakeCommentary: (raceId: string, progress: RaceProgress) => void
+  generateStartCommentary: (meetingName: string, raceNumber: number) => void
+  generateFinishCommentary: (meetingName: string, raceNumber: number, winner: string) => void
+  clearCommentary: () => void
+}
+
+const raceCommentaryHistory: Record<string, string[]> = {}
+
+/**
+ * Composable for generating realistic race commentary
+ */
+export function useRaceCommentary(raceId: string): UseRaceCommentaryReturn {
+  const commentary = ref<RaceCommentary[]>([])
+
+  // Initialize commentary history for this race if not exists
+  if (!raceCommentaryHistory[raceId]) {
+    raceCommentaryHistory[raceId] = []
+  }
+
+  const addCommentary = (message: string, type: RaceCommentary['type']) => {
+    // Avoid duplicate messages
+    if (raceCommentaryHistory[raceId].includes(message)) {
+      return
+    }
+    
+    // Add to history
+    raceCommentaryHistory[raceId].push(message)
+    // Keep only last 10 messages to prevent memory issues
+    if (raceCommentaryHistory[raceId].length > 10) {
+      raceCommentaryHistory[raceId].shift()
+    }
+    
+    // Add to commentary
+    commentary.value.push({
+      message,
+      timestamp: Date.now(),
+      type
+    })
+    
+    // Keep only last 5 commentary items
+    if (commentary.value.length > 5) {
+      commentary.value.shift()
+    }
+  }
+
+  const generateLeaderUpdate = (raceId: string, progress: RaceProgress) => {
+    if (!progress || !progress.order || progress.order.length === 0) return
+    
+    const runners = getSimulatedRunners(raceId)
+    if (!runners || runners.length === 0) return
+    
+    const leaderId = progress.order[0]
+    const leaderRunner = runners.find(r => r.id === leaderId)
+    if (!leaderRunner) return
+    
+    // Generate varied commentary for leader updates
+    const commentaryOptions = [
+      `${leaderRunner.name} takes the lead!`,
+      `${leaderRunner.name} moves to the front!`,
+      `${leaderRunner.name} surges ahead!`,
+      `${leaderRunner.name} powers into the lead!`,
+      `${leaderRunner.name} seizes the lead!`,
+      `${leaderRunner.name} makes a bold move to the front!`,
+      `${leaderRunner.name} breaks clear at the front!`,
+      `${leaderRunner.name} establishes a commanding lead!`
+    ]
+    
+    const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
+    addCommentary(randomCommentary, 'leader')
+  }
+
+  const generateOvertakeCommentary = (raceId: string, progress: RaceProgress) => {
+    if (!progress || !progress.order || progress.order.length < 2) return
+    
+    const runners = getSimulatedRunners(raceId)
+    if (!runners || runners.length === 0) return
+    
+    // Check for significant position changes
+    const leaderId = progress.order[0]
+    const secondId = progress.order[1]
+    
+    const leaderRunner = runners.find(r => r.id === leaderId)
+    const secondRunner = runners.find(r => r.id === secondId)
+    
+    if (!leaderRunner || !secondRunner) return
+    
+    // Generate overtaking commentary
+    const commentaryOptions = [
+      `${leaderRunner.name} pulls away from ${secondRunner.name}!`,
+      `${leaderRunner.name} extends the lead over ${secondRunner.name}!`,
+      `${leaderRunner.name} opens up a gap on ${secondRunner.name}!`,
+      `${leaderRunner.name} builds a clear advantage over ${secondRunner.name}!`,
+      `${secondRunner.name} tries to close the gap on ${leaderRunner.name}!`,
+      `${secondRunner.name} gives chase to ${leaderRunner.name}!`,
+      `${secondRunner.name} attempts to reel in ${leaderRunner.name}!`,
+      `A clear battle for the lead between ${leaderRunner.name} and ${secondRunner.name}!`
+    ]
+    
+    const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
+    addCommentary(randomCommentary, 'overtake')
+  }
+
+  const generateStartCommentary = (meetingName: string, raceNumber: number) => {
+    const commentaryOptions = [
+      `${meetingName} R${raceNumber} is underway!`,
+      `${meetingName} R${raceNumber} bursts into life!`,
+      `${meetingName} R${raceNumber} gets off to a thrilling start!`,
+      `And they're off at ${meetingName} for R${raceNumber}!`,
+      `${meetingName} R${raceNumber} commences with great excitement!`,
+      `The gates open for ${meetingName} R${raceNumber}!`
+    ]
+    
+    const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
+    addCommentary(randomCommentary, 'start')
+  }
+
+  const generateFinishCommentary = (meetingName: string, raceNumber: number, winner: string) => {
+    const commentaryOptions = [
+      `${winner} wins ${meetingName} R${raceNumber}!`,
+      `${winner} takes victory in ${meetingName} R${raceNumber}!`,
+      `${winner} claims victory at ${meetingName} R${raceNumber}!`,
+      `${winner} crosses the line first in ${meetingName} R${raceNumber}!`,
+      `${winner} secures a memorable win in ${meetingName} R${raceNumber}!`,
+      `${meetingName} R${raceNumber} goes to ${winner}!`
+    ]
+    
+    const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
+    addCommentary(randomCommentary, 'finish')
+  }
+
+  const clearCommentary = () => {
+    commentary.value = []
+    raceCommentaryHistory[raceId] = []
+  }
+
+  return {
+    commentary,
+    addCommentary,
+    generateLeaderUpdate,
+    generateOvertakeCommentary,
+    generateStartCommentary,
+    generateFinishCommentary,
+    clearCommentary
+  }
+}
 
 // Define commentary templates for different race scenarios
 const commentaryTemplates = {

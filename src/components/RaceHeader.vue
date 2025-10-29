@@ -111,15 +111,22 @@ const getLetterStyle = (index: number) => {
     return { opacity: 1, color: 'white', transition: 'color 0.3s ease' }
   }
   
+  // Check if we're in high contrast mode
+  const isHighContrast = document.documentElement.getAttribute('data-theme') === 'high-contrast'
+  
   // Calculate the position of this letter in the progress bar
   const totalWidth = 64 // Approximate width of the progress bar in pixels (w-16 = 4rem = 64px)
   const letterPosition = (index / countdownDisplay.value.length) * totalWidth
   const progressWidth = (progressPercentage.value / 100) * totalWidth
   
-  // If the progress bar has passed this letter, make it black
+  // If the progress bar has passed this letter, make it black (or white in high contrast mode)
   // Otherwise, keep the text white (inverted logic as requested)
   if (letterPosition < progressWidth) {
-    return { opacity: 1, color: 'black', transition: 'color 0.3s ease' }
+    return { 
+      opacity: 1, 
+      color: isHighContrast ? 'white' : 'black', 
+      transition: 'color 0.3s ease' 
+    }
   }
   
   // Otherwise, keep the text white

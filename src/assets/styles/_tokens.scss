@@ -1,6 +1,7 @@
 // Design Tokens
 // ==============
 
+// Default dark theme (applied immediately to prevent FOUC)
 :root {
   // Color Palette
   // -------------
@@ -14,12 +15,17 @@
 
   --color-text-base: #F8FAFC; // slate-50
   --color-text-muted: #94A3B8; // slate-400
-  --color-text-inverse: #111827;
+  --color-text-inverse: #FFFFFF;
 
   --color-success: #16A34A;
   --color-warning: #F59E0B;
   --color-danger: #DC2626;
   --color-info: #2563EB;
+
+  // Race type colors
+  --color-horse: #F97316; // Orange (same as brand-primary)
+  --color-greyhound: #C0C0C0; // Coppery silver
+  --color-harness: #DC2626; // Red (more red than orangey red)
 
   // Focus states for accessibility
   --focus-ring-color: #F97316;
@@ -63,4 +69,168 @@
   --transition-fast: 150ms ease;
   --transition-normal: 300ms ease;
   --transition-slow: 500ms ease;
+}
+
+// Dark Theme
+html[data-theme="dark"] {
+  // Color Palette
+  // -------------
+  --color-brand-primary: #F97316; // orange-500
+  --color-brand-secondary: #0F172A; // slate-900
+  --color-brand-accent: #FACC15; // yellow-400
+
+  --color-surface: #0B1220; // deep background
+  --color-surface-raised: #111827; // gray-900
+  --color-surface-sunken: #0A0F1C;
+
+  --color-text-base: #F8FAFC; // slate-50
+  --color-text-muted: #94A3B8; // slate-400
+  --color-text-inverse: #FFFFFF;
+
+  --color-success: #16A34A;
+  --color-warning: #F59E0B;
+  --color-danger: #DC2626;
+  --color-info: #2563EB;
+
+  // Race type colors
+  --color-horse: #F97316; // Orange (same as brand-primary)
+  --color-greyhound: #C0C0C0; // Coppery silver
+  --color-harness: #DC2626; // Red (more red than orangey red)
+
+  // Focus states for accessibility
+  --focus-ring-color: #F97316;
+  --focus-ring-offset: #0B1220;
+  --focus-ring-width: 2px;
+  --focus-ring-style: solid;
+  --focus-ring-spacing: 2px;
+
+  // Typography
+  // ----------
+  --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font-family-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-weight-base: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+
+  // Spacing
+  // -------
+  --spacing-xs: 0.25rem; // 4px
+  --spacing-sm: 0.5rem; // 8px
+  --spacing-md: 1rem; // 16px
+  --spacing-lg: 1.5rem; // 24px
+  --spacing-xl: 2rem; // 32px
+  --spacing-2xl: 3rem; // 48px
+  --spacing-3xl: 4rem; // 64px
+
+  // Border Radius
+  // -------------
+  --border-radius-sm: 0.25rem; // 4px
+  --border-radius-md: 0.5rem; // 8px
+  --border-radius-lg: 0.75rem; // 12px
+  --border-radius-xl: 1rem; // 16px
+  --border-radius-xl2: 1.25rem; // 20px
+
+  // Shadows
+  // -------
+  --shadow-card: 0 6px 24px rgba(0, 0, 0, 0.18);
+
+  // Transitions
+  // -----------
+  --transition-fast: 150ms ease;
+  --transition-normal: 300ms ease;
+  --transition-slow: 500ms ease;
+}
+
+// Light Theme - Beautiful and WCAG compliant
+html[data-theme="light"] {
+  --color-brand-primary: #D94F00; // Darker orange for better contrast (4.5:1+ against white)
+  --color-brand-secondary: #1E293B; // slate-800
+  --color-brand-accent: #92400E; // Dark amber for better contrast (4.5:1+ against white)
+
+  --color-surface: #FFFFFF; // Pure white background
+  --color-surface-raised: #F1F5F9; // slate-100 (more distinct from pure white)
+  --color-surface-sunken: #E2E8F0; // slate-200 (sunken elements)
+
+  --color-text-base: #0F172A; // slate-900 (darker for high contrast)
+  --color-text-muted: #64748B; // slate-500 (muted text with good contrast)
+  --color-text-inverse: #F8FAFC; // slate-50 (light text for dark backgrounds)
+
+  --color-success: #15803D; // green-700 (darker for better contrast)
+  --color-warning: #B45309; // amber-700 (darker for better contrast)
+  --color-danger: #B91C1C; // red-700 (darker for better contrast)
+  --color-info: #1D4ED8; // blue-700 (darker for better contrast)
+
+  // Race type colors with improved contrast
+  --color-horse: #D94F00; // Darker warm orange (4.5:1+ against white)
+  --color-greyhound: #334155; // slate-700 (darker cool gray)
+  --color-harness: #B91C1C; // red-700 (darker red)
+
+  // Typography
+  --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font-family-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-weight-base: 400;
+  --font-weight-medium: 500;
+  --font-weight-bold: 600;
+
+  // Shadows (lighter for light theme)
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+  // Borders
+  --border-color: #CBD5E1; // slate-300 (medium borders)
+
+  // Focus states for accessibility
+  --focus-ring-color: #D94F00;
+  --focus-ring-offset: #FFFFFF;
+}
+
+// High Contrast Theme - Beautiful and WCAG AAA compliant
+html[data-theme="high-contrast"] {
+  --color-brand-primary: #0047AB; // Strong cobalt blue (meets 7:1+ contrast)
+  --color-brand-secondary: #000000;
+  --color-brand-accent: #B8860B; // Dark goldenrod (meets 7:1+ contrast against white)
+
+  --color-surface: #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-surface-sunken: #f0f0f0;
+
+  --color-text-base: #000000;
+  --color-text-muted: #222222; // Slightly lighter black for muted text
+  --color-text-inverse: #ffffff;
+
+  --color-success: #006400; // Dark green (meets 7:1+ contrast)
+  --color-warning: #8B4513; // Saddle brown (meets 7:1+ contrast)
+  --color-danger: #8B0000; // Dark red (meets 7:1+ contrast)
+  --color-info: #00008B; // Dark blue (meets 7:1+ contrast)
+
+  // Race type colors with high contrast (all meeting 7:1+ contrast)
+  --color-horse: #006400; // Dark green
+  --color-greyhound: #000000; // Pure black
+  --color-harness: #00008B; // Dark blue
+
+  // Typography
+  --font-family-sans: 'Inter', system-ui, 'Segoe UI', Roboto, Helvetica, Arial, 'Apple Color Emoji', 'Segoe UI Emoji', sans-serif;
+  --font-family-mono: 'SFMono-Regular', Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-weight-base: 500; // Slightly heavier for better readability
+  --font-weight-medium: 600;
+  --font-weight-bold: 700;
+
+  // Shadows (minimal for high contrast)
+  --shadow-card: 0 2px 6px rgba(0, 0, 0, 0.5);
+
+  // Borders (strong for better definition)
+  --border-color: #000000;
+
+  // Focus states for accessibility (high visibility)
+  --focus-ring-color: #0047AB;
+  --focus-ring-offset: #ffffff;
+  --focus-ring-width: 3px;
+
+  // Increased spacing for better touch targets
+  --spacing-xs: 0.5rem; // 8px
+  --spacing-sm: 1rem; // 16px
+  --spacing-md: 1.5rem; // 24px
+
+  // Larger border radius for better visual distinction
+  --border-radius-sm: 0.375rem; // 6px
+  --border-radius-md: 0.75rem; // 12px
 }

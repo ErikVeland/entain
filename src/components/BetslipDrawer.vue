@@ -429,7 +429,7 @@ defineExpose({
             Betslip
             <span 
               v-if="activeSelections.length > 0"
-              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-brand-primary bg-opacity-20 text-brand-primary"
+              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-brand-primary bg-opacity-20 text-white"
             >
               {{ activeSelections.length }}
             </span>
@@ -448,7 +448,7 @@ defineExpose({
             Pending Bets
             <span 
               v-if="pendingBets.length > 0"
-              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-brand-primary bg-opacity-20 text-brand-primary"
+              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-brand-primary bg-opacity-20 text-white"
             >
               {{ pendingBets.length }}
             </span>
@@ -467,7 +467,7 @@ defineExpose({
             History
             <span 
               v-if="betHistory.length > 0"
-              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-brand-primary bg-opacity-20 text-brand-primary"
+              class="ml-1 px-2 py-0.5 text-xs rounded-full bg-brand-primary bg-opacity-20 text-white"
             >
               {{ betHistory.length }}
             </span>
@@ -594,7 +594,7 @@ defineExpose({
                       class="font-medium"
                       :class="bet.result === 'WON' ? 'text-success' : bet.result === 'LOST' ? 'text-danger' : 'text-text-muted'"
                     >
-                      ${{ (bet.payout / 100).toFixed(2) }}
+                      ${{ isNaN(bet.payout) ? '0.00' : (bet.payout / 100).toFixed(2) }}
                     </span>
                   </div>
                 </div>

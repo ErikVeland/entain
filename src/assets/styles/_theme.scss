@@ -1,6 +1,9 @@
 // Theme Variables
 // ===============
 
+// All theme variables are now defined in _tokens.scss
+// This file is kept for backward compatibility and to ensure proper import order
+
 // Default dark theme (applied immediately to prevent FOUC)
 :root, html[data-theme="dark"] {
   // Colors
@@ -14,7 +17,7 @@
   
   --color-text-base: #F8FAFC; // slate-50
   --color-text-muted: #94A3B8; // slate-400
-  --color-text-inverse: #111827;
+  --color-text-inverse: #FFFFFF;
   
   --color-success: #16A34A;
   --color-warning: #F59E0B;
@@ -70,7 +73,7 @@
   
   --color-text-base: #0F172A; // slate-900 (darker for high contrast)
   --color-text-muted: #64748B; // slate-500 (muted text with good contrast)
-  --color-text-inverse: #F8FAFC; // slate-50 (light text for dark backgrounds)
+  --color-text-inverse: #FFFFFF; // Pure white for best contrast
   
   --color-success: #15803D; // green-700 (darker for better contrast)
   --color-warning: #B45309; // amber-700 (darker for better contrast)
