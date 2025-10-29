@@ -209,7 +209,8 @@ watch(isInProgress, (inProgress) => {
           detail: {
             raceName: props.race.meeting_name,
             raceNumber: props.race.race_number,
-            userBets: [] // We would need to implement user bet tracking here
+            userBets: betsStore.getPendingBetsForRace(props.race.id),
+            categoryId: props.race.category_id
           }
         });
         window.dispatchEvent(event);
@@ -321,6 +322,30 @@ const initializeRaceSimulation = () => {
           gaps: tick.gaps,
           etaMs: tick.etaMs
         });
+        
+        // Dispatch race update event for live ticker with leaderboard information
+        const runners = getSimulatedRunners(props.race.id);
+        const leaderboard = tick.order.slice(0, 3).map(runnerId => {
+          const runner = runners.find(r => r.id === runnerId);
+          return runner ? { id: runner.id, name: runner.name, number: runner.number } : null;
+        }).filter(Boolean);
+        
+        const updateEvent = new CustomEvent('race-update', {
+          detail: {
+            raceId: props.race.id,
+            message: `${props.race.meeting_name} R${props.race.race_number} in progress`,
+            leaderboard: leaderboard,
+            progress: tick.progressByRunner,
+            order: tick.order,
+            gaps: tick.gaps,
+            etaMs: tick.etaMs,
+            meetingName: props.race.meeting_name,
+            raceNumber: props.race.race_number,
+            categoryId: props.race.category_id,
+            userBets: betsStore.getPendingBetsForRace(props.race.id)
+          }
+        });
+        window.dispatchEvent(updateEvent);
       } catch (err) {
         error.value = err instanceof Error ? err.message : String(err)
         // Only log critical errors
@@ -372,7 +397,9 @@ const initializeRaceSimulation = () => {
             raceId: props.race.id,
             message: `${props.race.meeting_name} R${props.race.race_number} has finished`,
             winner: result.placings.length > 0 ? { id: result.placings[0] } : null,
-            userBets: [] // We would need to implement user bet tracking here
+            userBets: betsStore.getPendingBetsForRace(props.race.id),
+            meetingName: props.race.meeting_name,
+            raceNumber: props.race.race_number
           }
         });
         window.dispatchEvent(finishEvent);

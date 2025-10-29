@@ -1,22 +1,14 @@
-<template>
-  <div v-if="showTicker && isSimulationMode" class="fixed top-16 left-0 right-0 bg-brand-primary text-text-inverse py-2 z-50">
-    <div class="container mx-auto px-4 overflow-hidden">
-      <div class="animate-marquee whitespace-nowrap">
-        {{ currentMessage }}
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useBetsStore } from '../stores/bets'
+import { useRaceCommentary } from '../composables/useRaceCommentary'
 
 // State
 const showTicker = ref(false)
 const currentMessage = ref('')
 const messages = ref<string[]>([])
 const betsStore = useBetsStore()
+const { generateRaceCommentary, generateWinnerAnnouncement } = useRaceCommentary()
 
 // Only show ticker in simulation mode
 const isSimulationMode = computed(() => {
@@ -42,15 +34,25 @@ const clearMessages = () => {
   currentMessage.value = ''
 }
 
-// Handle race update events
+// Handle race update events with enhanced commentary
 const handleRaceUpdate = (event: CustomEvent) => {
-  const { raceId, message, leaderboard, userBets } = event.detail
+  const { raceId, message, leaderboard, progress, order, gaps, etaMs, meetingName, raceNumber, categoryId, userBets } = event.detail
   
-  // Create enhanced message with leaderboard and user bet info
+  // Generate dynamic commentary if we have all the needed data
   let enhancedMessage = message
   
-  // Add leaderboard information if available
-  if (leaderboard && leaderboard.length > 0) {
+  if (progress && order && gaps && meetingName && raceNumber && categoryId) {
+    // Generate commentary using the race commentary composable
+    const progressData = {
+      progressByRunner: progress,
+      order: order,
+      gaps: gaps,
+      etaMs: etaMs
+    }
+    
+    enhancedMessage = generateRaceCommentary(raceId, progressData, meetingName, raceNumber, categoryId)
+  } else if (leaderboard && leaderboard.length > 0) {
+    // Fallback to leaderboard information if available
     const leaders = leaderboard.slice(0, 3).map((runner: any, index: number) => 
       `${index + 1}. ${runner.name}`
     ).join(', ')
@@ -59,8 +61,15 @@ const handleRaceUpdate = (event: CustomEvent) => {
   
   // Add user bet information if available
   if (userBets && userBets.length > 0) {
-    const userRunners = userBets.map((bet: any) => bet.runnerName).join(', ')
-    enhancedMessage += ` | Your bets: ${userRunners}`
+    const betRunners = userBets.map((bet: any) => {
+      if (bet.leg) {
+        return bet.leg.selectionName;
+      } else if (bet.legs && bet.legs.length > 0) {
+        return bet.legs[0].selectionName;
+      }
+      return 'Unknown Runner';
+    }).join(', ')
+    enhancedMessage += ` | You have bets on: ${betRunners}`
   }
   
   addMessage(enhancedMessage)
@@ -73,10 +82,14 @@ const handleRaceUpdate = (event: CustomEvent) => {
 
 // Handle race finish events
 const handleRaceFinish = (event: CustomEvent) => {
-  const { raceId, message, winner, userBets } = event.detail
+  const { raceId, message, winner, userBets, meetingName, raceNumber } = event.detail
   
-  // Create enhanced finish message
+  // Generate winner announcement
   let enhancedMessage = message
+  
+  if (winner && meetingName && raceNumber) {
+    enhancedMessage = generateWinnerAnnouncement(raceId, winner.id, meetingName, raceNumber)
+  }
   
   // Add user bet result information
   if (userBets && userBets.length > 0) {
@@ -98,9 +111,16 @@ const handleRaceFinish = (event: CustomEvent) => {
 
 // Handle race start events
 const handleRaceStart = (event: CustomEvent) => {
-  const { raceName, raceNumber, userBets } = event.detail
+  const { raceName, raceNumber, userBets, categoryId } = event.detail
+  
+  // Generate category-specific start message
+  const { generateCategoryCommentary } = useRaceCommentary()
+  const categoryCommentary = categoryId ? generateCategoryCommentary(categoryId) : ''
   
   let message = `LIVE: ${raceName} R${raceNumber} has started!`
+  if (categoryCommentary) {
+    message += ` ${categoryCommentary}`
+  }
   
   // Add user bet information
   if (userBets && userBets.length > 0) {
@@ -131,16 +151,3 @@ onUnmounted(() => {
   window.removeEventListener('race-start', handleRaceStart as EventListener)
 })
 </script>
-
-<style scoped>
-@keyframes marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-}
-
-.animate-marquee {
-  display: inline-block;
-  animation: marquee 15s linear infinite;
-}
-</style>
-```

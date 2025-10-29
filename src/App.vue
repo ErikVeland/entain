@@ -459,12 +459,6 @@ onUnmounted(() => {
       </div>
     </main>
 
-    <!-- Betslip Drawer -->
-    <BetslipDrawer
-      :is-open="isBetslipOpen"
-      @close="isBetslipOpen = false"
-      @update:isOpen="isBetslipOpen = $event"
-    />
 
     <footer class="py-6 px-4 sm:px-6 lg:px-8 text-center text-text-muted text-sm border-t border-surface-sunken bg-surface-raised">
       <p>Racehub by <a href="https://veland.au" class="text-brand-primary hover:underline">Erik Veland</a> &copy; {{ new Date().getFullYear() }}</p>
