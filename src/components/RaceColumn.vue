@@ -29,9 +29,9 @@
     
     <!-- Full card background category icon - moved outside conditional to prevent disappearing -->
     <div class="absolute inset-0 opacity-30 w-full h-full pointer-events-none select-none">
-      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-4 right-4 z-0">🏇</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-4 right-4 z-0">🐕</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-4 right-4 z-0">🛞</span>
+      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-2 right-4 z-0">🏇</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-2 right-4 z-0">🐕</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-2 right-4 z-0">🛞</span>
     </div>
     
     <RaceHeader 
