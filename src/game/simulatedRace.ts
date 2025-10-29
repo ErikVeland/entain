@@ -258,24 +258,32 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 		const s = pMax === pMin ? 0.5 : (p - pMin) / (pMax - pMin); // 0..1
 		// Bias factor: favourites (s→1) finish ~7–12% faster on average; outsiders slower.
 		const bias = 1 - (0.12 * s) + (0.06 * (1 - s));
-		// Random noise scaled by inverse strength (outsiders more volatile)
-		const noise = gaussian(rand, 0, 0.025 + (0.035 * (1 - s)));
-		// Clamp bias+noise to reasonable band
-		const mult = Math.min(1.18, Math.max(0.82, bias * (1 + noise)));
+		// Increase random noise for more unpredictable outcomes
+		const noise = gaussian(rand, 0, 0.05 + (0.05 * (1 - s))); // More noise for all runners
+		// Clamp bias+noise to reasonable band but allow more variation
+		const mult = Math.min(1.25, Math.max(0.75, bias * (1 + noise)));
 		// Apply environmental factors to finish times
 		finishTimeMs[r.id] = Math.round(tTotalMs * mult / environmentalSpeedFactor);
 	}
 
-	// Pace parameters per runner
+	// Pace parameters per runner, now influenced by odds
 	const paceParams: Record<string, { accel: number; kick: number; jitter: number; stamina: number }> = {};
 	for (const r of input.runners) {
 		const p = pMap.get(r.id)!;
 		const s = pMax === pMin ? 0.5 : (p - pMin) / (pMax - pMin);
-		const accel = 0.22 + 0.10 * s + (rand() - 0.5) * 0.04; // favourites jump well
-		const kick = 0.16 + 0.08 * s + (rand() - 0.5) * 0.04;  // favourites stronger late
-		const jitter = 0.006 + (1 - s) * 0.012; // outsiders wobble more
-		// Stamina factor - favourites have better stamina, adjusted by environmental factors
-		const stamina = clamp01((0.8 + 0.2 * s + (rand() - 0.5) * 0.1) * environmentalStaminaFactor);
+		
+		// Odds influence on performance - favorites (shorter odds) get performance boosts
+		const odds = r.decimalOdds || 6.0; // Default to 6.0 if no odds
+		const oddsFactor = Math.max(0.7, Math.min(1.3, 1.5 - (odds / 20))); // Shorter odds = better performance
+		
+		// Create more varied acceleration patterns to generate dynamic race situations
+		const accel = (0.15 + 0.20 * s + (rand() - 0.5) * 0.15) * oddsFactor; // Acceleration influenced by odds
+		// Create more varied kick patterns for late race excitement
+		const kick = (0.10 + 0.15 * s + (rand() - 0.5) * 0.15) * oddsFactor;  // Kick influenced by odds
+		// Increase jitter for more dynamic position changes
+		const jitter = (0.015 + (1 - s) * 0.025) / oddsFactor; // Higher odds = more jitter (less consistent)
+		// Stamina factor with more variation to create comebacks, influenced by odds
+		const stamina = clamp01((0.6 + 0.4 * s + (rand() - 0.5) * 0.3) * environmentalStaminaFactor * oddsFactor);
 		paceParams[r.id] = { accel: clamp01(accel), kick: clamp01(kick), jitter, stamina: clamp01(stamina) };
 	}
 
@@ -292,11 +300,13 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 		const u = clamp01(elapsed / total);
 		const { accel, kick, jitter, stamina } = paceParams[runnerId];
 		let base = paceCurve(u, accel, kick, stamina);
-		// Add small seeded jitter (stationary mean, bounded)
-		const j = (gaussian(rand, 0, jitter) * (1 - u)); // less jitter near finish
-		// Add fatigue factor - runners slow down as race progresses, adjusted by environmental factors
-		const fatigue = Math.max(0.7, 1 - (u * 0.3 * environmentalStaminaFactor)); // Up to 30% slower at end
-		return clamp01((base + j) * fatigue);
+		// Add more significant seeded jitter to create dynamic position changes
+		const j = (gaussian(rand, 0, jitter) * (1 - u * 0.5)); // More jitter throughout the race
+		// Add more pronounced fatigue factor to create comebacks in late stages
+		const fatigue = Math.max(0.5, 1 - (u * 0.5 * environmentalStaminaFactor)); // Up to 50% slower at end
+		// Add occasional burst of speed for dramatic position changes
+		const burst = (rand() < 0.02) ? (rand() * 0.1) : 0; // 2% chance of a speed burst
+		return clamp01((base + j + burst) * fatigue);
 	}
 
 	function emitTick(): void {
@@ -398,25 +408,4 @@ Example wiring (Vue 3 / Pinia sketch):
 const sim = createRaceSimulation({
   id: 'SIM_WARRAGUL_R12',
   meetingName: 'Warragul',
-  raceNumber: 12,
-  categoryId: '9daef0d7-bf3c-4f50-921d-8e818c60fe61',
-  runners: [
-	{ id: 'r1', number: 1, name: 'Got Immunity', decimalOdds: 2.4 },
-	{ id: 'r2', number: 2, name: 'She\'s Our Art', decimalOdds: 3.4 },
-	{ id: 'r3', number: 3, name: 'Disco Gizmo', decimalOdds: 6.0 },
-	{ id: 'r4', number: 4, name: 'Rumour Not Fact', decimalOdds: 11.0 },
-	{ id: 'r5', number: 5, name: 'Daintree Granite', decimalOdds: 13.0 }
-  ]
-}, 123456, 200);
-
-sim.onTick(t => {
-  // Update UI with t.progressByRunner[runnerId] (0..1) and t.order/gaps.
-});
-
-sim.onFinish(res => {
-  // Show placings, times, confetti, etc.
-});
-
-sim.start();
-
 */

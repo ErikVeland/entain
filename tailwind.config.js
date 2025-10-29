@@ -161,30 +161,22 @@ module.exports = {
 				// Enhanced race animations
 				'odds-change-up': {
 					'0%': {
-						transform: 'scale(1)',
-						backgroundColor: 'rgba(22, 163, 74, 0.2)'
-					},
-					'50%': {
-						transform: 'scale(1.1)',
-						backgroundColor: 'rgba(22, 163, 74, 0.4)'
+						transform: 'translateY(3px)',
+						opacity: '0'
 					},
 					'100%': {
-						transform: 'scale(1)',
-						backgroundColor: 'transparent'
+						transform: 'translateY(0)',
+						opacity: '1'
 					}
 				},
 				'odds-change-down': {
 					'0%': {
-						transform: 'scale(1)',
-						backgroundColor: 'rgba(220, 38, 38, 0.2)'
-					},
-					'50%': {
-						transform: 'scale(1.1)',
-						backgroundColor: 'rgba(220, 38, 38, 0.4)'
+						transform: 'translateY(-3px)',
+						opacity: '0'
 					},
 					'100%': {
-						transform: 'scale(1)',
-						backgroundColor: 'transparent'
+						transform: 'translateY(0)',
+						opacity: '1'
 					}
 				},
 				'race-finish': {
@@ -217,8 +209,8 @@ module.exports = {
 				'bounce-in': 'bounce-in 0.6s ease-out',
 				'pulse-slow': 'pulse-slow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
 				'spin-slow': 'spin-slow 3s linear infinite',
-				'odds-change-up': 'odds-change-up 0.5s ease-out',
-				'odds-change-down': 'odds-change-down 0.5s ease-out',
+				'odds-change-up': 'odds-change-up 0.2s ease-out',
+				'odds-change-down': 'odds-change-down 0.2s ease-out',
 				'race-finish': 'race-finish 1s ease-out'
 			},
 			borderRadius: {

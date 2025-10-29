@@ -33,14 +33,14 @@
             <button 
               @click="handleOddsClick"
               class="px-2 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center text-sm bg-surface-sunken hover:bg-brand-primary hover:text-text-inverse border-2 border-surface"
-              :class="[oddsButtonClass, oddsAnimation]"
+              :class="oddsButtonClass"
               :disabled="isExpired"
               :aria-label="`${$t('game.addToBetslip')} ${runner.name} ${$t('game.at')} ${runner.odds}`"
               :title="getOddsButtonTitle()"
             >
               {{ runner.odds }}
-              <span v-if="runner.oddsTrend === 'up'" class="ml-1 text-success">▲</span>
-              <span v-else-if="runner.oddsTrend === 'down'" class="ml-1 text-danger">▼</span>
+              <span v-if="runner.oddsTrend === 'up'" :class="['ml-1 text-success', oddsAnimation]">▲</span>
+              <span v-else-if="runner.oddsTrend === 'down'" :class="['ml-1 text-danger', oddsAnimation]">▼</span>
             </button>
           </div>
         </div>
@@ -110,13 +110,13 @@ watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | numb
     const changePercent = Math.abs((newNum - oldNum) / oldNum) * 100
     // Odds change percentage for runner: changePercent %
     
-    // Only trigger animation if change is at least 0.1% or 0.01 absolute difference
-    if (changePercent >= 0.1 || Math.abs(newNum - oldNum) >= 0.01) {
+    // Only trigger animation if change is at least 0.05% or 0.005 absolute difference
+    if (changePercent >= 0.05 || Math.abs(newNum - oldNum) >= 0.005) {
       if (newNum < oldNum) {
-        // Triggering odds change down animation for runner
+        // Triggering odds change down animation for runner (arrow moves down)
         oddsAnimation.value = 'animate-odds-change-down'
       } else if (newNum > oldNum) {
-        // Triggering odds change up animation for runner
+        // Triggering odds change up animation for runner (arrow moves up)
         oddsAnimation.value = 'animate-odds-change-up'
       }
       
@@ -129,7 +129,7 @@ watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | numb
       setTimeout(() => {
         // Resetting animation for runner
         oddsAnimation.value = ''
-      }, 700)
+      }, 300) // Shorter timeout to match the subtle animation
     }
   }
   

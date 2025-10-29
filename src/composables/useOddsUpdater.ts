@@ -36,7 +36,7 @@ const startOddsUpdates = (raceId: string) => {
       // Clean up if race is no longer in countdown status
       stopOddsUpdates(raceId)
     }
-  }, 3000) // Update every 3 seconds
+  }, 1500) // Update every 1.5 seconds for more frequent updates
   
   updateIntervals.set(raceId, intervalId)
   // console.log('Started odds updates for race:', raceId, 'with interval ID:', intervalId);
@@ -65,8 +65,8 @@ const updateRaceOdds = (raceId: string) => {
         // Favorites (lower numbers) start with higher progress
         // But add random market fluctuations to simulate real betting activity
         const baseProgress = 1 - (runner.number / (runners.length + 2))
-        // Reduce market volatility from ±10% to ±8% for more stable odds
-        const marketFluctuation = (Math.random() - 0.5) * 0.16
+        // Increase market volatility from ±8% to ±15% for more visible changes
+        const marketFluctuation = (Math.random() - 0.5) * 0.3
         progressByRunner[runner.id] = Math.max(0, Math.min(1, baseProgress + marketFluctuation))
         order.push(runner.id)
       })

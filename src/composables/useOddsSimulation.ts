@@ -383,9 +383,9 @@ export function updateOdds(
     return
   }
   
-  // Throttle updates to 1200ms intervals to prevent excessive updates (increased from 200ms)
-  // This is slightly less than the 3000ms update interval to avoid unnecessary blocking
-  if (now - simulation.lastUpdate < 1200) {
+  // Throttle updates to 1000ms intervals to prevent excessive updates
+  // This is slightly less than the 1500ms update interval to avoid unnecessary blocking
+  if (now - simulation.lastUpdate < 1000) {
     return
   }
   
@@ -422,7 +422,7 @@ export function updateOdds(
     }
     // Otherwise make small random adjustments
     else {
-      const randomFactor = 0.98 + (Math.random() * 0.04) // 0.98-1.02 for small changes
+      const randomFactor = 0.95 + (Math.random() * 0.1) // 0.95-1.05 for more noticeable changes
       newOdds = newOdds * randomFactor
     }
     
@@ -434,8 +434,8 @@ export function updateOdds(
     const originalOdds = typeof runner.odds === 'number' ? runner.odds : 2.0 // Default to 2.0 if SP
     const change = Math.abs(newOdds - originalOdds)
     
-    // Only show trend if change is significant (> 0.02)
-    if (change > 0.02) {
+    // Only show trend if change is significant (> 0.01)
+    if (change > 0.01) {
       trend = newOdds < originalOdds ? 'up' : 'down'
     }
     

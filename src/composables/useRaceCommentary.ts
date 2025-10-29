@@ -1,24 +1,145 @@
-import { ref, Ref, watch } from 'vue'
+import { ref } from 'vue'
 import { getSimulatedRunners } from './useOddsSimulation'
-import type { RaceProgress } from '../stores/simulation'
 
+// Define types
 interface RaceCommentary {
   message: string
   timestamp: number
-  type: 'leader' | 'overtake' | 'position' | 'finish' | 'start'
+  type: 'leader' | 'overtake' | 'start' | 'finish' | 'generic'
 }
 
 interface UseRaceCommentaryReturn {
-  commentary: Ref<RaceCommentary[]>
+  commentary: { value: RaceCommentary[] }
   addCommentary: (message: string, type: RaceCommentary['type']) => void
-  generateLeaderUpdate: (raceId: string, progress: RaceProgress) => void
-  generateOvertakeCommentary: (raceId: string, progress: RaceProgress) => void
+  generateLeaderUpdate: (raceId: string, progress: any) => void
+  generateOvertakeCommentary: (raceId: string, progress: any) => void
   generateStartCommentary: (meetingName: string, raceNumber: number) => void
   generateFinishCommentary: (meetingName: string, raceNumber: number, winner: string) => void
+  generateRaceCommentary: (raceId: string, progress: any, meetingName: string, raceNumber: number, categoryId: string) => string
+  generateWinnerAnnouncement: (raceId: string, winnerId: string, meetingName: string, raceNumber: number) => string
   clearCommentary: () => void
 }
 
+// Store commentary history per race to avoid repetition
 const raceCommentaryHistory: Record<string, string[]> = {}
+
+// Category-specific commentary with odds influence
+const getCategoryCommentary = (categoryId: string, runners: any[] = []): string => {
+  // Find the favorite (shortest odds) and outsider (longest odds) if runners are provided
+  let favorite: any = null;
+  let outsider: any = null;
+  
+  if (runners.length > 0) {
+    const runnersWithOdds = runners.filter(r => typeof r.odds === 'number');
+    if (runnersWithOdds.length > 0) {
+      favorite = runnersWithOdds.reduce((min, r) => r.odds < min.odds ? r : min, runnersWithOdds[0]);
+      outsider = runnersWithOdds.reduce((max, r) => r.odds > max.odds ? r : max, runnersWithOdds[0]);
+    }
+  }
+  
+  switch (categoryId) {
+    case '4a2788f8-e825-4d36-9894-efd4baf1cfae': // Horse
+      const horseCommentary = [
+        "The field is bunched up early!",
+        "The pace looks comfortable so far.",
+        "The jockeys are positioning their mounts carefully.",
+        "Plenty of horsepower on display here.",
+        "The riders are jostling for position.",
+        "The horses are settling into a steady rhythm.",
+        "The field is moving together in a tight group.",
+        "The early stages are unfolding evenly.",
+        "The competitors are feeling each other out.",
+        "The pace is steady but not taxing."
+      ];
+      
+      // Add odds-specific commentary if we have runner data
+      if (favorite && outsider) {
+        horseCommentary.push(
+          `The favorite ${favorite.name} (${favorite.odds.toFixed(2)}) is being cautiously rated.`,
+          `Outsider ${outsider.name} (${outsider.odds.toFixed(2)}) is showing surprising early pace.`,
+          `Market leader ${favorite.name} is tracking comfortably in the field.`,
+          `Long shot ${outsider.name} is getting plenty of daylight early.`
+        );
+      }
+      
+      return horseCommentary[Math.floor(Math.random() * horseCommentary.length)];
+    case '9daef0d7-bf3c-4f50-921d-8e818c60fe61': // Greyhound
+      const greyhoundCommentary = [
+        "They're off and running at full speed!",
+        "The dogs are flying down the track!",
+        "What a fast start from the field!",
+        "The greyhounds are hitting their stride.",
+        "Top speed already being reached!",
+        "The hounds are stretching out in the early stages.",
+        "The field is bunched but moving at a cracking pace!",
+        "The dogs are hitting the first turn at full tilt!",
+        "The early leaders are setting a blistering pace!",
+        "The greyhounds are showing their speed early!"
+      ];
+      
+      // Add odds-specific commentary if we have runner data
+      if (favorite && outsider) {
+        greyhoundCommentary.push(
+          `Clear favorite ${favorite.name} (${favorite.odds.toFixed(2)}) is leading the chase.`,
+          `Outside chance ${outsider.name} (${outsider.odds.toFixed(2)}) is flying early!`,
+          `Market mover ${favorite.name} is dictating the early pace.`,
+          `${outsider.name} (${outsider.odds.toFixed(2)}) is making all the running so far.`
+        );
+      }
+      
+      return greyhoundCommentary[Math.floor(Math.random() * greyhoundCommentary.length)];
+    case '161d9be2-e909-4326-8c2c-35ed71fb460b': // Harness
+      const harnessCommentary = [
+        "The pacemaker is setting a steady tempo.",
+        "The drivers are working their horses hard.",
+        "The sulky wheels are spinning fast!",
+        "The field is moving in unison.",
+        "The trotters are maintaining a good rhythm.",
+        "The paceline is holding together well.",
+        "The drivers are jostling for the best position.",
+        "The trotters are hitting their stride now.",
+        "The field is moving at a consistent pace.",
+        "The horses are settling into their rhythm."
+      ];
+      
+      // Add odds-specific commentary if we have runner data
+      if (favorite && outsider) {
+        harnessCommentary.push(
+          `Touted choice ${favorite.name} (${favorite.odds.toFixed(2)}) is tracking the pace.`,
+          `Each-way chance ${outsider.name} (${outsider.odds.toFixed(2)}) is moving smoothly.`,
+          `Short money ${favorite.name} is holding a comfortable position.`,
+          `${outsider.name} (${outsider.odds.toFixed(2)}) is getting a lovely run in the field.`
+        );
+      }
+      
+      return harnessCommentary[Math.floor(Math.random() * harnessCommentary.length)];
+    default:
+      const genericCommentary = [
+        "The race is underway!",
+        "The competitors are off to a strong start!",
+        "The field is moving forward steadily!",
+        "The pace is moderate but competitive!",
+        "The early stages are developing well!",
+        "The competitors are settling into position!",
+        "The race is unfolding as expected!",
+        "The field is maintaining a good tempo!",
+        "The competitors are showing their form!",
+        "The early running is proving competitive!"
+      ];
+      
+      // Add odds-specific commentary if we have runner data
+      if (favorite && outsider) {
+        genericCommentary.push(
+          `Favoritism for ${favorite.name} (${favorite.odds.toFixed(2)}) is showing early.`,
+          `Value play ${outsider.name} (${outsider.odds.toFixed(2)}) is traveling well.`,
+          `The market leader ${favorite.name} is in a perfect spot.`,
+          `${outsider.name} (${outsider.odds.toFixed(2)}) is tracking the leaders nicely.`
+        );
+      }
+      
+      return genericCommentary[Math.floor(Math.random() * genericCommentary.length)];
+  }
+}
 
 /**
  * Composable for generating realistic race commentary
@@ -57,7 +178,7 @@ export function useRaceCommentary(raceId: string): UseRaceCommentaryReturn {
     }
   }
 
-  const generateLeaderUpdate = (raceId: string, progress: RaceProgress) => {
+  const generateLeaderUpdate = (raceId: string, progress: any) => {
     if (!progress || !progress.order || progress.order.length === 0) return
     
     const runners = getSimulatedRunners(raceId)
@@ -76,14 +197,18 @@ export function useRaceCommentary(raceId: string): UseRaceCommentaryReturn {
       `${leaderRunner.name} seizes the lead!`,
       `${leaderRunner.name} makes a bold move to the front!`,
       `${leaderRunner.name} breaks clear at the front!`,
-      `${leaderRunner.name} establishes a commanding lead!`
+      `${leaderRunner.name} establishes a commanding lead!`,
+      `${leaderRunner.name} bursts to the front of the field!`,
+      `${leaderRunner.name} takes command of the race!`,
+      `${leaderRunner.name} assumes the lead position!`,
+      `${leaderRunner.name} charges to the front!`
     ]
     
     const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
     addCommentary(randomCommentary, 'leader')
   }
 
-  const generateOvertakeCommentary = (raceId: string, progress: RaceProgress) => {
+  const generateOvertakeCommentary = (raceId: string, progress: any) => {
     if (!progress || !progress.order || progress.order.length < 2) return
     
     const runners = getSimulatedRunners(raceId)
@@ -107,7 +232,11 @@ export function useRaceCommentary(raceId: string): UseRaceCommentaryReturn {
       `${secondRunner.name} tries to close the gap on ${leaderRunner.name}!`,
       `${secondRunner.name} gives chase to ${leaderRunner.name}!`,
       `${secondRunner.name} attempts to reel in ${leaderRunner.name}!`,
-      `A clear battle for the lead between ${leaderRunner.name} and ${secondRunner.name}!`
+      `A clear battle for the lead between ${leaderRunner.name} and ${secondRunner.name}!`,
+      `${leaderRunner.name} is widening the margin over ${secondRunner.name}!`,
+      `${secondRunner.name} is pressing hard on ${leaderRunner.name}!`,
+      `${leaderRunner.name} is holding off the challenge from ${secondRunner.name}!`,
+      `${secondRunner.name} is making ground on the leader ${leaderRunner.name}!`
     ]
     
     const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
@@ -121,7 +250,11 @@ export function useRaceCommentary(raceId: string): UseRaceCommentaryReturn {
       `${meetingName} R${raceNumber} gets off to a thrilling start!`,
       `And they're off at ${meetingName} for R${raceNumber}!`,
       `${meetingName} R${raceNumber} commences with great excitement!`,
-      `The gates open for ${meetingName} R${raceNumber}!`
+      `The gates open for ${meetingName} R${raceNumber}!`,
+      `${meetingName} R${raceNumber} is off and running!`,
+      `The competitors spring from the gates at ${meetingName} R${raceNumber}!`,
+      `${meetingName} R${raceNumber} explodes into action!`,
+      `They're away at ${meetingName} for R${raceNumber}!`
     ]
     
     const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
@@ -135,11 +268,195 @@ export function useRaceCommentary(raceId: string): UseRaceCommentaryReturn {
       `${winner} claims victory at ${meetingName} R${raceNumber}!`,
       `${winner} crosses the line first in ${meetingName} R${raceNumber}!`,
       `${winner} secures a memorable win in ${meetingName} R${raceNumber}!`,
-      `${meetingName} R${raceNumber} goes to ${winner}!`
+      `${meetingName} R${raceNumber} goes to ${winner}!`,
+      `${winner} captures the prize in ${meetingName} R${raceNumber}!`,
+      `${winner} prevails in ${meetingName} R${raceNumber}!`,
+      `${winner} emerges victorious in ${meetingName} R${raceNumber}!`,
+      `${winner} takes the spoils at ${meetingName} R${raceNumber}!`
     ]
     
     const randomCommentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)]
     addCommentary(randomCommentary, 'finish')
+  }
+
+  const generateRaceCommentary = (raceId: string, progress: any, meetingName: string, raceNumber: number, categoryId: string): string => {
+    if (!progress || !progress.order || progress.order.length === 0) {
+      // Return category-specific start commentary if no progress yet
+      const runners = getSimulatedRunners(raceId);
+      return `${meetingName} R${raceNumber} is underway! ${getCategoryCommentary(categoryId, runners)}`;
+    }
+    
+    const runners = getSimulatedRunners(raceId);
+    if (!runners || runners.length === 0) {
+      return `${meetingName} R${raceNumber} is in progress`;
+    }
+    
+    const leaderId = progress.order[0];
+    const leaderRunner = runners.find(r => r.id === leaderId);
+    
+    if (!leaderRunner) {
+      return `${meetingName} R${raceNumber} is in progress`;
+    }
+    
+    // Check for close competition
+    if (progress.order.length > 1 && progress.gaps) {
+      const secondId = progress.order[1];
+      const gap = Math.abs(progress.gaps[leaderId] - progress.gaps[secondId]);
+      const secondRunner = runners.find(r => r.id === secondId);
+      
+      if (secondRunner) {
+        if (gap < 0.1) {
+          const neckAndNeckOptions = [
+            `${leaderRunner.name} and ${secondRunner.name} are neck and neck!`,
+            `${leaderRunner.name} and ${secondRunner.name} are running stride for stride!`,
+            `${leaderRunner.name} and ${secondRunner.name} are locked in a fierce battle!`,
+            `${leaderRunner.name} and ${secondRunner.name} are trading blows at the front!`,
+            `${leaderRunner.name} and ${secondRunner.name} are inseparable at the lead!`,
+            `${leaderRunner.name} and ${secondRunner.name} are matching each other move for move!`,
+            `${leaderRunner.name} and ${secondRunner.name} are in a photo finish battle!`
+          ];
+          
+          // Add odds-based commentary for close competition
+          if (typeof leaderRunner.odds === 'number' && typeof secondRunner.odds === 'number') {
+            if (leaderRunner.odds < secondRunner.odds) {
+              neckAndNeckOptions.push(
+                `${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) is holding off the challenge from ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`,
+                `Market leader ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) is just ahead of ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`
+              );
+            } else {
+              neckAndNeckOptions.push(
+                `${secondRunner.name} (${secondRunner.odds.toFixed(2)}) is pressing hard on favorite ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)})!`,
+                `Underdog ${secondRunner.name} (${secondRunner.odds.toFixed(2)}) is making ground on the leader ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)})!`
+              );
+            }
+          }
+          
+          return neckAndNeckOptions[Math.floor(Math.random() * neckAndNeckOptions.length)];
+        } else if (gap < 0.3) {
+          const narrowLeadOptions = [
+            `${leaderRunner.name} holds a narrow lead over ${secondRunner.name}`,
+            `${leaderRunner.name} edges ahead of ${secondRunner.name}`,
+            `${leaderRunner.name} maintains a slender advantage over ${secondRunner.name}`,
+            `${leaderRunner.name} clings to a precarious lead over ${secondRunner.name}`,
+            `${leaderRunner.name} just holds the advantage over ${secondRunner.name}`,
+            `${leaderRunner.name} has a slight edge over ${secondRunner.name}`,
+            `${leaderRunner.name} is barely ahead of ${secondRunner.name}`
+          ];
+          
+          // Add odds-based commentary for narrow leads
+          if (typeof leaderRunner.odds === 'number' && typeof secondRunner.odds === 'number') {
+            if (leaderRunner.odds < secondRunner.odds) {
+              narrowLeadOptions.push(
+                `${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) is holding off ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`,
+                `Favorite ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) clings to the lead over ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`
+              );
+            } else {
+              narrowLeadOptions.push(
+                `${secondRunner.name} (${secondRunner.odds.toFixed(2)}) is closing on ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)})!`,
+                `Underdog ${secondRunner.name} (${secondRunner.odds.toFixed(2)}) is pressing the favorite ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)})!`
+              );
+            }
+          }
+          
+          return narrowLeadOptions[Math.floor(Math.random() * narrowLeadOptions.length)];
+        } else {
+          const clearLeadOptions = [
+            `${leaderRunner.name} has opened up a clear lead over ${secondRunner.name}`,
+            `${leaderRunner.name} has established a commanding advantage over ${secondRunner.name}`,
+            `${leaderRunner.name} is pulling away from ${secondRunner.name} at the front`,
+            `${leaderRunner.name} has broken clear at the head of the field over ${secondRunner.name}`,
+            `${leaderRunner.name} is striding away from the competition led by ${secondRunner.name}`,
+            `${leaderRunner.name} has built a substantial lead over ${secondRunner.name}`,
+            `${leaderRunner.name} is dominating the field with ${secondRunner.name} in pursuit`
+          ];
+          
+          // Add odds-based commentary for clear leads
+          if (typeof leaderRunner.odds === 'number' && typeof secondRunner.odds === 'number') {
+            if (leaderRunner.odds < secondRunner.odds) {
+              clearLeadOptions.push(
+                `${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) has broken clear of ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`,
+                `Market leader ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) is striding away from ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`
+              );
+            } else {
+              clearLeadOptions.push(
+                `Shock leader ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) has opened a gap on ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`,
+                `Underdog ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) is pulling away from favorite ${secondRunner.name} (${secondRunner.odds.toFixed(2)})!`
+              );
+            }
+          }
+          
+          return clearLeadOptions[Math.floor(Math.random() * clearLeadOptions.length)];
+        }
+      }
+    }
+    
+    // Default leader commentary
+    const leaderOptions = [
+      `${leaderRunner.name} is leading ${meetingName} R${raceNumber}`,
+      `${leaderRunner.name} holds the lead in ${meetingName} R${raceNumber}`,
+      `${leaderRunner.name} maintains the advantage in ${meetingName} R${raceNumber}`,
+      `${leaderRunner.name} continues to lead ${meetingName} R${raceNumber}`,
+      `${leaderRunner.name} is setting the pace at the front of ${meetingName} R${raceNumber}`,
+      `${leaderRunner.name} is showing the way at the head of the field in ${meetingName} R${raceNumber}`,
+      `${leaderRunner.name} is dictating the tempo from the front in ${meetingName} R${raceNumber}`
+    ];
+    
+    // Add odds-based commentary for solo leaders
+    if (typeof leaderRunner.odds === 'number') {
+      leaderOptions.push(
+        `${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) is leading ${meetingName} R${raceNumber}`,
+        `Market leader ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) holds the advantage in ${meetingName} R${raceNumber}`,
+        `Favorite ${leaderRunner.name} (${leaderRunner.odds.toFixed(2)}) continues to lead ${meetingName} R${raceNumber}`
+      );
+    }
+    
+    return leaderOptions[Math.floor(Math.random() * leaderOptions.length)];
+  }
+
+  const generateWinnerAnnouncement = (raceId: string, winnerId: string, meetingName: string, raceNumber: number): string => {
+    const runners = getSimulatedRunners(raceId);
+    if (!runners || runners.length === 0) {
+      return `${meetingName} R${raceNumber}: Race finished`;
+    }
+    
+    const winnerRunner = runners.find(r => r.id === winnerId);
+    if (!winnerRunner) {
+      return `${meetingName} R${raceNumber}: Race finished`;
+    }
+    
+    const winnerOptions = [
+      `${winnerRunner.name} wins ${meetingName} R${raceNumber}!`,
+      `${winnerRunner.name} takes victory in ${meetingName} R${raceNumber}!`,
+      `${winnerRunner.name} claims victory at ${meetingName} R${raceNumber}!`,
+      `${winnerRunner.name} crosses the line first in ${meetingName} R${raceNumber}!`,
+      `${winnerRunner.name} secures a memorable win in ${meetingName} R${raceNumber}!`,
+      `${meetingName} R${raceNumber} goes to ${winnerRunner.name}!`,
+      `${winnerRunner.name} captures the prize in ${meetingName} R${raceNumber}!`,
+      `${winnerRunner.name} prevails in ${meetingName} R${raceNumber}!`
+    ];
+    
+    // Add odds-based commentary for winners
+    if (typeof winnerRunner.odds === 'number') {
+      if (winnerRunner.odds < 3) {
+        winnerOptions.push(
+          `Hot favorite ${winnerRunner.name} (${winnerRunner.odds.toFixed(2)}) wins ${meetingName} R${raceNumber}!`,
+          `Market leader ${winnerRunner.name} (${winnerRunner.odds.toFixed(2)}) takes victory in ${meetingName} R${raceNumber}!`
+        );
+      } else if (winnerRunner.odds > 10) {
+        winnerOptions.push(
+          `Giant killing ${winnerRunner.name} (${winnerRunner.odds.toFixed(2)}) wins ${meetingName} R${raceNumber}!`,
+          `Shock result! Outsider ${winnerRunner.name} (${winnerRunner.odds.toFixed(2)}) prevails in ${meetingName} R${raceNumber}!`,
+          `Each-way value! ${winnerRunner.name} (${winnerRunner.odds.toFixed(2)}) captures the prize in ${meetingName} R${raceNumber}!`
+        );
+      } else {
+        winnerOptions.push(
+          `${winnerRunner.name} (${winnerRunner.odds.toFixed(2)}) claims victory at ${meetingName} R${raceNumber}!`,
+          `Solid win for ${winnerRunner.name} (${winnerRunner.odds.toFixed(2)}) in ${meetingName} R${raceNumber}!`
+        );
+      }
+    }
+    
+    return winnerOptions[Math.floor(Math.random() * winnerOptions.length)];
   }
 
   const clearCommentary = () => {
@@ -154,349 +471,8 @@ export function useRaceCommentary(raceId: string): UseRaceCommentaryReturn {
     generateOvertakeCommentary,
     generateStartCommentary,
     generateFinishCommentary,
-    clearCommentary
-  }
-}
-
-// Define commentary templates for different race scenarios
-const commentaryTemplates = {
-  // Leader change commentary
-  leaderChange: [
-    "{runner} takes the lead!",
-    "{runner} moves into the lead!",
-    "{runner} surges to the front!",
-    "{runner} powers past the field to take the lead!",
-    "{runner} makes a bold move to the front!",
-    "{runner} breaks through to take command!",
-    "{runner} seizes the lead with a strong push!",
-    "{runner} storms to the front of the pack!",
-    "{runner} finds another gear and moves ahead!",
-    "{runner} takes control of the race!"
-  ],
-  
-  // Close race commentary
-  closeRace: [
-    "What a tight race this is!",
-    "The field is bunched up tightly!",
-    "Any of these runners could win!",
-    "It's anyone's race at this point!",
-    "The runners are neck and neck!",
-    "This is shaping up to be a photo finish!",
-    "The gap between the leaders is closing!",
-    "The chasing pack is closing in fast!",
-    "What drama! The runners are all together!",
-    "This is going down to the wire!"
-  ],
-  
-  // Mid-race updates
-  midRace: [
-    "{runner} is holding a comfortable lead.",
-    "{runner} continues to set the pace.",
-    "{runner} is maintaining the lead nicely.",
-    "{runner} looks strong out in front.",
-    "{runner} is controlling the tempo.",
-    "{runner} is setting a steady pace.",
-    "{runner} is dictating the terms up front.",
-    "{runner} is in command of this race.",
-    "{runner} is showing the way.",
-    "{runner} is leading the field."
-  ],
-  
-  // Final stretch commentary
-  finalStretch: [
-    "They're heading for the final turn!",
-    "Into the home straight!",
-    "Here we go into the final furlong!",
-    "The runners are hitting the final stretch!",
-    "Down to the last few hundred meters!",
-    "The final turn is approaching!",
-    "They're rounding the final bend!",
-    "Into the last straightaway!",
-    "The home stretch awaits!",
-    "The final push is coming up!"
-  ],
-  
-  // Sprint finish commentary
-  sprintFinish: [
-    "{runner} kicks for home!",
-    "{runner} finds another gear!",
-    "{runner} makes a last-ditch effort!",
-    "{runner} unleashes a final burst!",
-    "{runner} gives everything he's got!",
-    "{runner} puts in a desperate drive!",
-    "{runner} goes all out for the line!",
-    "{runner} throws everything at the finish!",
-    "{runner} makes one last push!",
-    "{runner} digs deep for the wire!"
-  ],
-  
-  // Winning commentary
-  winner: [
-    "{runner} wins it!",
-    "{runner} takes it!",
-    "{runner} gets up!",
-    "{runner} crosses the line!",
-    "{runner} claims victory!",
-    "{runner} secures the win!",
-    "{runner} makes it across!",
-    "{runner} snatches victory!",
-    "{runner} captures the prize!",
-    "{runner} seals the deal!"
-  ]
-}
-
-// Race-specific commentary based on category
-const categorySpecificPhrases = {
-  horse: [
-    "The thoroughbreds are flying down the track!",
-    "What a magnificent display of horsemanship!",
-    "The jockeys are urging their mounts forward!",
-    "The field is thundering down the homestretch!",
-    "What a spectacular finish from these equine athletes!"
-  ],
-  greyhound: [
-    "The greyhounds are flying around the track!",
-    "What a display of canine speed!",
-    "The dogs are making their final dash!",
-    "The hounds are sprinting for the finish!",
-    "What a breathtaking display from these racing dogs!"
-  ],
-  harness: [
-    "The pacers are flying down the track!",
-    "What a display of harness racing!",
-    "The horses and drivers are working in perfect harmony!",
-    "The sulky drivers are urging their horses forward!",
-    "What a masterful performance in the sulky!"
-  ]
-}
-
-// Position change commentary
-const positionChangePhrases = [
-  "{runner} is making up ground!",
-  "{runner} is charging through the field!",
-  "{runner} is moving up quickly!",
-  "{runner} is closing in on the leaders!",
-  "{runner} is picking off runners one by one!",
-  "{runner} is weaving through traffic!",
-  "{runner} is finding a clear run!",
-  "{runner} is making a strong move!",
-  "{runner} is coming with a rush!",
-  "{runner} is launching a late challenge!"
-]
-
-// Odds-related commentary
-const oddsCommentary = [
-  "{runner} was the favorite at {odds} to win.",
-  "{runner}, the {odds} shot, is making a move.",
-  "The {odds} longshot {runner} is closing in!",
-  "{runner} at {odds} is showing determination.",
-  "Can {runner} at {odds} pull off the upset?"
-]
-
-// Generic runner names for commentary when we don't have specific names
-const genericRunners = ['the field', 'the pack', 'the runners', 'the contenders', 'the competitors']
-
-export function useRaceCommentary() {
-  // Track the last commentary to avoid repetition
-  const lastCommentary = ref<string[]>([])
-  const lastLeader = ref<string>('')
-  const commentaryHistory = ref<string[]>([])
-  
-  // Generate a random commentary line from templates
-  const generateCommentary = (
-    templateType: keyof typeof commentaryTemplates,
-    replacements: Record<string, string> = {}
-  ): string => {
-    const templates = commentaryTemplates[templateType]
-    if (!templates || templates.length === 0) return ''
-    
-    // Select a random template
-    const template = templates[Math.floor(Math.random() * templates.length)]
-    
-    // Apply replacements
-    let commentary = template
-    for (const [key, value] of Object.entries(replacements)) {
-      commentary = commentary.replace(`{${key}}`, value)
-    }
-    
-    return commentary
-  }
-  
-  // Generate category-specific commentary
-  const generateCategoryCommentary = (categoryId: string): string => {
-    const categoryKey = getCategoryKey(categoryId)
-    const phrases = categorySpecificPhrases[categoryKey]
-    if (phrases && phrases.length > 0) {
-      return phrases[Math.floor(Math.random() * phrases.length)]
-    }
-    return ''
-  }
-  
-  // Get category key from category ID
-  const getCategoryKey = (categoryId: string): 'horse' | 'greyhound' | 'harness' => {
-    if (categoryId === '4a2788f8-e825-4d36-9894-efd4baf1cfae') {
-      return 'horse'
-    } else if (categoryId === '9daef0d7-bf3c-4f50-921d-8e818c60fe61') {
-      return 'greyhound'
-    } else {
-      return 'harness'
-    }
-  }
-  
-  // Generate position change commentary
-  const generatePositionChangeCommentary = (runnerName: string): string => {
-    const phrase = positionChangePhrases[Math.floor(Math.random() * positionChangePhrases.length)]
-    return phrase.replace('{runner}', runnerName)
-  }
-  
-  // Generate odds commentary
-  const generateOddsCommentary = (runnerName: string, odds: number | 'SP'): string => {
-    const phrase = oddsCommentary[Math.floor(Math.random() * oddsCommentary.length)]
-    const oddsString = odds === 'SP' ? 'starting price' : `${odds.toFixed(1)}`
-    return phrase.replace('{runner}', runnerName).replace('{odds}', oddsString)
-  }
-  
-  // Generate dynamic race commentary based on race progress
-  const generateRaceCommentary = (
-    raceId: string,
-    progress: {
-      progressByRunner: Record<string, number>
-      order: string[]
-      gaps: Record<string, number>
-      etaMs: number
-    },
-    meetingName: string,
-    raceNumber: number,
-    categoryId: string
-  ): string => {
-    try {
-      // Get runners information
-      const runners = getSimulatedRunners(raceId)
-      if (!runners || runners.length === 0) {
-        return `${meetingName} R${raceNumber}: Race in progress`
-      }
-      
-      // Get current leader
-      const leaderId = progress.order[0]
-      const leaderRunner = runners.find(r => r.id === leaderId)
-      const leaderName = leaderRunner ? leaderRunner.name : 'Unknown'
-      
-      // Calculate race progress percentage
-      const raceProgress = progress.progressByRunner[leaderId] || 0
-      const timeRemaining = progress.etaMs > 0 ? progress.etaMs / 1000 : 0
-      
-      // Generate commentary based on race stage
-      let commentary = ''
-      
-      // Early race commentary (0-30%)
-      if (raceProgress < 0.3) {
-        // Leader change or maintaining lead
-        if (leaderName !== lastLeader.value) {
-          commentary = generateCommentary('leaderChange', { runner: leaderName })
-          lastLeader.value = leaderName
-        } else {
-          commentary = generateCommentary('midRace', { runner: leaderName })
-        }
-      }
-      // Mid race commentary (30-70%)
-      else if (raceProgress < 0.7) {
-        // Check if race is close
-        const gaps = Object.values(progress.gaps)
-        const maxGap = Math.max(...gaps, 0)
-        
-        if (maxGap < 0.1) {
-          // Close race
-          commentary = generateCommentary('closeRace')
-        } else if (leaderName !== lastLeader.value) {
-          // Leader change
-          commentary = generateCommentary('leaderChange', { runner: leaderName })
-          lastLeader.value = leaderName
-        } else {
-          // Regular mid-race update
-          commentary = generateCommentary('midRace', { runner: leaderName })
-        }
-        
-        // Add some position change commentary occasionally
-        if (Math.random() > 0.7 && progress.order.length > 1) {
-          const chasingRunnerId = progress.order[1]
-          const chasingRunner = runners.find(r => r.id === chasingRunnerId)
-          if (chasingRunner) {
-            commentary += ` ${generatePositionChangeCommentary(chasingRunner.name)}`
-          }
-        }
-      }
-      // Late race commentary (70-90%)
-      else if (raceProgress < 0.9) {
-        commentary = generateCommentary('finalStretch')
-        
-        // Add odds commentary occasionally
-        if (Math.random() > 0.8 && leaderRunner) {
-          commentary += ` ${generateOddsCommentary(leaderRunner.name, leaderRunner.odds)}`
-        }
-      }
-      // Final stretch commentary (90%+)
-      else {
-        if (timeRemaining < 10) {
-          // Sprint finish
-          commentary = generateCommentary('sprintFinish', { runner: leaderName })
-        } else {
-          // Regular final stretch
-          commentary = generateCommentary('finalStretch')
-        }
-      }
-      
-      // Add category-specific flavor occasionally
-      if (Math.random() > 0.8) {
-        const categoryCommentary = generateCategoryCommentary(categoryId)
-        if (categoryCommentary) {
-          commentary = `${categoryCommentary} ${commentary}`
-        }
-      }
-      
-      // Avoid repetition by checking history
-      if (commentaryHistory.value.includes(commentary)) {
-        // If we've used this commentary recently, try to generate a different one
-        // or fall back to a simple leader update
-        commentary = `${meetingName} R${raceNumber}: ${leaderName} leads`
-      }
-      
-      // Add to history (keep last 5 commentaries)
-      commentaryHistory.value.push(commentary)
-      if (commentaryHistory.value.length > 5) {
-        commentaryHistory.value.shift()
-      }
-      
-      return `${meetingName} R${raceNumber}: ${commentary}`
-    } catch (error) {
-      // Fallback to simple commentary if there's an error
-      return `${meetingName} R${raceNumber}: Race in progress`
-    }
-  }
-  
-  // Generate winner announcement
-  const generateWinnerAnnouncement = (
-    raceId: string,
-    winnerId: string,
-    meetingName: string,
-    raceNumber: number
-  ): string => {
-    try {
-      const runners = getSimulatedRunners(raceId)
-      const winnerRunner = runners.find(r => r.id === winnerId)
-      const winnerName = winnerRunner ? winnerRunner.name : 'Unknown'
-      
-      const winnerCommentary = generateCommentary('winner', { runner: winnerName })
-      const categoryCommentary = generateCategoryCommentary('horse') // Default to horse for winner
-      
-      return `${meetingName} R${raceNumber}: ${winnerCommentary} ${categoryCommentary}`
-    } catch (error) {
-      return `${meetingName} R${raceNumber}: Race finished`
-    }
-  }
-  
-  return {
     generateRaceCommentary,
     generateWinnerAnnouncement,
-    generateCategoryCommentary
+    clearCommentary
   }
 }

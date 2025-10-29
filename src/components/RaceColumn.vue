@@ -1,9 +1,9 @@
 <template>
-  <div 
+  <div
     v-if="!error"
     class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden transition-all duration-500 animate-bounce-in flex flex-col h-full relative border-2 border-surface"
-    :class="{ 
-      'ring-2 ring-brand-primary': isActive, 
+    :class="{
+      'ring-2 ring-brand-primary': isActive,
       'opacity-50 pointer-events-none': isExpired,
       'animate-pulse-slow': raceStatus === 'starting_soon',
       'border-warning': raceStatus === 'starting_soon',
@@ -18,7 +18,7 @@
     role="region"
   >
     <!-- Full card background with subtle race-type color overlay (10% opacity) -->
-    <div 
+    <div
       class="absolute inset-0 rounded-xl2 pointer-events-none select-none opacity-10"
       :class="{
         'bg-horse': race.category_id === CATEGORY_IDS.HORSE,
@@ -26,15 +26,15 @@
         'bg-harness': race.category_id === CATEGORY_IDS.HARNESS
       }"
     ></div>
-    
+
     <!-- Full card background category icon - moved outside conditional to prevent disappearing -->
     <div class="absolute inset-0 opacity-30 w-full h-full pointer-events-none select-none">
-      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-2 right-4 z-0">🏇</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-2 right-4 z-0">🐕</span>
-      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-2 right-4 z-0">🛞</span>
+      <span v-if="race.category_id === CATEGORY_IDS.HORSE" class="text-[120px] block absolute bottom-0 right-4 z-0" style="transform: translateY(34px);">🏇</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.GREYHOUND" class="text-[120px] block absolute bottom-0 right-4 z-0" style="transform: translateY(34px);">🐕</span>
+      <span v-else-if="race.category_id === CATEGORY_IDS.HARNESS" class="text-[120px] block absolute bottom-0 right-4 z-0" style="transform: translateY(34px);">🛞</span>
     </div>
-    
-    <RaceHeader 
+
+    <RaceHeader
       :meeting-name="race.meeting_name"
       :race-number="race.race_number"
       :category-id="race.category_id"
@@ -43,7 +43,7 @@
       :race-id="race.id"
       :race-finished="raceFinished"
     />
-    
+
     <SimulationControlsSection
       :race="race"
       :show-game="betsStore.showGame"
@@ -52,7 +52,7 @@
       @start-race-simulation="startRaceSimulation"
       @reset-race-simulation="resetRaceSimulation"
     />
-    
+
     <RunnersSection
       :race-id="race.id"
       :race-name="race.meeting_name"
@@ -63,7 +63,7 @@
       :runners-for-display="runnersForDisplay"
       @add-to-betslip="handleAddToBetslip"
     />
-    
+
     <OddsTrendSection
       :race-id="race.id"
       :show-game="betsStore.showGame"
@@ -72,20 +72,20 @@
       :show-odds-chart="showOddsChart"
       @toggle-odds-chart="toggleOddsChart"
     />
-    
-    <RaceResults 
+
+    <RaceResults
       v-if="raceResult && !isExpired && betsStore.showGame && raceFinished"
       :race-id="race.id"
       :runners="runnersForBetPlacer"
       :race-result="raceResult"
     />
   </div>
-  
+
   <!-- Error boundary -->
   <div v-else class="bg-surface-raised rounded-xl2 shadow-card overflow-hidden flex flex-col h-full relative border border-danger p-4">
     <div class="text-danger font-bold mb-2">Error Loading Race</div>
     <div class="text-text-muted text-sm mb-4">{{ error }}</div>
-    <button 
+    <button
       @click="retryLoad"
       class="px-3 py-1 bg-brand-primary text-text-inverse rounded text-sm hover:bg-opacity-90"
     >
@@ -176,15 +176,15 @@ const raceStatus = computed(() => {
 // Watch for race status changes to manage odds updates
 watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, startingSoon, isExpired]) => {
   // Race status changed for race
-  
+
   // Check if race is in countdown status (upcoming race)
   // Odds should update only when race is upcoming (countdown) and not expired
-  // DO NOT allow odds updates when "starting soon" - odds must be locked
-  const isCountdown = !isExpired && !inProgress && !startingSoon && !raceFinished.value;
-  
+  // Allow odds updates during "starting soon" period - odds are only locked when race actually starts
+  const isCountdown = !isExpired && !inProgress && !raceFinished.value;
+
   // Explicitly check if we're in simulation mode
   const isInSimulationMode = betsStore.showGame && betsStore.useSimulatedData;
-  
+
   if (isCountdown && isInSimulationMode) {
     // Register race for global odds updates
     // console.log('Registering race for odds updates:', props.race.id);
@@ -199,7 +199,7 @@ watch([isInProgress, isStartingSoon, () => props.isExpired], ([inProgress, start
 // Start race simulation when countdown ends with smooth transition
 watch(isInProgress, (inProgress) => {
   // inProgress changed for race to inProgress
-  
+
   if (inProgress && betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value && !raceLive.value) {
     // Start the simulation when countdown finishes
     if (simulationController) {
@@ -208,7 +208,7 @@ watch(isInProgress, (inProgress) => {
         raceLive.value = true
         // Emit race started event
         emit('race-started')
-        
+
         // Dispatch race start event for live ticker
         const event = new CustomEvent('race-start', {
           detail: {
@@ -238,10 +238,10 @@ watch(isInProgress, (inProgress) => {
 // Compute runners with significant odds changes for visual indicators
 const runnersWithSignificantChanges = computed(() => {
   if (!betsStore.showGame || !betsStore.useSimulatedData) return []
-  
+
   // For starting soon races, don't show any runners with trends (odds are locked)
   if (raceStatus.value === 'starting_soon') return []
-  
+
   const runners = getSimulatedRunners(props.race.id)
   // Filter to only show runners with significant odds changes (trend is not 'none')
   return runners.filter((runner: SimulatedRunner) => runner.oddsTrend !== 'none')
@@ -267,30 +267,36 @@ const updateRaceProgress = (raceId: string, progress: {
 // Initialize race simulation
 const initializeRaceSimulation = () => {
   // Initializing race simulation for race
-  
+
   // Only initialize in simulation mode
   if (!betsStore.showGame || !betsStore.useSimulatedData) {
     // Not in simulation mode, skipping initialization
     return
   }
-  
+
   // Check concurrent simulation limit using global manager
   if (!canStartSimulation()) {
     // Too many active simulations, skipping initialization for now
     return
   }
-  
+
   try {
     // Initializing race simulation for race
     // Clean up any existing simulation
     cleanupSimulation()
-    
+
     // Generate randomized runners based on race category with initial odds
     const runners = generateRandomizedRunners(props.race.id, props.race.category_id)
-    
+
     // Initialize odds simulation
     initializeOddsSimulation(props.race.id, runners)
-    
+
+    // Register race for global odds updates immediately when simulation starts
+    // This ensures odds animations start for upcoming races as soon as simulation starts
+    if (!props.isExpired && !raceFinished.value) {
+      registerCountdownRace(props.race.id);
+    }
+
     // Create race simulation
     const raceInput = {
       id: props.race.id,
@@ -305,21 +311,21 @@ const initializeRaceSimulation = () => {
         decimalOdds: typeof runner.odds === 'number' ? runner.odds : 6.0
       }))
     }
-    
+
     // Calculate optimal tick interval using global simulation manager
     const tickMs = calculateOptimalTickInterval();
-    
+
     simulationController = createSimulation(raceInput, undefined, tickMs)
-    
+
     // Increment active simulation count using global manager
     incrementSimulationCount();
-    
+
     // Set up tick handler for race progress updates only
     // DO NOT update odds during live race - odds are locked once race starts
     simulationController.onTick((tick: Tick) => {
       try {
         // Race tick for race with progress and order
-        
+
         // Update race progress in the simulation store
         updateRaceProgress(props.race.id, {
           progressByRunner: tick.progressByRunner,
@@ -327,47 +333,124 @@ const initializeRaceSimulation = () => {
           gaps: tick.gaps,
           etaMs: tick.etaMs
         });
-        
+
         // Dispatch race update event for live ticker with leaderboard information
         const runners = getSimulatedRunners(props.race.id);
         const leaderboard = tick.order.slice(0, 3).map(runnerId => {
           const runner = runners.find(r => r.id === runnerId);
           return runner ? { id: runner.id, name: runner.name, number: runner.number } : null;
         }).filter(Boolean);
-        
+
         // Generate commentary based on race progress
         let commentary = "";
         if (tick.order.length > 0) {
           const leaderId = tick.order[0];
           const leaderRunner = runners.find(r => r.id === leaderId);
-          
+
           if (leaderRunner) {
-            // Check for close competition
+            // Create more varied commentary based on different race situations
             if (tick.order.length > 1 && tick.gaps) {
               const secondId = tick.order[1];
               const gap = Math.abs(tick.gaps[leaderId] - tick.gaps[secondId]);
+              const secondRunner = runners.find(r => r.id === secondId);
               
-              if (gap < 0.1) {
-                const secondRunner = runners.find(r => r.id === secondId);
-                if (secondRunner) {
-                  commentary = `${leaderRunner.name} and ${secondRunner.name} are neck and neck!`;
+              if (secondRunner) {
+                // Neck and neck situation
+                if (gap < 0.1) {
+                  const neckAndNeckCommentary = [
+                    `${leaderRunner.name} and ${secondRunner.name} are neck and neck!`,
+                    `${leaderRunner.name} and ${secondRunner.name} are running stride for stride!`,
+                    `${leaderRunner.name} and ${secondRunner.name} are locked in a fierce battle!`,
+                    `${leaderRunner.name} and ${secondRunner.name} are trading blows at the front!`,
+                    `${leaderRunner.name} and ${secondRunner.name} are inseparable at the lead!`,
+                    `${leaderRunner.name} and ${secondRunner.name} are matching each other move for move!`,
+                    `${leaderRunner.name} and ${secondRunner.name} are in a photo finish battle!`
+                  ];
+                  commentary = neckAndNeckCommentary[Math.floor(Math.random() * neckAndNeckCommentary.length)];
                 }
-              } else if (gap < 0.3) {
-                commentary = `${leaderRunner.name} holds a narrow lead`;
+                // Narrow lead situation
+                else if (gap < 0.3) {
+                  const narrowLeadCommentary = [
+                    `${leaderRunner.name} holds a narrow lead over ${secondRunner.name}`,
+                    `${leaderRunner.name} edges ahead of ${secondRunner.name}`,
+                    `${leaderRunner.name} maintains a slender advantage over ${secondRunner.name}`,
+                    `${leaderRunner.name} clings to a precarious lead over ${secondRunner.name}`,
+                    `${leaderRunner.name} just holds the advantage over ${secondRunner.name}`,
+                    `${leaderRunner.name} has a slight edge over ${secondRunner.name}`,
+                    `${leaderRunner.name} is barely ahead of ${secondRunner.name}`
+                  ];
+                  commentary = narrowLeadCommentary[Math.floor(Math.random() * narrowLeadCommentary.length)];
+                }
+                // Clear lead situation
+                else {
+                  const clearLeadCommentary = [
+                    `${leaderRunner.name} has opened up a clear lead over ${secondRunner.name}`,
+                    `${leaderRunner.name} has established a commanding advantage over ${secondRunner.name}`,
+                    `${leaderRunner.name} is pulling away from ${secondRunner.name} at the front`,
+                    `${leaderRunner.name} has broken clear at the head of the field over ${secondRunner.name}`,
+                    `${leaderRunner.name} is striding away from the competition led by ${secondRunner.name}`,
+                    `${leaderRunner.name} has built a substantial lead over ${secondRunner.name}`,
+                    `${leaderRunner.name} is dominating the field with ${secondRunner.name} in pursuit`
+                  ];
+                  commentary = clearLeadCommentary[Math.floor(Math.random() * clearLeadCommentary.length)];
+                }
               } else {
-                commentary = `${leaderRunner.name} has opened up a clear lead`;
+                // Leader with no clear second
+                const leaderCommentary = [
+                  `${leaderRunner.name} takes the lead!`,
+                  `${leaderRunner.name} moves to the front!`,
+                  `${leaderRunner.name} surges ahead!`,
+                  `${leaderRunner.name} powers into the lead!`,
+                  `${leaderRunner.name} seizes the lead!`,
+                  `${leaderRunner.name} makes a bold move to the front!`,
+                  `${leaderRunner.name} breaks clear at the front!`,
+                  `${leaderRunner.name} establishes a commanding lead!`,
+                  `${leaderRunner.name} bursts to the front of the field!`,
+                  `${leaderRunner.name} takes command of the race!`,
+                  `${leaderRunner.name} assumes the lead position!`,
+                  `${leaderRunner.name} charges to the front!`
+                ];
+                commentary = leaderCommentary[Math.floor(Math.random() * leaderCommentary.length)];
               }
             } else {
-              const commentaryOptions = [
+              // Solo leader situation
+              const soloLeaderCommentary = [
                 `${leaderRunner.name} takes the lead!`,
                 `${leaderRunner.name} moves to the front!`,
-                `${leaderRunner.name} surges ahead!`
+                `${leaderRunner.name} surges ahead!`,
+                `${leaderRunner.name} powers into the lead!`,
+                `${leaderRunner.name} seizes the lead!`,
+                `${leaderRunner.name} makes a bold move to the front!`,
+                `${leaderRunner.name} breaks clear at the front!`,
+                `${leaderRunner.name} establishes a commanding lead!`,
+                `${leaderRunner.name} bursts to the front of the field!`,
+                `${leaderRunner.name} takes command of the race!`,
+                `${leaderRunner.name} assumes the lead position!`,
+                `${leaderRunner.name} charges to the front!`,
+                `${leaderRunner.name} is setting the pace at the front!`,
+                `${leaderRunner.name} is showing the way at the head of the field!`,
+                `${leaderRunner.name} is dictating the tempo from the front!`
               ];
-              commentary = commentaryOptions[Math.floor(Math.random() * commentaryOptions.length)];
+              commentary = soloLeaderCommentary[Math.floor(Math.random() * soloLeaderCommentary.length)];
             }
           }
+        } else {
+          // Fallback commentary when no leader is determined
+          const fallbackCommentary = [
+            "The field is bunched up early!",
+            "The pace looks comfortable so far.",
+            "The competitors are jostling for position.",
+            "Plenty of energy on display here.",
+            "The field is moving in unison.",
+            "The early stages are unfolding evenly.",
+            "The competitors are feeling each other out.",
+            "The pace is steady but not taxing.",
+            "The field is settling into a rhythm.",
+            "The competitors are positioning themselves carefully."
+          ];
+          commentary = fallbackCommentary[Math.floor(Math.random() * fallbackCommentary.length)];
         }
-        
+
         const updateEvent = new CustomEvent('race-update', {
           detail: {
             raceId: props.race.id,
@@ -393,7 +476,7 @@ const initializeRaceSimulation = () => {
         }
       }
     })
-    
+
     // Set up finish handler for results
     simulationController.onFinish((result: Result) => {
       try {
@@ -402,34 +485,34 @@ const initializeRaceSimulation = () => {
         raceResult.value = {
           placings: result.placings
         }
-        
+
         // Mark race as finished
         raceFinished.value = true
         raceLive.value = false
-        
+
         // Decrement active simulation count using global manager
         decrementSimulationCount();
-        
+
         // Emit race finished event
         emit('race-finished')
-        
+
         // Settle any bets for this race
         const settlements = betsStore.settleRace(props.race.id, { placings: result.placings })
-        
+
         // Check if user won any bets and trigger celebration animation
         if (settlements && settlements.length > 0) {
           const winningSettlements = settlements.filter(s => s.result === 'WON')
           if (winningSettlements.length > 0) {
             // Trigger win celebration
-            const event = new CustomEvent('win-celebration', { 
-              detail: { 
-                winAmount: winningSettlements.reduce((sum, s) => sum + s.payout, 0) 
-              } 
+            const event = new CustomEvent('win-celebration', {
+              detail: {
+                winAmount: winningSettlements.reduce((sum, s) => sum + s.payout, 0)
+              }
             })
             window.dispatchEvent(event)
           }
         }
-      
+
         // Dispatch race finish event for live ticker
         const finishEvent = new CustomEvent('race-finish', {
           detail: {
@@ -468,6 +551,12 @@ onMounted(() => {
     // Only initialize simulation in simulation mode
     if (betsStore.showGame && betsStore.useSimulatedData) {
       initializeRaceSimulation()
+      
+      // Register race for global odds updates when component mounts in simulation mode
+      // This ensures odds animations start for upcoming races immediately
+      if (!props.isExpired && !raceFinished.value) {
+        registerCountdownRace(props.race.id);
+      }
     }
   } catch (err) {
     // Enhanced error handling with user-friendly error messages
@@ -483,7 +572,7 @@ onMounted(() => {
 // Also start race simulation when manually triggered (for testing)
 const startRaceSimulation = () => {
   // Manual start race simulation requested for race
-  
+
   if (betsStore.showGame && betsStore.useSimulatedData && !raceFinished.value && !raceLive.value) {
     // Check concurrent simulation limit using global manager
     if (!canStartSimulation()) {
@@ -491,7 +580,7 @@ const startRaceSimulation = () => {
       error.value = 'Too many active simulations. Please wait for some to finish.';
       return;
     }
-    
+
     // Mark race as live
     raceLive.value = true
     // Increment active simulation count using global manager
@@ -529,7 +618,7 @@ const cleanupSimulation = () => {
     raceResult.value = null
     raceFinished.value = false
     raceLive.value = false
-    
+
     // Decrement active simulation count using global manager
     decrementSimulationCount();
   } catch (err) {
@@ -546,7 +635,7 @@ const cleanupSimulation = () => {
 // Watch for changes in simulation mode
 watch(() => betsStore.showGame && betsStore.useSimulatedData, (newVal, oldVal) => {
   // Simulation mode changed for race from oldVal to newVal
-  
+
   if (newVal && !oldVal) {
     // Switching to simulation mode
     try {
@@ -556,9 +645,16 @@ watch(() => betsStore.showGame && betsStore.useSimulatedData, (newVal, oldVal) =
         error.value = 'Too many active simulations. Please wait for some to finish.';
         return;
       }
-      
+
       // Initializing race simulation for race
       initializeRaceSimulation()
+      
+      // Register race for global odds updates when switching to simulation mode
+      // This ensures odds animations start for upcoming races immediately
+      if (!props.isExpired && !raceFinished.value) {
+        registerCountdownRace(props.race.id);
+      }
+      
       // Make sure the chart knows the simulation is available
       setTimeout(() => {
         window.dispatchEvent(new CustomEvent('simulation-initialized', { detail: { raceId: props.race.id } }));
@@ -624,20 +720,20 @@ const runnersForDisplay = computed(() => {
   if (!betsStore.showGame || !betsStore.useSimulatedData) {
     return []
   }
-  
+
   // In simulation mode, show simulated runners
   const runners = getSimulatedRunners(props.race.id)
   // Got simulated runners for race
-  
+
   const formattedRunners = runners.map((runner: SimulatedRunner) => ({
     ...runner,
     odds: runner.odds === 'SP' ? 'SP' : runner.odds.toString(),
     // For non-simulation mode, we always show 'none' trend
     oddsTrend: (!betsStore.showGame || !betsStore.useSimulatedData) ? 'none' : runner.oddsTrend
   }));
-  
+
   // Updating runners for display for race
-  
+
   return formattedRunners;
 })
 
@@ -651,7 +747,7 @@ const handleAddToBetslip = (runner: any) => {
 // Handle keyboard navigation
 const handleKeyDown = (event: KeyboardEvent) => {
   if (!props.isActive) return
-  
+
   switch (event.key) {
     case 'ArrowRight':
       event.preventDefault()
