@@ -162,13 +162,6 @@ onUnmounted(() => {
 
 <template>
   <div class="bg-surface-sunken px-3 py-2 flex items-center justify-between relative rounded-t-xl2 overflow-hidden">
-    <!-- Background category icon (full card) -->
-    <div class="absolute bottom-0 right-0 opacity-20 w-full h-full z-0 overflow-hidden pointer-events-none select-none">
-      <span v-if="categoryIcon === 'horse'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🏇</span>
-      <span v-else-if="categoryIcon === 'greyhound'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🐕</span>
-      <span v-else-if="categoryIcon === 'harness'" class="text-[120px] block absolute bottom-[-25%] right-[-15%]">🛞</span>
-    </div>
-    
     <!-- Race number cap (smaller circular) -->
     <div class="absolute top-1/2 left-2 transform -translate-y-1/2 bg-brand-primary text-text-inverse w-6 h-6 flex items-center justify-center font-bold text-sm z-10 rounded-full">
       {{ raceNumber }}
