@@ -193,6 +193,7 @@
   const handleOpenBetslip = (payload: {
     race: any;runner: any
   }) => {
+    console.log('App.vue: handleOpenBetslip called with payload', payload);
     // Open the betslip drawer
     isBetslipOpen.value = true
 
@@ -205,6 +206,7 @@
           runner: payload.runner
         }
       })
+      console.log('App.vue: Dispatching open-betslip event with data', { race: payload.race, runner: payload.runner });
       window.dispatchEvent(event)
     }, 100)
   }

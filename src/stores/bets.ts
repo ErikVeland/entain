@@ -51,7 +51,9 @@ export const useBetsStore = defineStore('bets', {
     
     placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: string) {
       try {
+        console.log('BetsStore: Placing bet with parameters', { raceId, runnerId, stake, odds, advertisedStartMs, meetingName, raceNumber, runnerName, categoryId });
         const result = this.engine.placeBet(raceId, runnerId, stake, odds, advertisedStartMs, meetingName, raceNumber, runnerName, categoryId)
+        console.log('BetsStore: Bet placed successfully with result', result);
         // Check if player is now bankrupt after placing the bet
         this.checkGameOver()
         return result

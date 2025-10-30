@@ -173,9 +173,21 @@ function paceCurve(u: number, accel = 0.3, kick = 0.2, stamina = 1.0): number {
 	// Mid race: introduce more variation to create dynamic position changes
 	const midSpan = 1 - accel - kick;
 	const x = (u - accel) / midSpan;
+<<<<<<< Local
 	// Add more pronounced mid-race variations for dynamic racing
 	const variation = 0.05 * Math.sin(u * 15) + 0.03 * Math.cos(u * 25);
 	return accel + x * midSpan + variation;
+=======
+	// Stamina affects mid-race consistency - tired runners have more variation
+	const consistency = Math.min(1, stamina * 1.2);
+	const variation = (1 - consistency) * 0.05 * (Math.sin(u * 20) + Math.cos(u * 15));
+	
+	// Add more dynamic variations for exciting mid-race battles
+	// Create opportunities for position changes throughout the race
+	const midRaceVariation = 0.03 * Math.sin(u * 30) * Math.cos(u * 25);
+	
+	return accel / 2 + x * midSpan + variation + midRaceVariation;
+>>>>>>> Remote
 }
 
 /* ------------------------------- Simulation ------------------------------- */
@@ -277,14 +289,47 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 		const oddsFactor = Math.max(0.7, Math.min(1.3, 1.5 - (odds / 20))); // Shorter odds = better performance
 		
 		// Create more varied acceleration patterns to generate dynamic race situations
-		const accel = (0.15 + 0.20 * s + (rand() - 0.5) * 0.15) * oddsFactor; // Acceleration influenced by odds
+		// Add more randomness to create diverse runner types
+		const accelBase = 0.15 + 0.20 * s;
+		const accelVariation = (rand() - 0.5) * 0.3; // Increased variation
+		const accel = accelBase + accelVariation * oddsFactor;
+		
 		// Create more varied kick patterns for late race excitement
-		const kick = (0.10 + 0.15 * s + (rand() - 0.5) * 0.15) * oddsFactor;  // Kick influenced by odds
+		const kickBase = 0.10 + 0.15 * s;
+		const kickVariation = (rand() - 0.5) * 0.3; // Increased variation
+		const kick = kickBase + kickVariation * oddsFactor;
+		
 		// Increase jitter for more dynamic position changes
-		const jitter = (0.015 + (1 - s) * 0.025) / oddsFactor; // Higher odds = more jitter (less consistent)
+		const jitterBase = 0.015 + (1 - s) * 0.025;
+		const jitterVariation = rand() * 0.02; // Additional variation
+		const jitter = (jitterBase + jitterVariation) / oddsFactor;
+		
 		// Stamina factor with more variation to create comebacks, influenced by odds
-		const stamina = clamp01((0.6 + 0.4 * s + (rand() - 0.5) * 0.3) * environmentalStaminaFactor * oddsFactor);
-		paceParams[r.id] = { accel: clamp01(accel), kick: clamp01(kick), jitter, stamina: clamp01(stamina) };
+		const staminaBase = 0.6 + 0.4 * s;
+		const staminaVariation = (rand() - 0.5) * 0.6; // Increased variation
+		const stamina = clamp01((staminaBase + staminaVariation) * environmentalStaminaFactor * oddsFactor);
+		
+		// Add runner-specific characteristics for more diversity
+		// Some runners are early speed specialists, others are closers
+		const runnerType = rand();
+		let finalAccel = clamp01(accel);
+		let finalKick = clamp01(kick);
+		let finalStamina = clamp01(stamina);
+		
+		if (runnerType < 0.3) {
+			// Early speed specialist - strong acceleration, weaker kick
+			finalAccel = clamp01(finalAccel * 1.3);
+			finalKick = clamp01(finalKick * 0.7);
+			finalStamina = clamp01(finalStamina * 0.9);
+		} else if (runnerType > 0.7) {
+			// Closer - weaker acceleration, strong kick
+			finalAccel = clamp01(finalAccel * 0.7);
+			finalKick = clamp01(finalKick * 1.3);
+			finalStamina = clamp01(finalStamina * 1.1);
+		}
+		// Middle type runners - balanced characteristics
+		
+		paceParams[r.id] = { accel: finalAccel, kick: finalKick, jitter, stamina: finalStamina };
 	}
 
 	// State
@@ -306,7 +351,28 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 		const fatigue = Math.max(0.5, 1 - (u * 0.5 * environmentalStaminaFactor)); // Up to 50% slower at end
 		// Add occasional burst of speed for dramatic position changes
 		const burst = (rand() < 0.02) ? (rand() * 0.1) : 0; // 2% chance of a speed burst
-		return clamp01((base + j + burst) * fatigue);
+		
+		// Add late race surge mechanics for exciting finishes
+		let lateSurge = 0;
+		if (u > 0.8 && rand() < 0.15) { // 15% chance of a late surge in the final 20%
+			const surgeStrength = 0.05 + (rand() * 0.1); // 5-15% speed increase
+			lateSurge = surgeStrength * (1 - u) * 5; // Stronger surge closer to the end
+		}
+		
+		// Add early race variability for dynamic starts
+		let earlyVariation = 0;
+		if (u < 0.2) { // In the first 20% of the race
+			// Create more variation in early pace
+			earlyVariation = (rand() - 0.5) * 0.05; // ±2.5% variation
+		}
+		
+		// Add mid-race tactical moves for position changes
+		let tacticalMove = 0;
+		if (u > 0.3 && u < 0.7 && rand() < 0.1) { // 10% chance of tactical move in mid-race
+			tacticalMove = (rand() - 0.5) * 0.08; // ±4% variation
+		}
+		
+		return clamp01((base + j + burst + lateSurge + earlyVariation + tacticalMove) * fatigue);
 	}
 
 	function emitTick(): void {

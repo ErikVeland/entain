@@ -170,9 +170,12 @@ const clearSelections = () => {
 }
 
 const placeBets = () => {
+  console.log('BetslipDrawer: placeBets called with selections', betslipSelections.value);
+  
   if (betslipSelections.value.length === 0 || !hasValidStakes.value) {
     playErrorSound()
     showToast('Please add at least one bet with a valid stake', 'error')
+    console.log('BetslipDrawer: No valid selections to place');
     return
   }
   
@@ -208,6 +211,18 @@ const placeBets = () => {
           const race = racesStore.races.find(r => r.id === selection.raceId)
           const categoryId = race ? race.category_id : undefined
           
+          console.log('BetslipDrawer: Placing bet with data', {
+            raceId: selection.raceId,
+            runnerId: selection.runnerId,
+            stake,
+            odds: selection.odds,
+            advertisedStartMs,
+            raceName: selection.raceName,
+            raceNumber: selection.raceNumber,
+            runnerName: selection.runnerName,
+            categoryId
+          });
+          
           const betId = betsStore.placeBet(
             selection.raceId,
             selection.runnerId,
@@ -219,6 +234,8 @@ const placeBets = () => {
             selection.runnerName,
             categoryId
           )
+          
+          console.log('BetslipDrawer: Bet placed successfully with ID', betId);
           
           // Add to placed bets for history tracking
           placedBets.push({
@@ -239,6 +256,7 @@ const placeBets = () => {
           delete placingBets.value[selection.id]
         } catch (error: unknown) {
           const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error('BetslipDrawer: Error placing bet', errorMessage);
           // Show error in a more user-friendly way
           playErrorSound()
           showToast(`Error placing bet: ${errorMessage}`, 'error')
@@ -246,6 +264,7 @@ const placeBets = () => {
           delete placingBets.value[selection.id]
         }
       } else {
+        console.log('BetslipDrawer: Skipping bet with zero stake');
         // Remove the selection from the placing animation tracking
         delete placingBets.value[selection.id]
       }
@@ -255,14 +274,17 @@ const placeBets = () => {
   // Add placed bets to history after a delay
   setTimeout(() => {
     betHistory.value = [...betHistory.value, ...placedBets]
+    console.log('BetslipDrawer: Updated bet history with', placedBets.length, 'new bets');
   }, betslipSelections.value.length * 200 + 1000)
   
   // Show success message
   showToast(`Bets placed successfully! Total stake: $${(totalStake / 100).toFixed(2)}`, 'success')
+  console.log('BetslipDrawer: Bets placed successfully, total stake:', totalStake);
   
   // Clear selections after placing (but keep the animation tracking)
   setTimeout(() => {
     clearSelections()
+    console.log('BetslipDrawer: Cleared selections after placing bets');
   }, betslipSelections.value.length * 200 + 500)
 }
 
@@ -331,6 +353,8 @@ const handleOpenBetslip = (event: CustomEvent) => {
   const { race, runner } = event.detail
   const raceId = race?.id
   
+  console.log('BetslipDrawer: Processing bet selection for race', race?.meeting_name, 'runner', runner?.name);
+  
   // If runner data is provided, add it to the betslip
   if (runner) {
     // Convert odds to number or 'SP'
@@ -341,6 +365,8 @@ const handleOpenBetslip = (event: CustomEvent) => {
         odds = oddsNum
       }
     }
+    
+    console.log('BetslipDrawer: Adding selection with odds', odds);
     
     // Add to betslip
     addSelection({

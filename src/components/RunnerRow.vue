@@ -215,52 +215,56 @@ const oddsButtonClass = computed(() => {
 })
 
 const handleOddsClick = () => {
+  console.log('RunnerRow: handleOddsClick called for runner', props.runner.name);
+  
   // Check race status - only allow betting on countdown races (upcoming)
   const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
   let isRaceCountdown = false;
   if (raceElement) {
     const raceStatus = raceElement.getAttribute('data-race-status');
+    console.log('RunnerRow: Race status is', raceStatus);
     // Allow betting only on countdown races (upcoming)
     isRaceCountdown = raceStatus === 'countdown';
   }
   
   // MUST prevent betting if race is not in countdown status
   if (!isRaceCountdown) {
+    console.log('RunnerRow: Cannot place bet - race is not in countdown status');
     // BLOCKED: Cannot place bet on non-countdown race
     return;
   }
   
   // Prevent betting if game mode is disabled
   if (!betsStore.showGame) {
+    console.log('RunnerRow: Cannot place bet - game mode is disabled');
     // BLOCKED: Cannot place bet when game mode is disabled
     return;
   }
   
   // Prevent betting on expired races
   if (props.isExpired) {
+    console.log('RunnerRow: Cannot place bet - race is expired');
     // BLOCKED: Cannot place bet on expired race
     return;
   }
   
+  console.log('RunnerRow: All conditions met, dispatching open-betslip event');
+  
   // Emit event to parent to handle adding to betslip
-  const raceElementForEvent = document.querySelector(`[data-race-id="${props.raceId}"]`);
-  let raceData = {
+  // Create proper race object with the required fields
+  const race = {
     id: props.raceId,
-    name: props.raceName,
-    number: props.raceNumber
+    meeting_name: props.raceName,
+    race_number: props.raceNumber
   };
   
-  // Try to get race data from the DOM element if available
-  if (raceElementForEvent) {
-    const raceName = raceElementForEvent.getAttribute('data-race-name');
-    const raceNumber = raceElementForEvent.getAttribute('data-race-number');
-    if (raceName && raceNumber) {
-      raceData = {
-        id: props.raceId,
-        name: raceName,
-        number: parseInt(raceNumber, 10)
-      };
+  // Dispatch a custom event that the App.vue can listen to
+  const event = new CustomEvent('open-betslip', {
+    detail: {
+      race,
+      runner: props.runner
     }
+<<<<<<< Local
   }
   
   // Emit event to parent to handle adding to betslip
@@ -270,7 +274,10 @@ const handleOddsClick = () => {
       runner: props.runner
     },
     bubbles: true
+=======
+>>>>>>> Remote
   });
+  console.log('RunnerRow: Dispatching open-betslip event with data', { race, runner: props.runner });
   window.dispatchEvent(event);
 }
 

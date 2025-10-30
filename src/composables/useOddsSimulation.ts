@@ -319,23 +319,39 @@ export function generateRandomizedRunners(raceId: string, categoryId: string): S
     // Generate base odds with favorites having shorter odds
     let baseOdds: number
     if (i < 2) {
+<<<<<<< Local
       // Positions 1-2: 1.2-2.0 (favorites)
       baseOdds = 1.2 + (Math.random() * 0.8);
     } else if (i < 5) {
       // Positions 3-5: 2.0-6.0 (contenders)
       baseOdds = 2.0 + (Math.random() * 4.0);
+=======
+      // Positions 1-2: 1.8-4.0 (favorites)
+      baseOdds = 1.8 + (Math.random() * 2.2);
+    } else if (i < 4) {
+      // Positions 3-4: 4.0-7.0 (strong contenders)
+      baseOdds = 4.0 + (Math.random() * 3.0);
+    } else if (i < 6) {
+      // Positions 5-6: 7.0-12.0 (contenders)
+      baseOdds = 7.0 + (Math.random() * 5.0);
+>>>>>>> Remote
     } else {
+<<<<<<< Local
       // Positions 6+: 6.0-50.0 (outsiders)
       baseOdds = 6.0 + (Math.random() * 44.0);
+=======
+      // Positions 7+: 12.0-25.0 (outsiders)
+      baseOdds = 12.0 + (Math.random() * 13.0);
+>>>>>>> Remote
     }
     
     // Add some category-specific adjustments
     if (categoryId === '9daef0d7-bf3c-4f50-921d-8e818c60fe61') { // Greyhound
       // Greyhounds typically have shorter odds
-      baseOdds *= 0.8;
+      baseOdds *= 0.9;
     } else if (categoryId === '161d9be2-e909-4326-8c2c-35ed71fb460b') { // Harness
       // Harness typically has longer odds
-      baseOdds *= 1.2;
+      baseOdds *= 1.1;
     }
     
     // Ensure minimum odds of 1.10
@@ -417,19 +433,24 @@ export function updateOdds(
     // Base odds calculation
     let newOdds = typeof runner.odds === 'number' ? runner.odds : 2.0 // Default to 2.0 if SP
     
-    // Adjust odds based on position and progress with moderate changes for realism
-    // If runner is leading and making good progress, shorten odds
+    // Adjust odds based on position and progress with more dynamic changes for realism
+    // If runner is leading and making good progress, significantly shorten odds
     if (positionFactor < 0.3 && progressFactor > 0.5) {
-      newOdds = Math.max(1.1, newOdds * 0.97) // Moderate shortening for leaders
+      // More significant shortening for leaders (5-15% change)
+      const shorteningFactor = 0.85 + (Math.random() * 0.10);
+      newOdds = Math.max(1.1, newOdds * shorteningFactor);
     }
-    // If runner is trailing and not making good progress, lengthen odds
+    // If runner is trailing and not making good progress, significantly lengthen odds
     else if (positionFactor > 0.7 && progressFactor < 0.3) {
-      newOdds = newOdds * 1.03 // Moderate lengthening for trailers
+      // More significant lengthening for trailers (5-15% change)
+      const lengtheningFactor = 1.05 + (Math.random() * 0.10);
+      newOdds = newOdds * lengtheningFactor;
     }
-    // Otherwise make small random adjustments
+    // For runners in the middle, make moderate random adjustments
     else {
-      const randomFactor = 0.95 + (Math.random() * 0.1) // 0.95-1.05 for more noticeable changes
-      newOdds = newOdds * randomFactor
+      // More noticeable changes (3-20% change)
+      const randomFactor = 0.80 + (Math.random() * 0.40);
+      newOdds = newOdds * randomFactor;
     }
     
     // Ensure reasonable odds range
