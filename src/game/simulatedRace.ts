@@ -158,24 +158,24 @@ function normaliseProbabilities(runners: RunnerInput[]): Map<string, number> {
 // Smooth acceleration → cruise → final kick. Returns progress [0..1] at time fraction u.
 // Enhanced with more realistic horse/greyhound/harness movement patterns
 function paceCurve(u: number, accel = 0.3, kick = 0.2, stamina = 1.0): number {
-	// Three-piece cubic Bezier-ish easing with stamina factor
+	// More dynamic pace curve with varied acceleration and kick phases
 	if (u <= accel) {
 		const x = u / accel; // early acceleration
-		return (x * x) / 2 * accel;
+		// More aggressive acceleration for favorites, more gradual for outsiders
+		return (x * x * x) * accel;
 	}
 	if (u >= 1 - kick) {
 		const x = (u - (1 - kick)) / kick; // late kick
-		// Stamina affects the final kick - tired runners have weaker final push
-		const kickStrength = Math.max(0.3, kick * stamina);
-		return 1 - (1 - kickStrength) * (1 - (1 - (1 - x) * (1 - x)) / 2);
+		// More varied final kick based on stamina
+		const kickStrength = Math.max(0.1, kick * stamina);
+		return 1 - (1 - kickStrength) * (1 - x * x);
 	}
-	// Mid race: near-linear with slight smoothing, but stamina affects consistency
+	// Mid race: introduce more variation to create dynamic position changes
 	const midSpan = 1 - accel - kick;
 	const x = (u - accel) / midSpan;
-	// Stamina affects mid-race consistency - tired runners have more variation
-	const consistency = Math.min(1, stamina * 1.2);
-	const variation = (1 - consistency) * 0.05 * (Math.sin(u * 20) + Math.cos(u * 15));
-	return accel / 2 + x * midSpan + variation;
+	// Add more pronounced mid-race variations for dynamic racing
+	const variation = 0.05 * Math.sin(u * 15) + 0.03 * Math.cos(u * 25);
+	return accel + x * midSpan + variation;
 }
 
 /* ------------------------------- Simulation ------------------------------- */

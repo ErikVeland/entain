@@ -264,7 +264,7 @@ const handleOddsClick = () => {
   }
   
   // Emit event to parent to handle adding to betslip
-  const event = new CustomEvent('add-to-betslip', {
+  const event = new CustomEvent('open-betslip', {
     detail: {
       race: raceData,
       runner: props.runner

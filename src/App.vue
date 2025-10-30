@@ -199,7 +199,7 @@
     // Add selection to betslip
     setTimeout(() => {
       // Dispatch a custom event that the betslip drawer can listen to
-      const event = new CustomEvent('add-to-betslip', {
+      const event = new CustomEvent('open-betslip', {
         detail: {
           race: payload.race,
           runner: payload.runner

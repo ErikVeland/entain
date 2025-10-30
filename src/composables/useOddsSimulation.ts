@@ -319,14 +319,14 @@ export function generateRandomizedRunners(raceId: string, categoryId: string): S
     // Generate base odds with favorites having shorter odds
     let baseOdds: number
     if (i < 2) {
-      // Positions 1-2: 1.5-2.5 (favorites)
-      baseOdds = 1.5 + (Math.random() * 1.0);
+      // Positions 1-2: 1.2-2.0 (favorites)
+      baseOdds = 1.2 + (Math.random() * 0.8);
     } else if (i < 5) {
-      // Positions 3-5: 2.5-5.0 (contenders)
-      baseOdds = 2.5 + (Math.random() * 2.5);
+      // Positions 3-5: 2.0-6.0 (contenders)
+      baseOdds = 2.0 + (Math.random() * 4.0);
     } else {
-      // Positions 6+: 5.0-20.0 (outsiders)
-      baseOdds = 5.0 + (Math.random() * 15.0);
+      // Positions 6+: 6.0-50.0 (outsiders)
+      baseOdds = 6.0 + (Math.random() * 44.0);
     }
     
     // Add some category-specific adjustments
