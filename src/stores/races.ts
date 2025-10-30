@@ -355,26 +355,30 @@ export const useRacesStore = defineStore('races', {
       const t = now()
       if (this.races.length === 0) return
       const before = this.races.length
-      this.races = this.races.filter(r => !isExpired(r, t))
-      const after = this.races.length
+      const filteredRaces = this.races.filter(r => !isExpired(r, t))
+      const after = filteredRaces.length
       
-      // If we removed races and now have fewer than 5, fetch more
-      if (before > after && after < 5) {
-        // Trigger a fetch in the background
-        setTimeout(() => {
-          // Get the store instance and call the action
-          const store = useRacesStore()
-          store.fetchRaces()
-        }, 100)
-      }
-      
+      // Only update if there's a change
       if (after !== before) {
+        // If we removed races and now have fewer than 5, fetch more
+        if (before > after && after < 5) {
+          // Trigger a fetch in the background
+          setTimeout(() => {
+            // Get the store instance and call the action
+            const store = useRacesStore()
+            store.fetchRaces()
+          }, 100)
+        }
+        
         // Keep sorted when pruning affects order
-        this.races.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+        filteredRaces.sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
+        
+        // Update races array
+        this.races = filteredRaces
+        
+        // Clear cache when pruning
+        this.clearCache()
       }
-      
-      // Clear cache when pruning
-      this.clearCache()
     },
 
     /**
@@ -391,7 +395,7 @@ export const useRacesStore = defineStore('races', {
           // Instead, we prune expired and any countdown component can
           // observe Date.now() or computed props.
           this.pruneExpired()
-        }, 1000)
+        }, 2000)
       }
 
       if (this._pollHandle == null) {
@@ -400,7 +404,7 @@ export const useRacesStore = defineStore('races', {
         this._pollHandle = window.setInterval(() => {
           // Fire and forget; errors are reflected in state
           void this.fetchRaces()
-        }, 15000)
+        }, 30000)
       }
     },
 

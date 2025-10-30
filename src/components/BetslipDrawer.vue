@@ -109,6 +109,16 @@ const hasValidStakes = computed(() => {
   })
 })
 
+// Handle Enter key press in the betslip drawer
+const handleKeyPress = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    // If we're in the betslip tab and there are valid bets, place them
+    if (activeTab.value === 'betslip' && canPlaceBetsValue.value) {
+      placeBets()
+    }
+  }
+}
+
 // Methods for betslip management
 const addSelection = (selection: Omit<BetSelection, 'id' | 'estimatedReturn' | 'stake'>) => {
   const newSelection: BetSelection = {
@@ -400,6 +410,8 @@ defineExpose({
       <div 
         class="relative w-full h-full bg-surface-raised shadow-xl flex flex-col"
         :class="isMobile ? 'rounded-t-xl' : 'rounded-l-xl'"
+        @keypress="handleKeyPress"
+        tabindex="0"
       >
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 bg-brand-primary rounded-t-xl">

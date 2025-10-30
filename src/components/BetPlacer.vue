@@ -1,5 +1,5 @@
 <template>
-  <div v-if="betsStore.showGame" class="mt-6 bg-surface-sunken rounded-lg p-4">
+  <div v-if="betsStore.showGame" class="mt-6 bg-surface-sunken rounded-lg p-4" @keypress="handleKeyPress" tabindex="0">
     <h3 class="text-lg font-semibold text-text-base mb-3">Place a Bet</h3>
     
     <div class="mb-4">
@@ -119,6 +119,13 @@ const canPlaceBet = computed(() => {
     betAmount.value <= bankroll.value.balance
   )
 })
+
+// Handle Enter key press
+const handleKeyPress = (event: KeyboardEvent) => {
+  if (event.key === 'Enter' && canPlaceBet.value) {
+    placeBet()
+  }
+}
 
 const formatOdds = (odds: number | 'SP') => {
   return odds === 'SP' ? 'SP' : odds.toFixed(2)

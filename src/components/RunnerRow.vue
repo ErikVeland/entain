@@ -1,54 +1,3 @@
-<template>
-  <div class="py-2 border-b border-surface last:border-b-0" :class="{ 'opacity-50 pointer-events-none': isExpired }">
-    <div class="flex items-start">
-      <!-- Silk color icon as circle with number inside -->
-      <div class="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0 flex items-center justify-center text-xs font-bold" :class="runner.silkColor">
-        <span class="text-text-inverse">{{ runner.number }}</span>
-      </div>
-      
-      <!-- Runner info and odds -->
-      <div class="flex-grow min-w-0">
-        <!-- Runner name full width -->
-        <div class="font-medium text-text-base truncate">
-          {{ runner.name }}
-        </div>
-        
-        <!-- Meta info and odds in a row below -->
-        <div class="flex items-center mt-1">
-          <!-- Meta info -->
-          <div class="text-sm text-text-muted truncate flex-grow min-w-0" v-if="runner.jockey || runner.weight || runner.bestTime">
-            <span v-if="runner.jockey" :title="runner.jockey">{{ formatJockeyName(runner.jockey) }}</span>
-            <span v-if="runner.jockey && runner.weight"> | </span>
-            <span v-if="runner.weight">{{ runner.weight }}</span>
-            <span v-if="(runner.jockey || runner.weight) && runner.bestTime"> | </span>
-            <!-- Expand BT to Best Time on larger screens -->
-            <span v-if="runner.bestTime" :title="$t('game.bestTime')">
-              <span class="hidden lg:inline">Best Time: {{ runner.bestTime }}</span>
-              <span class="lg:hidden">BT: {{ runner.bestTime }}</span>
-            </span>
-          </div>
-          
-          <!-- Odds button -->
-          <div class="ml-2 flex-shrink-0">
-            <button 
-              @click="handleOddsClick"
-              class="px-2 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center text-sm bg-surface-sunken hover:bg-brand-primary hover:text-text-inverse border-2 border-surface"
-              :class="oddsButtonClass"
-              :disabled="isExpired"
-              :aria-label="`${$t('game.addToBetslip')} ${runner.name} ${$t('game.at')} ${runner.odds}`"
-              :title="getOddsButtonTitle()"
-            >
-              {{ runner.odds }}
-              <span v-if="runner.oddsTrend === 'up'" :class="['ml-1 text-success', oddsAnimation]">▲</span>
-              <span v-else-if="runner.oddsTrend === 'down'" :class="['ml-1 text-danger', oddsAnimation]">▼</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
@@ -75,6 +24,7 @@ const props = defineProps<{
   raceId: string
   raceName: string
   raceNumber: number
+  categoryId?: string // Add categoryId prop to differentiate categories
   isExpired?: boolean
 }>()
 
@@ -137,13 +87,14 @@ watch(() => props.runner.odds, (newOdds: string | number, oldOdds: string | numb
   previousOddsNum.value = newNum
 })
 
-const formatJockeyName = (jockeyName: string) => {
-  if (!jockeyName) return ''
+// Format jockey/driver/trainer name based on category
+const formatPersonName = (personName: string) => {
+  if (!personName) return ''
   
-  // Check if the name already has the prefix (J: or D:)
-  if (jockeyName.startsWith('J:') || jockeyName.startsWith('D:')) {
+  // Check if the name already has the prefix (J:, D:, or T:)
+  if (personName.startsWith('J:') || personName.startsWith('D:') || personName.startsWith('T:')) {
     // Split the name into prefix and the rest
-    const [prefix, ...nameParts] = jockeyName.split(' ')
+    const [prefix, ...nameParts] = personName.split(' ')
     
     if (nameParts.length === 0) {
       return prefix
@@ -158,7 +109,7 @@ const formatJockeyName = (jockeyName: string) => {
   }
   
   // Handle names without prefix (fallback)
-  const parts = jockeyName.trim().split(' ')
+  const parts = personName.trim().split(' ')
   
   if (parts.length === 1) {
     return parts[0]
@@ -166,6 +117,54 @@ const formatJockeyName = (jockeyName: string) => {
   
   // Return first initial and last name
   return `${parts[0][0]}. ${parts[parts.length - 1]}`
+}
+
+// Get full person name without prefix for title attributes
+const getFullPersonName = (personName: string) => {
+  if (!personName) return ''
+  
+  // Check if the name has a prefix (J:, D:, or T:)
+  if (personName.startsWith('J:') || personName.startsWith('D:') || personName.startsWith('T:')) {
+    // Remove the prefix and return the rest of the name
+    const parts = personName.split(' ')
+    if (parts.length > 1) {
+      return parts.slice(1).join(' ')
+    }
+    return personName
+  }
+  
+  // Return the name as is if no prefix
+  return personName
+}
+
+// Get the label for the person based on category
+const getPersonLabel = () => {
+  // Category IDs
+  const CATEGORY_IDS = {
+    HORSE: '4a2788f8-e825-4d36-9894-efd4baf1cfae',
+    GREYHOUND: '9daef0d7-bf3c-4f50-921d-8e818c60fe61',
+    HARNESS: '161d9be2-e909-4326-8c2c-35ed71fb460b'
+  }
+  
+  switch (props.categoryId) {
+    case CATEGORY_IDS.GREYHOUND:
+      return 'Trainer'
+    case CATEGORY_IDS.HARNESS:
+      return 'Driver'
+    default:
+      return 'Jockey'
+  }
+}
+
+// Check if this is a greyhound race
+const isGreyhoundRace = () => {
+  const CATEGORY_IDS = {
+    HORSE: '4a2788f8-e825-4d36-9894-efd4baf1cfae',
+    GREYHOUND: '9daef0d7-bf3c-4f50-921d-8e818c60fe61',
+    HARNESS: '161d9be2-e909-4326-8c2c-35ed71fb460b'
+  }
+  
+  return props.categoryId === CATEGORY_IDS.GREYHOUND
 }
 
 const getOddsButtonTitle = () => {
@@ -228,65 +227,111 @@ const handleOddsClick = () => {
   // MUST prevent betting if race is not in countdown status
   if (!isRaceCountdown) {
     // BLOCKED: Cannot place bet on non-countdown race
-    console.log('Blocked: Race is not in countdown status', raceElement?.getAttribute('data-race-status'));
     return;
   }
   
-  // Check if race is expired - MUST prevent betting
+  // Prevent betting if game mode is disabled
+  if (!betsStore.showGame) {
+    // BLOCKED: Cannot place bet when game mode is disabled
+    return;
+  }
+  
+  // Prevent betting on expired races
   if (props.isExpired) {
     // BLOCKED: Cannot place bet on expired race
-    console.log('Blocked: Race is expired');
     return;
   }
   
-  // Check if game mode is enabled
-  if (!betsStore.showGame) {
-    // Emit event to show game mode dialog
-    console.log('Game mode not enabled, showing dialog');
-    const event = new CustomEvent('show-game-mode-dialog')
-    window.dispatchEvent(event)
-    return
-  }
+  // Emit event to parent to handle adding to betslip
+  const raceElementForEvent = document.querySelector(`[data-race-id="${props.raceId}"]`);
+  let raceData = {
+    id: props.raceId,
+    name: props.raceName,
+    number: props.raceNumber
+  };
   
-  // Convert odds to number or 'SP'
-  let odds: number | 'SP' = 'SP'
-  if (props.runner.odds !== 'SP') {
-    const oddsNum = typeof props.runner.odds === 'number' ? props.runner.odds : parseFloat(props.runner.odds)
-    if (!isNaN(oddsNum)) {
-      odds = oddsNum
-    }
-  }
-  
-  console.log('ALLOWED: Adding runner to betslip', {
-    race: {
-      id: props.raceId,
-      meeting_name: props.raceName,
-      race_number: props.raceNumber
-    },
-    runner: {
-      ...props.runner,
-      raceName: props.raceName,
-      raceNumber: props.raceNumber
-    }
-  });
-  
-  // ALLOWED: Adding runner to betslip
-  
-  // Emit event to open betslip drawer
-  const event = new CustomEvent('open-betslip', { 
-    detail: { 
-      race: {
+  // Try to get race data from the DOM element if available
+  if (raceElementForEvent) {
+    const raceName = raceElementForEvent.getAttribute('data-race-name');
+    const raceNumber = raceElementForEvent.getAttribute('data-race-number');
+    if (raceName && raceNumber) {
+      raceData = {
         id: props.raceId,
-        meeting_name: props.raceName,
-        race_number: props.raceNumber
-      },
-      runner: {
-        ...props.runner,
-        raceName: props.raceName,
-        raceNumber: props.raceNumber
-      }
+        name: raceName,
+        number: parseInt(raceNumber, 10)
+      };
     }
-  })
-  window.dispatchEvent(event)
+  }
+  
+  // Emit event to parent to handle adding to betslip
+  const event = new CustomEvent('add-to-betslip', {
+    detail: {
+      race: raceData,
+      runner: props.runner
+    },
+    bubbles: true
+  });
+  window.dispatchEvent(event);
 }
+
 </script>
+
+<template>
+  <div class="py-2 border-b border-surface last:border-b-0" :class="{ 'opacity-50 pointer-events-none': isExpired }">
+    <div class="flex items-start">
+      <!-- Silk color icon as circle with number inside -->
+      <div class="w-6 h-6 rounded-full mr-3 mt-1 flex-shrink-0 flex items-center justify-center text-xs font-bold" :class="runner.silkColor">
+        <span class="text-text-inverse">{{ runner.number }}</span>
+      </div>
+      
+      <!-- Runner info and odds -->
+      <div class="flex-grow min-w-0">
+        <!-- Runner name full width -->
+        <div class="font-medium text-text-base truncate" :title="runner.name">
+          {{ runner.name }}
+        </div>
+        
+        <!-- Meta info and odds in a row below -->
+        <div class="flex items-center mt-1">
+          <!-- Meta info -->
+          <div class="text-sm text-text-muted truncate flex-grow min-w-0" v-if="runner.jockey || runner.weight || runner.bestTime">
+            <!-- For greyhounds, only show best time -->
+            <template v-if="isGreyhoundRace()">
+              <span v-if="runner.bestTime" :title="`${$t('game.bestTime')}: ${runner.bestTime}`">
+                <span class="hidden lg:inline">Best Time: {{ runner.bestTime }}</span>
+                <span class="lg:hidden">BT: {{ runner.bestTime }}</span>
+              </span>
+            </template>
+            <!-- For other races, show jockey/driver and weight -->
+            <template v-else>
+              <span v-if="runner.jockey" :title="`${getPersonLabel()}: ${getFullPersonName(runner.jockey)}`">{{ formatPersonName(runner.jockey) }}</span>
+              <span v-if="runner.jockey && runner.weight"> | </span>
+              <span v-if="runner.weight" :title="`Weight: ${runner.weight}`">{{ runner.weight }}</span>
+              <span v-if="(runner.jockey || runner.weight) && runner.bestTime"> | </span>
+              <span v-if="runner.bestTime" :title="`${$t('game.bestTime')}: ${runner.bestTime}`">
+                <span class="hidden lg:inline">Best Time: {{ runner.bestTime }}</span>
+                <span class="lg:hidden">BT: {{ runner.bestTime }}</span>
+              </span>
+            </template>
+          </div>
+          
+          <!-- Odds button -->
+          <div class="ml-2 flex-shrink-0">
+            <button 
+              @click="handleOddsClick"
+              class="px-2 py-1 rounded-lg font-bold shadow-card transition-all duration-200 flex items-center text-sm bg-surface-sunken hover:bg-brand-primary hover:text-text-inverse border-2 border-surface"
+              :class="oddsButtonClass"
+              :disabled="isExpired"
+              :aria-label="`${$t('game.addToBetslip')} ${runner.name} ${$t('game.at')} ${runner.odds}`"
+              :title="getOddsButtonTitle()"
+            >
+              {{ runner.odds }}
+              <span v-if="runner.oddsTrend === 'up'" :class="['ml-1 text-success', oddsAnimation]">▲</span>
+              <span v-else-if="runner.oddsTrend === 'down'" :class="['ml-1 text-danger', oddsAnimation]">▼</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>

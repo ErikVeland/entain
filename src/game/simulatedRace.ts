@@ -180,7 +180,7 @@ function paceCurve(u: number, accel = 0.3, kick = 0.2, stamina = 1.0): number {
 
 /* ------------------------------- Simulation ------------------------------- */
 
-export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, tickMs = 200): SimulationController {
+export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, tickMs = 400): SimulationController {
 	if (!input.runners || input.runners.length === 0) {
 		throw new Error('Simulation requires at least one runner');
 	}

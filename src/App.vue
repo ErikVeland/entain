@@ -227,6 +227,11 @@
           betsStore.setShowGame(true)
           betsStore.setUseSimulatedData(true)
         }
+        // Enable simulation mode by default if API is not working
+        else {
+          betsStore.setShowGame(true)
+          betsStore.setUseSimulatedData(true)
+        }
       }
     } catch (e) {
       // Silent fail

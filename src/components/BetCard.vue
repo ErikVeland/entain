@@ -86,9 +86,13 @@
           type="number"
           step="0.1"
           min="0"
+          ref="stakeInputRef"
+          @focus="handleFocus"
+          @blur="handleBlur"
+          @keypress="handleKeyPress"
           class="w-full pl-8 pr-4 py-2 bg-surface-sunken text-text-base rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-primary"
           :class="{ 'border border-danger': hasError }"
-          placeholder="0.00"
+          :placeholder="isFocused ? '' : '0.00'"
           aria-label="Enter stake amount"
         >
       </div>
@@ -107,11 +111,25 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
-import { type BetSelection } from '../stores/bets'
 import { useVirtualCurrency } from '../composables/useVirtualCurrency'
 import { useBettingLogic } from '../composables/useBettingLogic'
 import { useAnimationEffects } from '../composables/useAnimationEffects'
 import { useBettingFeedback } from '../composables/useBettingFeedback'
+
+// Define the BetSelection type locally since it's not exported from the store
+interface BetSelection {
+  id: string
+  raceId: string
+  raceName: string
+  raceNumber: number
+  runnerId: string
+  runnerNumber: number
+  runnerName: string
+  odds: number | 'SP'
+  market: 'win' | 'place' | 'each-way'
+  stake: number
+  estimatedReturn: number
+}
 
 const props = defineProps<{
   selection: BetSelection
@@ -132,9 +150,11 @@ const { flashElement: flashElementFeedback } = useBettingFeedback()
 const cardElement = ref<HTMLElement | null>(null)
 const oddsElement = ref<HTMLElement | null>(null)
 const previousOdds = ref(props.selection.odds)
+const stakeInputRef = ref<HTMLInputElement | null>(null)
 
 // State
 const stakeInput = ref(props.selection.stake / 100) // Convert from cents to dollars
+const isFocused = ref(false)
 
 // Watch for changes to stakeInput and emit update-stake event immediately
 watch(stakeInput, (newStake) => {
@@ -142,6 +162,35 @@ watch(stakeInput, (newStake) => {
   const stakeInCents = Math.round(newStake * 100)
   emit('update-stake', props.selection.id, stakeInCents)
 })
+
+// Handle focus event to clear the input if it's the default value
+const handleFocus = () => {
+  isFocused.value = true
+  // If the value is 0, clear it so the user can type without getting 010
+  if (stakeInput.value === 0) {
+    stakeInput.value = NaN // This will show as empty in the input field
+  }
+}
+
+// Handle blur event to restore default value if empty
+const handleBlur = () => {
+  isFocused.value = false
+  // If the value is empty, set it back to 0
+  if (isNaN(stakeInput.value) || stakeInput.value === null) {
+    stakeInput.value = 0
+  }
+}
+
+// Handle Enter key press
+const handleKeyPress = (event: KeyboardEvent) => {
+  if (event.key === 'Enter') {
+    // Find the place bets button and click it
+    const placeBetsButton = document.querySelector('button[aria-label="Place Bets"]') as HTMLButtonElement
+    if (placeBetsButton && !placeBetsButton.disabled) {
+      placeBetsButton.click()
+    }
+  }
+}
 
 // Computed
 const hasError = computed(() => {

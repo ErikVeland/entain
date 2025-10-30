@@ -302,10 +302,16 @@ export function generateRandomizedRunners(raceId: string, categoryId: string): S
   
   for (let i = 0; i < numRunners; i++) {
     const name = shuffledNames[i % shuffledNames.length]
-    const jockey = shuffledJockeys[i % shuffledJockeys.length]
+    // For greyhounds, don't assign jockey/trainer information
+    const jockey = categoryId === '9daef0d7-bf3c-4f50-921d-8e818c60fe61' 
+      ? '' 
+      : shuffledJockeys[i % shuffledJockeys.length]
+    // For greyhounds, don't assign weight information
     const weight = categoryId === '4a2788f8-e825-4d36-9894-efd4baf1cfae' 
       ? shuffledWeights[i % shuffledWeights.length] 
-      : `${50 + Math.floor(Math.random() * 15)}kg` // 50-64kg for non-horse categories
+      : categoryId === '9daef0d7-bf3c-4f50-921d-8e818c60fe61' 
+        ? '' 
+        : `${50 + Math.floor(Math.random() * 15)}kg` // 50-64kg for non-horse categories
     const bestTime = categoryId === '9daef0d7-bf3c-4f50-921d-8e818c60fe61' 
       ? shuffledGreyhoundTimes[i % shuffledGreyhoundTimes.length] 
       : shuffledTimes[i % shuffledTimes.length]
@@ -383,9 +389,9 @@ export function updateOdds(
     return
   }
   
-  // Throttle updates to 1000ms intervals to prevent excessive updates
+  // Throttle updates to 2000ms intervals to prevent excessive updates
   // This is slightly less than the 1500ms update interval to avoid unnecessary blocking
-  if (now - simulation.lastUpdate < 1000) {
+  if (now - simulation.lastUpdate < 2000) {
     return
   }
   

@@ -39,6 +39,7 @@ const props = defineProps<{
   raceId: string
   raceName: string
   raceNumber: number
+  categoryId?: string
   isExpired?: boolean
   showGame: boolean
   useSimulatedData: boolean

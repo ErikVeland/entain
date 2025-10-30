@@ -57,6 +57,7 @@
       :race-id="race.id"
       :race-name="race.meeting_name"
       :race-number="race.race_number"
+      :category-id="race.category_id"
       :is-expired="!!isExpired"
       :show-game="betsStore.showGame"
       :use-simulated-data="betsStore.useSimulatedData"

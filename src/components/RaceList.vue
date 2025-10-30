@@ -19,11 +19,6 @@ const emit = defineEmits<{
 // Show all 5 races in a grid
 const visibleRaces = computed(() => {
   const races = store.nextFive.slice(0, 5); // Show all 5 races
-  // Visible races computed
-  // Store state in RaceList
-  // Store races in RaceList
-  // Store loadState in RaceList
-  // Next five in RaceList
   return races;
 })
 
@@ -84,6 +79,8 @@ const isRaceExpired = (race: any) => {
 import { onUnmounted, onMounted } from 'vue'
 onUnmounted(() => {
   // No more auto-rotation
+  expiringRaces.value.clear()
+  newRaces.value.clear()
 })
 
 onMounted(() => {
@@ -99,59 +96,35 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="space-y-6">
-    <!-- Loading state -->
-    <div v-if="store.loadState === 'loading' && store.races.length === 0" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-      <div v-for="i in 5" :key="i" class="bg-surface-raised rounded-2xl shadow-card overflow-hidden animate-pulse">
-        <div class="h-48 bg-surface-sunken"></div>
-        <div class="p-4">
-          <div class="h-6 bg-surface-sunken rounded mb-2"></div>
-          <div class="h-4 bg-surface-sunken rounded w-3/4"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Error state -->
-    <div v-else-if="store.loadState === 'error'" class="text-center py-12">
-      <div class="text-5xl mb-4">⚠️</div>
-      <h3 class="text-xl font-bold mb-2">{{ $t('races.error') }}</h3>
-      <p class="text-text-muted mb-4">{{ store.errorMessage }}</p>
-      <button 
-        ref="retryButton"
-        @click="retryFetch"
-        class="px-4 py-2 bg-brand-primary text-text-inverse rounded-lg hover:bg-opacity-90 transition-colors focus:outline-none focus:ring-2 focus:ring-brand-primary"
+  <div v-if="store.loadState === 'error'" class="flex flex-col items-center justify-center h-full">
+    <p class="text-center text-lg font-bold mb-4">{{ t('raceList.error') }}</p>
+    <button
+      ref="retryButton"
+      class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      @click="retryFetch"
+    >
+      {{ t('raceList.retry') }}
+    </button>
+  </div>
+  <!-- Race grid -->
+  <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+    <TransitionGroup name="race-list" tag="div" class="contents">
+      <div 
+        v-for="race in visibleRaces"
+        :key="`${race.id}-${race.advertised_start_ms}`"
+        class="race-list-item"
       >
-        {{ $t('races.tryAgain') }}
-      </button>
-    </div>
-
-    <!-- Empty state -->
-    <div v-else-if="store.loadState === 'ready' && visibleRaces.length === 0" class="text-center py-12">
-      <div class="text-5xl mb-4">📭</div>
-      <h3 class="text-xl font-bold mb-2">{{ $t('races.noRaces') }}</h3>
-      <p class="text-text-muted">{{ $t('races.checkBack') }}</p>
-    </div>
-
-    <!-- Race grid -->
-    <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-      <TransitionGroup name="race-list" tag="div" class="contents">
-        <div 
-          v-for="race in visibleRaces"
-          :key="race.id"
-          class="race-list-item"
-        >
-          <RaceColumn
-            :race="race"
-            :is-expired="isRaceExpired(race)"
-            :class="{
-              'opacity-50 scale-95': expiringRaces.has(race.id),
-              'scale-105': newRaces.has(race.id)
-            }"
-            @add-to-betslip="handleAddToBetslip"
-          />
-        </div>
-      </TransitionGroup>
-    </div>
+        <RaceColumn
+          :race="race"
+          :is-expired="isRaceExpired(race)"
+          :class="{
+            'opacity-50 scale-95': expiringRaces.has(race.id),
+            'scale-105': newRaces.has(race.id)
+          }"
+          @add-to-betslip="handleAddToBetslip"
+        />
+      </div>
+    </TransitionGroup>
   </div>
 </template>
 
