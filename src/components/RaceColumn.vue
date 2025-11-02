@@ -111,6 +111,7 @@ import OddsTrendSection from './OddsTrendSection.vue'
 import RunnersSection from './RunnersSection.vue'
 import SimulationControlsSection from './SimulationControlsSection.vue'
 import { useSimulationStore } from '../stores/simulation'
+import { useCommentaryDeduplication } from '../composables/useCommentaryDeduplication'
 
 const props = defineProps<{
   race: RaceSummary
@@ -132,6 +133,7 @@ const { registerCountdownRace, unregisterCountdownRace } = useOddsUpdater()
 const { createSimulation, getSimulation, removeSimulation, startSimulation, stopSimulation, resetSimulation: resetRaceSimulationStore } = useRaceSimulation()
 const { canStartSimulation, incrementSimulationCount, decrementSimulationCount, calculateOptimalTickInterval } = useSimulationManager()
 const { formattedTime, isStartingSoon, isInProgress } = useCountdown(props.race.advertised_start_ms)
+const { generateCommentary, generateStartCommentary, generateFinishCommentary } = useCommentaryDeduplication()
 
 // State for odds chart dropdown
 const showOddsChart = ref(false)
@@ -342,114 +344,36 @@ const initializeRaceSimulation = () => {
           return runner ? { id: runner.id, name: runner.name, number: runner.number } : null;
         }).filter(Boolean);
 
-        // Generate commentary based on race progress
+        // Generate commentary using deduplication system
         let commentary = "";
-        if (tick.order.length > 0) {
+        if (tick.order.length > 0 && runners.length > 0) {
           const leaderId = tick.order[0];
-          const leaderRunner = runners.find(r => r.id === leaderId);
-
-          if (leaderRunner) {
-            // Create more varied commentary based on different race situations
-            if (tick.order.length > 1 && tick.gaps) {
-              const secondId = tick.order[1];
-              const gap = Math.abs(tick.gaps[leaderId] - tick.gaps[secondId]);
-              const secondRunner = runners.find(r => r.id === secondId);
-              
-              if (secondRunner) {
-                // Neck and neck situation
-                if (gap < 0.1) {
-                  const neckAndNeckCommentary = [
-                    `${leaderRunner.name} and ${secondRunner.name} are neck and neck!`,
-                    `${leaderRunner.name} and ${secondRunner.name} are running stride for stride!`,
-                    `${leaderRunner.name} and ${secondRunner.name} are locked in a fierce battle!`,
-                    `${leaderRunner.name} and ${secondRunner.name} are trading blows at the front!`,
-                    `${leaderRunner.name} and ${secondRunner.name} are inseparable at the lead!`,
-                    `${leaderRunner.name} and ${secondRunner.name} are matching each other move for move!`,
-                    `${leaderRunner.name} and ${secondRunner.name} are in a photo finish battle!`
-                  ];
-                  commentary = neckAndNeckCommentary[Math.floor(Math.random() * neckAndNeckCommentary.length)];
-                }
-                // Narrow lead situation
-                else if (gap < 0.3) {
-                  const narrowLeadCommentary = [
-                    `${leaderRunner.name} holds a narrow lead over ${secondRunner.name}`,
-                    `${leaderRunner.name} edges ahead of ${secondRunner.name}`,
-                    `${leaderRunner.name} maintains a slender advantage over ${secondRunner.name}`,
-                    `${leaderRunner.name} clings to a precarious lead over ${secondRunner.name}`,
-                    `${leaderRunner.name} just holds the advantage over ${secondRunner.name}`,
-                    `${leaderRunner.name} has a slight edge over ${secondRunner.name}`,
-                    `${leaderRunner.name} is barely ahead of ${secondRunner.name}`
-                  ];
-                  commentary = narrowLeadCommentary[Math.floor(Math.random() * narrowLeadCommentary.length)];
-                }
-                // Clear lead situation
-                else {
-                  const clearLeadCommentary = [
-                    `${leaderRunner.name} has opened up a clear lead over ${secondRunner.name}`,
-                    `${leaderRunner.name} has established a commanding advantage over ${secondRunner.name}`,
-                    `${leaderRunner.name} is pulling away from ${secondRunner.name} at the front`,
-                    `${leaderRunner.name} has broken clear at the head of the field over ${secondRunner.name}`,
-                    `${leaderRunner.name} is striding away from the competition led by ${secondRunner.name}`,
-                    `${leaderRunner.name} has built a substantial lead over ${secondRunner.name}`,
-                    `${leaderRunner.name} is dominating the field with ${secondRunner.name} in pursuit`
-                  ];
-                  commentary = clearLeadCommentary[Math.floor(Math.random() * clearLeadCommentary.length)];
-                }
-              } else {
-                // Leader with no clear second
-                const leaderCommentary = [
-                  `${leaderRunner.name} takes the lead!`,
-                  `${leaderRunner.name} moves to the front!`,
-                  `${leaderRunner.name} surges ahead!`,
-                  `${leaderRunner.name} powers into the lead!`,
-                  `${leaderRunner.name} seizes the lead!`,
-                  `${leaderRunner.name} makes a bold move to the front!`,
-                  `${leaderRunner.name} breaks clear at the front!`,
-                  `${leaderRunner.name} establishes a commanding lead!`,
-                  `${leaderRunner.name} bursts to the front of the field!`,
-                  `${leaderRunner.name} takes command of the race!`,
-                  `${leaderRunner.name} assumes the lead position!`,
-                  `${leaderRunner.name} charges to the front!`
-                ];
-                commentary = leaderCommentary[Math.floor(Math.random() * leaderCommentary.length)];
-              }
-            } else {
-              // Solo leader situation
-              const soloLeaderCommentary = [
-                `${leaderRunner.name} takes the lead!`,
-                `${leaderRunner.name} moves to the front!`,
-                `${leaderRunner.name} surges ahead!`,
-                `${leaderRunner.name} powers into the lead!`,
-                `${leaderRunner.name} seizes the lead!`,
-                `${leaderRunner.name} makes a bold move to the front!`,
-                `${leaderRunner.name} breaks clear at the front!`,
-                `${leaderRunner.name} establishes a commanding lead!`,
-                `${leaderRunner.name} bursts to the front of the field!`,
-                `${leaderRunner.name} takes command of the race!`,
-                `${leaderRunner.name} assumes the lead position!`,
-                `${leaderRunner.name} charges to the front!`,
-                `${leaderRunner.name} is setting the pace at the front!`,
-                `${leaderRunner.name} is showing the way at the head of the field!`,
-                `${leaderRunner.name} is dictating the tempo from the front!`
-              ];
-              commentary = soloLeaderCommentary[Math.floor(Math.random() * soloLeaderCommentary.length)];
-            }
+          const secondId = tick.order.length > 1 ? tick.order[1] : null;
+          
+          // Calculate gap between leader and second
+          const gap = secondId && tick.gaps ? 
+            Math.abs((tick.gaps[leaderId] || 0) - (tick.gaps[secondId] || 0)) : 0;
+          
+          // Calculate race progress (0-1)
+          const avgProgress = Object.values(tick.progressByRunner).reduce((sum, p) => sum + p, 0) / Object.values(tick.progressByRunner).length;
+          
+          // Generate commentary with deduplication
+          const generated = generateCommentary({
+            raceId: props.race.id,
+            meetingName: props.race.meeting_name,
+            raceNumber: props.race.race_number,
+            categoryId: props.race.category_id,
+            leaderId,
+            secondId,
+            gap,
+            raceProgress: avgProgress,
+            runnerData: runners.map(r => ({ id: r.id, name: r.name, odds: r.odds }))
+          });
+          
+          // Only use generated commentary if it's not null (throttled)
+          if (generated) {
+            commentary = generated;
           }
-        } else {
-          // Fallback commentary when no leader is determined
-          const fallbackCommentary = [
-            "The field is bunched up early!",
-            "The pace looks comfortable so far.",
-            "The competitors are jostling for position.",
-            "Plenty of energy on display here.",
-            "The field is moving in unison.",
-            "The early stages are unfolding evenly.",
-            "The competitors are feeling each other out.",
-            "The pace is steady but not taxing.",
-            "The field is settling into a rhythm.",
-            "The competitors are positioning themselves carefully."
-          ];
-          commentary = fallbackCommentary[Math.floor(Math.random() * fallbackCommentary.length)];
         }
 
         const updateEvent = new CustomEvent('race-update', {
@@ -481,13 +405,27 @@ const initializeRaceSimulation = () => {
     // Set up finish handler for results
     simulationController.onFinish((result: Result) => {
       try {
-        // Race finished for race with result
+        const simulationStore = useSimulationStore()
+        
+        // Get the winner name for commentary
+        const runners = getSimulatedRunners(props.race.id)
+        const winnerId = result.placings.length > 0 ? result.placings[0] : null
+        const winnerRunner = winnerId ? runners.find(r => r.id === winnerId) : null
+        
+        // Generate finish commentary
+        const finishMessage = winnerRunner ? 
+          generateFinishCommentary(props.race.meeting_name, props.race.race_number, winnerRunner.name) :
+          `${props.race.meeting_name} R${props.race.race_number}: Race finished`
+        
         // Set race result to show after simulation completes
         raceResult.value = {
           placings: result.placings
         }
 
-        // Mark race as finished
+        // Mark race as finished in simulation store
+        simulationStore.finishSimulation(props.race.id)
+        
+        // Mark race as finished locally
         raceFinished.value = true
         raceLive.value = false
 
@@ -500,26 +438,31 @@ const initializeRaceSimulation = () => {
         // Settle any bets for this race
         const settlements = betsStore.settleRace(props.race.id, { placings: result.placings })
 
+        // Determine if user has bets and winning bets
+        const hasUserBets = settlements && settlements.length > 0
+        const hasWinningBets = settlements ? settlements.some(s => s.result === 'WON') : false
+        
+        // Start results display timer
+        simulationStore.startResultsDisplay(props.race.id, hasUserBets, hasWinningBets)
+        
         // Check if user won any bets and trigger celebration animation
-        if (settlements && settlements.length > 0) {
+        if (hasWinningBets && settlements) {
           const winningSettlements = settlements.filter(s => s.result === 'WON')
-          if (winningSettlements.length > 0) {
-            // Trigger win celebration
-            const event = new CustomEvent('win-celebration', {
-              detail: {
-                winAmount: winningSettlements.reduce((sum, s) => sum + s.payout, 0)
-              }
-            })
-            window.dispatchEvent(event)
-          }
+          // Trigger win celebration
+          const event = new CustomEvent('win-celebration', {
+            detail: {
+              winAmount: winningSettlements.reduce((sum, s) => sum + s.payout, 0)
+            }
+          })
+          window.dispatchEvent(event)
         }
 
-        // Dispatch race finish event for live ticker
+        // Dispatch race finish event for live ticker with finish commentary
         const finishEvent = new CustomEvent('race-finish', {
           detail: {
             raceId: props.race.id,
-            message: `${props.race.meeting_name} R${props.race.race_number} has finished`,
-            winner: result.placings.length > 0 ? { id: result.placings[0] } : null,
+            message: finishMessage,
+            winner: winnerRunner ? { id: winnerRunner.id, name: winnerRunner.name } : null,
             userBets: betsStore.getPendingBetsForRace(props.race.id),
             meetingName: props.race.meeting_name,
             raceNumber: props.race.race_number
