@@ -17,6 +17,14 @@ RaceHub transforms a basic race listing application into a sophisticated racing 
 - Enhances user experience with interactive elements, visual feedback, and intuitive navigation
 - Delivers robust error handling, performance optimizations, and security best practices
 
+## 🧠 Architectural Philosophy
+
+RaceHub is built with a strong emphasis on:
+- **Component Decomposition**: Complex UIs are broken into small, focused components
+- **Separation of Concerns**: Logic, state, and presentation are cleanly separated
+- **Clean Code Patterns**: Maintainable, testable, and scalable code organization
+- **Balanced Features**: Ambitious functionality without sacrificing code simplicity
+
 ## 📦 Tech Stack
 
 - **Vue 3 (Composition API, `<script setup>`)**
@@ -51,55 +59,84 @@ npm run test
 npm run coverage
 ```
 
-## 🧠 Architecture Overview
+## 🏗️ Architecture Overview
 
-### Directory Structure
+### Modern Layered Architecture
+
+RaceHub follows a clean, layered architecture that emphasizes separation of concerns and testability:
 
 ```
 src/
-├── components/
-│   ├── RaceList.vue
-│   ├── RaceColumn.vue
-│   ├── RaceHeader.vue
-│   ├── RunnerRow.vue
-│   ├── CategoryFilter.vue
-│   ├── CountdownTimer.vue
-│   ├── BetPlacer.vue
-│   ├── BetslipDrawer.vue
-│   └── ...
-├── composables/
-│   ├── useFetchRaces.ts
-│   ├── useCountdown.ts
-│   ├── useOddsSimulation.ts
-│   ├── useOddsUpdater.ts
-│   ├── useRaceSimulation.ts
-│   └── ...
-├── stores/
-│   ├── races.ts
-│   ├── bets.ts
-│   ├── simulation.ts
-│   └── ...
-├── game/
-│   ├── bettingSimulator.ts
-│   ├── simulatedRace.ts
-│   └── ...
-├── assets/
+├── adapters/              # Adapters for different data sources (API vs Simulation)
+│   ├── api/               # API adapters for real data sources
+│   ├── simulation/        # Simulation adapters for development/testing
+│   └── index.ts
+├── api/                   # API type definitions
+├── assets/                # Static assets and styles
 │   └── styles/
-│       ├── tailwind.css
-│       ├── _tokens.scss
-│       └── _theme.scss
-├── i18n.ts
+├── components/            # Presentational UI components
+│   ├── betslip/           # Betslip-specific components
+│   └── __tests__/         # Component tests
+├── composables/           # Reusable logic (Vue Composition API functions)
+│   └── __tests__/         # Composable tests
+├── core/                  # Core domain abstractions and interfaces
+├── game/                  # Game logic and simulation engines
+├── i18n/                  # Internationalization
+├── services/              # Service layer coordinating adapters
+├── simulation/            # Simulation type definitions
+├── stores/                # Global state management (Pinia)
+│   └── __tests__/         # Store tests
+├── types/                 # Shared TypeScript types
+├── utils/                 # Utility functions
 ├── App.vue
 └── main.ts
 ```
 
-### Key Components
-- **RaceList.vue** — orchestrates rendering of active races, applying sorting and expiry logic.
-- **RaceColumn.vue** — displays individual race information with runners, odds, and betting controls.
-- **CategoryFilter.vue** — handles toggling between racing categories with active state visuals.
-- **CountdownTimer.vue** — isolated timer with proper interval cleanup and reactive updates.
-- **BetPlacer.vue** — interactive betting interface for placing wagers on runners.
-- **BetslipDrawer.vue** — slide-out panel for managing bet selections and placement.
+### Key Design Principles
+
+1. **Clean Separation Between API and Simulation Code**
+   - Abstract interfaces defined in [src/core/](src/core/)
+   - Adapter implementations in [src/adapters/](src/adapters/) for both API and simulation
+   - Service layers in [src/services/](src/services/) coordinate between adapters
+   - Components depend only on abstract interfaces, not directly on simulation or API modules
+
+2. **Component Decomposition**
+   - Large components broken into smaller, focused units
+   - Reusable logic extracted into composables
+   - Clear separation between presentation and business logic
+
+3. **TypeScript Interface Centralization**
+   - TypeScript interfaces and types centralized in [src/types/](src/types/) directory
+   - Domain-specific files (race.ts, betting.ts, simulation.ts)
+
+### Component Architecture
+
+The UI is decomposed into focused, reusable components:
+
+- **RaceList.vue** — orchestrates rendering of active races, applying sorting and expiry logic
+- **RaceColumn.vue** — displays individual race information with runners, odds, and betting controls
+- **CategoryFilter.vue** — handles toggling between racing categories with active state visuals
+- **CountdownTimer.vue** — isolated timer with proper interval cleanup and reactive updates
+- **BetPlacer.vue** — interactive betting interface for placing wagers on runners
+- **BetslipDrawer.vue** — slide-out panel for managing bet selections and placement
+- **RunnersSection.vue** — encapsulates runner display logic
+- **RaceHeader.vue** — race metadata display
+- **RaceResults.vue** — race outcome visualization
+- **OddsTrendSection.vue** — odds visualization controls
+- **SimulationControlsSection.vue** — simulation-specific controls
+
+### Composable Pattern
+
+Reusable logic is extracted into composable functions following Vue 3 Composition API patterns:
+
+- **useFetchRaces.ts** — race data fetching with retry logic
+- **useCountdown.ts** — countdown timer logic
+- **useOddsSimulation.ts** — odds simulation and updating
+- **useRaceSimulation.ts** — race simulation management
+- **useBettingLogic.ts** — betting calculations and validation
+- **useVirtualCurrency.ts** — virtual currency management
+- **useAnimationEffects.ts** — animation coordination
+- **useCommentaryDeduplication.ts** — commentary generation and deduplication
 
 ### State Management
 
