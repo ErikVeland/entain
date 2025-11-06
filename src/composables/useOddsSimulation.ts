@@ -302,10 +302,19 @@ export function generateRandomizedRunners(raceId: string, categoryId: string): S
   
   for (let i = 0; i < numRunners; i++) {
     const name = shuffledNames[i % shuffledNames.length]
-    // For greyhounds, don't assign jockey/trainer information
-    const jockey = categoryId === '9daef0d7-bf3c-4f50-921d-8e818c60fe61' 
-      ? '' 
-      : shuffledJockeys[i % shuffledJockeys.length]
+    // For greyhounds, assign trainer information with 'T:' prefix
+    // Assign category-specific person information with appropriate prefixes
+    let jockey = ''
+    if (categoryId === '9daef0d7-bf3c-4f50-921d-8e818c60fe61') {
+      // For greyhounds, use trainer names with 'T:' prefix
+      jockey = `T: ${shuffledJockeys[i % shuffledJockeys.length]}`
+    } else if (categoryId === '161d9be2-e909-4326-8c2c-35ed71fb460b') {
+      // For harness, use driver names with 'D:' prefix
+      jockey = `D: ${shuffledJockeys[i % shuffledJockeys.length]}`
+    } else {
+      // For horses, use jockey names with 'J:' prefix
+      jockey = `J: ${shuffledJockeys[i % shuffledJockeys.length]}`
+    }
     // For greyhounds, don't assign weight information
     const weight = categoryId === '4a2788f8-e825-4d36-9894-efd4baf1cfae' 
       ? shuffledWeights[i % shuffledWeights.length] 
@@ -319,13 +328,6 @@ export function generateRandomizedRunners(raceId: string, categoryId: string): S
     // Generate base odds with favorites having shorter odds
     let baseOdds: number
     if (i < 2) {
-<<<<<<< Local
-      // Positions 1-2: 1.2-2.0 (favorites)
-      baseOdds = 1.2 + (Math.random() * 0.8);
-    } else if (i < 5) {
-      // Positions 3-5: 2.0-6.0 (contenders)
-      baseOdds = 2.0 + (Math.random() * 4.0);
-=======
       // Positions 1-2: 1.8-4.0 (favorites)
       baseOdds = 1.8 + (Math.random() * 2.2);
     } else if (i < 4) {
@@ -334,15 +336,9 @@ export function generateRandomizedRunners(raceId: string, categoryId: string): S
     } else if (i < 6) {
       // Positions 5-6: 7.0-12.0 (contenders)
       baseOdds = 7.0 + (Math.random() * 5.0);
->>>>>>> Remote
     } else {
-<<<<<<< Local
-      // Positions 6+: 6.0-50.0 (outsiders)
-      baseOdds = 6.0 + (Math.random() * 44.0);
-=======
       // Positions 7+: 12.0-25.0 (outsiders)
       baseOdds = 12.0 + (Math.random() * 13.0);
->>>>>>> Remote
     }
     
     // Add some category-specific adjustments

@@ -8,6 +8,17 @@ export function formatCurrency(cents: number): string {
 }
 
 /**
+ * Format odds value
+ * @param odds The odds value or 'SP'
+ * @returns Formatted odds string
+ */
+export function formatOdds(odds: number | 'SP'): string {
+  if (odds === 'SP') return 'SP'
+  const numericOdds = typeof odds === 'number' ? odds : parseFloat(String(odds))
+  return isNaN(numericOdds) ? 'SP' : numericOdds.toFixed(2)
+}
+
+/**
  * Format person name based on category
  * @param personName The person's name with possible prefix
  * @returns Formatted name

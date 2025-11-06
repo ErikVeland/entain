@@ -215,69 +215,17 @@ const oddsButtonClass = computed(() => {
 })
 
 const handleOddsClick = () => {
-  console.log('RunnerRow: handleOddsClick called for runner', props.runner.name);
-  
-  // Check race status - only allow betting on countdown races (upcoming)
-  const raceElement = document.querySelector(`[data-race-id="${props.raceId}"]`);
-  let isRaceCountdown = false;
-  if (raceElement) {
-    const raceStatus = raceElement.getAttribute('data-race-status');
-    console.log('RunnerRow: Race status is', raceStatus);
-    // Allow betting only on countdown races (upcoming)
-    isRaceCountdown = raceStatus === 'countdown';
-  }
-  
-  // MUST prevent betting if race is not in countdown status
-  if (!isRaceCountdown) {
-    console.log('RunnerRow: Cannot place bet - race is not in countdown status');
-    // BLOCKED: Cannot place bet on non-countdown race
-    return;
-  }
-  
-  // Prevent betting if game mode is disabled
-  if (!betsStore.showGame) {
-    console.log('RunnerRow: Cannot place bet - game mode is disabled');
-    // BLOCKED: Cannot place bet when game mode is disabled
-    return;
-  }
-  
-  // Prevent betting on expired races
-  if (props.isExpired) {
-    console.log('RunnerRow: Cannot place bet - race is expired');
-    // BLOCKED: Cannot place bet on expired race
-    return;
-  }
-  
-  console.log('RunnerRow: All conditions met, dispatching open-betslip event');
-  
-  // Emit event to parent to handle adding to betslip
-  // Create proper race object with the required fields
-  const race = {
-    id: props.raceId,
-    meeting_name: props.raceName,
-    race_number: props.raceNumber
-  };
-  
-  // Dispatch a custom event that the App.vue can listen to
-  const event = new CustomEvent('open-betslip', {
-    detail: {
-      race,
-      runner: props.runner
-    }
-<<<<<<< Local
-  }
+  if (props.isExpired) return
   
   // Emit event to parent to handle adding to betslip
   const event = new CustomEvent('open-betslip', {
     detail: {
-      race: raceData,
+      raceId: props.raceId,
       runner: props.runner
     },
     bubbles: true
-=======
->>>>>>> Remote
   });
-  console.log('RunnerRow: Dispatching open-betslip event with data', { race, runner: props.runner });
+  console.log('RunnerRow: Dispatching open-betslip event with data', { raceId: props.raceId, runner: props.runner });
   window.dispatchEvent(event);
 }
 

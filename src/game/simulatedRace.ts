@@ -173,11 +173,6 @@ function paceCurve(u: number, accel = 0.3, kick = 0.2, stamina = 1.0): number {
 	// Mid race: introduce more variation to create dynamic position changes
 	const midSpan = 1 - accel - kick;
 	const x = (u - accel) / midSpan;
-<<<<<<< Local
-	// Add more pronounced mid-race variations for dynamic racing
-	const variation = 0.05 * Math.sin(u * 15) + 0.03 * Math.cos(u * 25);
-	return accel + x * midSpan + variation;
-=======
 	// Stamina affects mid-race consistency - tired runners have more variation
 	const consistency = Math.min(1, stamina * 1.2);
 	const variation = (1 - consistency) * 0.05 * (Math.sin(u * 20) + Math.cos(u * 15));
@@ -187,7 +182,6 @@ function paceCurve(u: number, accel = 0.3, kick = 0.2, stamina = 1.0): number {
 	const midRaceVariation = 0.03 * Math.sin(u * 30) * Math.cos(u * 25);
 	
 	return accel / 2 + x * midSpan + variation + midRaceVariation;
->>>>>>> Remote
 }
 
 /* ------------------------------- Simulation ------------------------------- */
