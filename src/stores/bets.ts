@@ -3,18 +3,27 @@ import { SimulationBettingAdapter, ApiBettingAdapter } from '../adapters'
 import type { BettingService } from '../core/betting'
 import type { Bankroll } from '../core/types'
 
+interface BetsState {
+  showGame: boolean
+  useSimulatedData: boolean
+  showGameOver: boolean
+  lastWonBetId: string | null
+  service: BettingService | null
+}
+
 export const useBetsStore = defineStore('bets', {
-  state: () => ({
+  state: (): BetsState => ({
     showGame: false,
     useSimulatedData: false,
     showGameOver: false,
-    lastWonBetId: null as string | null,
+    lastWonBetId: null,
     // We'll store the service instance directly in state
-    service: null as BettingService | null
+    service: null
   }),
   
   getters: {
     bankroll(): Bankroll {
+      // @ts-ignore
       const service = this.service as BettingService | null
       return service?.getBankroll() || {
         balance: 0,
@@ -28,47 +37,41 @@ export const useBetsStore = defineStore('bets', {
   actions: {
     // Initialize the betting service based on mode
     initializeService() {
-      const state = this as any
-      if (state.showGame && state.useSimulatedData) {
-        state.service = new SimulationBettingAdapter(1000)
+      if (this.showGame && this.useSimulatedData) {
+        this.service = new SimulationBettingAdapter(1000)
       } else {
-        state.service = new ApiBettingAdapter()
+        this.service = new ApiBettingAdapter()
       }
     },
     
     // Add action to toggle game mode
     setShowGame(show: boolean) {
-      const state = this as any
-      state.showGame = show
+      this.showGame = show
       this.initializeService()
     },
     
     // Add action to toggle data mode
     setUseSimulatedData(useSimulated: boolean) {
-      const state = this as any
-      state.useSimulatedData = useSimulated
+      this.useSimulatedData = useSimulated
       this.initializeService()
     },
     
     // Method to add welcome credits (for restarting the game)
     acceptWelcomeCredits() {
-      const state = this as any
-      state.service?.addCredits(10000) // Add $100 in cents
+      this.service?.addCredits(10000) // Add $100 in cents
     },
     
     // Method to check if game over dialog should be shown
     checkGameOver() {
-      const state = this as any
-      if (!state.service) return
+      if (!this.service) return
       
-      const bankroll = state.service.getBankroll()
+      const bankroll = this.service.getBankroll()
       // For now, we'll simplify this check as we don't have access to listBets
-      state.showGameOver = bankroll.balance <= 0
+      this.showGameOver = bankroll.balance <= 0
     },
     
     placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: string) {
-      const state = this as any
-      if (!state.service) {
+      if (!this.service) {
         this.initializeService()
       }
       
@@ -76,7 +79,7 @@ export const useBetsStore = defineStore('bets', {
         console.log('BetsStore: Placing bet with parameters', { raceId, runnerId, stake, odds, advertisedStartMs, meetingName, raceNumber, runnerName, categoryId });
         
         // In the new abstraction, we need to pass a complete BetPlacement object
-        const result = state.service.placeBet({
+        const result = this.service.placeBet({
           raceId,
           runnerId,
           stake,
@@ -99,11 +102,10 @@ export const useBetsStore = defineStore('bets', {
     },
     
     cancelBet(betId: string) {
-      const state = this as any
-      if (!state.service) return false
+      if (!this.service) return false
       
       try {
-        const result = state.service.cancelBet(betId)
+        const result = this.service.cancelBet(betId)
         // Check if player is now bankrupt after cancelling the bet
         this.checkGameOver()
         return result
@@ -114,19 +116,18 @@ export const useBetsStore = defineStore('bets', {
     },
     
     settleRace(raceId: string, placings: string[]) {
-      const state = this as any
-      if (!state.service) return []
+      if (!this.service) return []
       
       try {
-        const settlements = state.service.settleRace({
+        const settlements = this.service.settleRace({
           raceId,
           placings
         })
         
         // Track the last won bet for animations
-        const winningSettlement = settlements.find(s => s.result === 'WON')
+        const winningSettlement = settlements.find((s: any) => s.result === 'WON')
         if (winningSettlement) {
-          state.lastWonBetId = winningSettlement.betId
+          this.lastWonBetId = winningSettlement.betId
         }
         
         // Check if player is now bankrupt after settling the race
@@ -143,8 +144,7 @@ export const useBetsStore = defineStore('bets', {
     reset() {
       try {
         this.initializeService()
-        const state = this as any
-        state.showGameOver = false
+        this.showGameOver = false
       } catch (error) {
         console.error('Error resetting engine:', error)
         throw error

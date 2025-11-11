@@ -56,52 +56,17 @@
         </div>
       </div>
       
-      <div class="border-t border-surface">
-        <div class="p-4">
-          <h4 class="text-sm font-medium text-text-base mb-2">Recent Transactions</h4>
-          <div v-if="recentTransactions.length === 0" class="text-text-muted text-sm">
-            No transactions yet
-          </div>
-          <div v-else class="space-y-2">
-            <div 
-              v-for="transaction in recentTransactions" 
-              :key="transaction.id"
-              class="flex justify-between text-sm"
-            >
-              <div>
-                <div class="text-text-base">{{ transaction.description }}</div>
-                <div class="text-text-muted text-xs">
-                  {{ new Date(transaction.timestamp).toLocaleTimeString() }}
-                </div>
-              </div>
-              <div class="text-right">
-                <div 
-                  class="font-medium"
-                  :class="{
-                    'text-success': transaction.type === 'initial_credit' || transaction.type === 'bet_won',
-                    'text-danger': transaction.type === 'bet_placed' || transaction.type === 'bet_lost',
-                    'text-text-base': transaction.type === 'bet_cancelled'
-                  }"
-                >
-                  {{ transaction.type === 'bet_placed' || transaction.type === 'bet_lost' ? '-' : '+' }}${{ (transaction.amount / 100).toFixed(2) }}
-                </div>
-                <div class="text-text-muted text-xs">
-                  Balance: ${{ (transaction.balanceAfter / 100).toFixed(2) }}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useVirtualCurrency } from '../composables/useVirtualCurrency'
+import { eventManager } from '../utils/eventManager'
 
-const { availableBalance, totalBalance, lockedBalance, recentTransactions } = useVirtualCurrency()
+const { availableBalance, totalBalance, lockedBalance } = useVirtualCurrency()
 
 const showDropdown = ref(false)
 const showTooltip = ref(false)
@@ -111,10 +76,23 @@ const toggleDropdown = () => {
 }
 
 // Close dropdown when clicking outside
-document.addEventListener('click', (event) => {
-  const dropdown = document.querySelector('.relative')
-  if (dropdown && !dropdown.contains(event.target as Node)) {
-    showDropdown.value = false
+// Store event listener ID for cleanup
+const eventListenerId = ref<number | null>(null)
+
+// Close dropdown when clicking outside
+onMounted(() => {
+  eventListenerId.value = eventManager.addEventListener(document, 'click', (event) => {
+    const dropdown = document.querySelector('.relative')
+    if (dropdown && !dropdown.contains(event.target as Node)) {
+      showDropdown.value = false
+    }
+  })
+})
+
+// Clean up event listener
+onUnmounted(() => {
+  if (eventListenerId.value) {
+    eventManager.removeEventListener(eventListenerId.value)
   }
 })
 </script>

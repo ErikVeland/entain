@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRacesStore } from '../stores/races'
+import { timerManager } from '../utils/timerManager'
 import RaceColumn from './RaceColumn.vue'
 
 const { t } = useI18n()
@@ -35,6 +36,9 @@ const handleAddToBetslip = (payload: { race: any; runner: any }) => {
 
 // Track expiring and new races
 const previousRaces = ref<string[]>([])
+// Store timer IDs for cleanup
+const timerIds = ref<number[]>([])
+
 watch(() => store.nextFive, (currentRaces, oldRaces) => {
   // Next five changed
   const currentRaceIds = currentRaces.map(r => r.id)
@@ -53,16 +57,18 @@ watch(() => store.nextFive, (currentRaces, oldRaces) => {
   
   // Clear expired races after animation
   if (removedRaceIds.length > 0) {
-    setTimeout(() => {
+    const timerId1 = timerManager.setTimeout(() => {
       expiringRaces.value.clear()
     }, 500)
+    timerIds.value.push(timerId1)
   }
   
   // Clear new races after animation
   if (addedRaceIds.length > 0) {
-    setTimeout(() => {
+    const timerId2 = timerManager.setTimeout(() => {
       newRaces.value.clear()
     }, 1000)
+    timerIds.value.push(timerId2)
   }
   
   // Update previous races
@@ -76,13 +82,6 @@ const isRaceExpired = (race: any) => {
 }
 
 // Clean up interval when component unmounts
-import { onUnmounted, onMounted } from 'vue'
-onUnmounted(() => {
-  // No more auto-rotation
-  expiringRaces.value.clear()
-  newRaces.value.clear()
-})
-
 onMounted(() => {
   // Initialize previous races
   previousRaces.value = store.nextFive.map(r => r.id)
@@ -92,6 +91,18 @@ onMounted(() => {
   if (store.loadState === 'error' && retryButton.value) {
     retryButton.value.focus()
   }
+})
+
+onUnmounted(() => {
+  // No more auto-rotation
+  expiringRaces.value.clear()
+  newRaces.value.clear()
+  
+  // Clear all timers
+  timerIds.value.forEach(timerId => {
+    timerManager.clearTimer(timerId)
+  })
+  timerIds.value = []
 })
 </script>
 

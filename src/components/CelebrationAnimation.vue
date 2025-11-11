@@ -30,6 +30,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from 'vue'
 import { useAnimationEffects } from '../composables/useAnimationEffects'
+import { eventManager } from '../utils/eventManager'
 
 // Define CustomEvent type for TypeScript
 interface CustomEventDetail {
@@ -71,13 +72,18 @@ onMounted(() => {
       triggerWinCelebration(customEvent.detail.amount);
     }
   };
-  window.addEventListener('trigger-win-celebration', handleWinCelebration as EventListener);
-  
-  // Clean up event listener
-  onUnmounted(() => {
-    window.removeEventListener('trigger-win-celebration', handleWinCelebration as EventListener);
-  });
+  eventListenerId.value = eventManager.addEventListener(window, 'trigger-win-celebration', handleWinCelebration as EventListener);
 })
+
+// Store event listener ID for cleanup
+const eventListenerId = ref<number | null>(null)
+
+// Clean up event listener
+onUnmounted(() => {
+  if (eventListenerId.value) {
+    eventManager.removeEventListener(eventListenerId.value);
+  }
+});
 </script>
 
 <style scoped>

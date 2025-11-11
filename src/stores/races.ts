@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { useBetsStore } from './bets'
 import { getSimulatedRunners } from '../composables/useOddsSimulation'
+import { timerManager } from '../utils/timerManager'
 
 /**
  * Category IDs as specified by the task brief.
@@ -389,7 +390,7 @@ export const useRacesStore = defineStore('races', {
      */
     startLoops(): void {
       if (this._tickHandle == null) {
-        this._tickHandle = window.setInterval(() => {
+        this._tickHandle = timerManager.setInterval(() => {
           // Trigger reactivity by touching a derived piece of state:
           // we don't store "now" in state to avoid re-renders everywhere.
           // Instead, we prune expired and any countdown component can
@@ -401,7 +402,7 @@ export const useRacesStore = defineStore('races', {
       if (this._pollHandle == null) {
         // Stagger initial fetch to avoid immediate double-hit when startLoops is called
         // by mounting + manual fetch in setup.
-        this._pollHandle = window.setInterval(() => {
+        this._pollHandle = timerManager.setInterval(() => {
           // Fire and forget; errors are reflected in state
           void this.fetchRaces()
         }, 30000)
@@ -414,11 +415,11 @@ export const useRacesStore = defineStore('races', {
      */
     stopLoops(): void {
       if (this._tickHandle != null) {
-        clearInterval(this._tickHandle)
+        timerManager.clearTimer(this._tickHandle)
         this._tickHandle = null
       }
       if (this._pollHandle != null) {
-        clearInterval(this._pollHandle)
+        timerManager.clearTimer(this._pollHandle)
         this._pollHandle = null
       }
     },

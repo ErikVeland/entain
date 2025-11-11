@@ -3,6 +3,8 @@
 // Provides deterministic (seedable) live ticks, positions, and final placings.
 // No external deps. Designed for Vue/React/Svelte or plain TS integration.
 
+import { timerManager } from '../utils/timerManager';
+
 /* ---------------------------------- Types --------------------------------- */
 
 export type CategoryId =
@@ -439,13 +441,13 @@ export function createRaceSimulation(input: RaceInput, seed = Date.now() >>> 0, 
 			status = 'running';
 			tStart = Date.now();
 			tElapsed = 0;
-			timer = setInterval(emitTick, Math.max(50, tickMs)) as unknown as number;
+			timer = timerManager.setInterval(emitTick, Math.max(50, tickMs));
 			// Emit first tick instantly for snappy UI
 			emitTick();
 		},
 		stop() {
 			if (timer != null) {
-				clearInterval(timer);
+				timerManager.clearTimer(timer);
 				timer = null;
 			}
 			if (status === 'running') status = 'aborted';

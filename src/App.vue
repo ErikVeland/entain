@@ -1,127 +1,129 @@
 <script setup lang="ts">
-  import {
-    ref,
-    computed,
-    onMounted,
-    onUnmounted,
-    watch
-  } from 'vue'
-  import {
-    useI18n
-  } from 'vue-i18n'
-  import {
-    useRacesStore,
-    CATEGORY_IDS
-  } from './stores/races'
-  import {
-    useBetsStore
-  } from './stores/bets'
-  import {
-    useSimulationStore
-  } from './stores/simulation'
-  import {
-    getSimulatedRunners
-  } from './composables/useOddsSimulation'
-  import { useRaceCommentary } from './composables/useRaceCommentary'
-  import RaceList from './components/RaceList.vue'
-  import MeetingsView from './components/MeetingsView.vue'
-  import NewsTicker from './components/NewsTicker.vue'
-  import DebugPanel from './components/DebugPanel.vue'
-  import BalanceWidget from './components/BalanceWidget.vue'
-  import BetslipDrawer from './components/BetslipDrawer.vue'
-  import ControlBar from './components/ControlBar.vue'
-  import GameModeDialog from './components/GameModeDialog.vue'
-  import GameOverDialog from './components/GameOverDialog.vue'
-  import TestRaces from './components/TestRaces.vue'
-  import CelebrationAnimation from './components/CelebrationAnimation.vue'
+import {
+  ref,
+  computed,
+  onMounted,
+  onUnmounted,
+  watch
+} from 'vue'
+import {
+  useI18n
+} from 'vue-i18n'
+import {
+  useRacesStore,
+  CATEGORY_IDS
+} from './stores/races'
+import {
+  useBetsStore
+} from './stores/bets'
+import {
+  useSimulationStore
+} from './stores/simulation'
+import {
+  getSimulatedRunners
+} from './composables/useOddsSimulation'
+import { useRaceCommentary } from './composables/useRaceCommentary'
+import { eventManager } from './utils/eventManager'
+import { timerManager } from './utils/timerManager'
+import RaceList from './components/RaceList.vue'
+import MeetingsView from './components/MeetingsView.vue'
+import NewsTicker from './components/NewsTicker.vue'
+import DebugPanel from './components/DebugPanel.vue'
+import BalanceWidget from './components/BalanceWidget.vue'
+import BetslipDrawer from './components/BetslipDrawer.vue'
+import ControlBar from './components/ControlBar.vue'
+import GameModeDialog from './components/GameModeDialog.vue'
+import GameOverDialog from './components/GameOverDialog.vue'
+import TestRaces from './components/TestRaces.vue'
+import CelebrationAnimation from './components/CelebrationAnimation.vue'
 
-  const {
-    locale,
-    t
-  } = useI18n()
-  const store = useRacesStore()
-  const betsStore = useBetsStore()
-  const simulationStore = useSimulationStore()
-  const betslipDrawer = ref < InstanceType < typeof BetslipDrawer > | null > (null)
-  const showGameModeDialog = ref(false)
-  const currentView = ref < 'races' | 'meetings' > ('races')
+const {
+  locale,
+  t
+} = useI18n()
+const store = useRacesStore()
+const betsStore = useBetsStore()
+const simulationStore = useSimulationStore()
+const betslipDrawer = ref < InstanceType < typeof BetslipDrawer > | null > (null)
+const showGameModeDialog = ref(false)
+const currentView = ref < 'races' | 'meetings' > ('races')
 
-  // Event handlers
-  const handleGameModeDialog = () => {
-    showGameModeDialog.value = true;
-  };
+// Event handlers
+const handleGameModeDialog = () => {
+  showGameModeDialog.value = true;
+};
 
-  // Theme handling
-  const isDarkMode = ref(true)
-  const isHighContrast = ref(false)
+// Theme handling
+const isDarkMode = ref(true)
+const isHighContrast = ref(false)
 
-  // Language handling
-  const currentLocale = ref('en')
+// Language handling
+const currentLocale = ref('en')
 
-  // Betslip handling
-  const isBetslipOpen = ref(false)
+// Betslip handling
+const isBetslipOpen = ref(false)
 
-  // Debug state
-  const showDebug = ref(false)
-  const toggleDebug = () => {
-    showDebug.value = !showDebug.value
-  }
+// Debug state
+const showDebug = ref(false)
+const toggleDebug = () => {
+  showDebug.value = !showDebug.value
+}
 
-  // Combined simulation mode (combines game mode and simulated data)
-  const isSimulationMode = computed(() => {
-    return betsStore.showGame && betsStore.useSimulatedData
-  })
+// Combined simulation mode (combines game mode and simulated data)
+const isSimulationMode = computed(() => {
+  return betsStore.showGame && betsStore.useSimulatedData
+})
 
-  // Get live race updates
-  const liveRaceUpdates = computed(() => {
-    if (!isSimulationMode.value) return null
+// Get live race updates
+const liveRaceUpdates = computed(() => {
+  if (!isSimulationMode.value) return null
 
-    // Find the first running race with a smooth transition
-    for (const [raceId, status] of simulationStore.raceStatus.entries()) {
-      if (status === 'running') {
-        // Find the race in the store
-        const race = store.races.find(r => r.id === raceId)
-        if (race) {
-          // Get the race progress to determine the current leader
-          const progress = simulationStore.getRaceProgress(raceId)
+  // Find the first running race with a smooth transition
+  for (const [raceId, status] of simulationStore.raceStatus.entries()) {
+    if (status === 'running') {
+      // Find the race in the store
+      const race = store.races.find(r => r.id === raceId)
+      if (race) {
+        // Get the race progress to determine the current leader
+        const progress = simulationStore.getRaceProgress(raceId)
           
-          // Generate dynamic commentary using the composable with runner information
-          const { generateRaceCommentary } = useRaceCommentary(raceId)
-          const runners = getSimulatedRunners(raceId)
-          const commentary = generateRaceCommentary(
-            raceId, 
-            progress, 
-            race.meeting_name, 
-            race.race_number, 
-            race.category_id
-          )
+        // Generate dynamic commentary using the composable with runner information
+        const { generateRaceCommentary } = useRaceCommentary(raceId)
+        const runners = getSimulatedRunners(raceId)
+        const commentary = generateRaceCommentary(
+          raceId, 
+          progress, 
+          race.meeting_name, 
+          race.race_number, 
+          race.category_id
+        )
 
-          return {
-            raceId: race.id,
-            meetingName: race.meeting_name,
-            raceNumber: race.race_number,
-            categoryId: race.category_id,
-            commentary: commentary,
-            // Add runner information for more detailed commentary
-            runners: runners
-          }
+        return {
+          raceId: race.id,
+          meetingName: race.meeting_name,
+          raceNumber: race.race_number,
+          categoryId: race.category_id,
+          commentary: commentary,
+          // Add runner information for more detailed commentary
+          runners: runners
         }
       }
     }
+  }
 
-    return null
-  })
+  return null
+})
 
-  // Get next race information when no races are live
-  const nextRaceInfo = computed(() => {
-    if (!isSimulationMode.value) return null
+// Get next race information when no races are live
+const nextRaceInfo = computed(() => {
+  if (!isSimulationMode.value) return null
 
-    // If there are live races, don't show next race info
-    if (liveRaceUpdates.value) return null
+  // If there are live races, don't show next race info
+  if (liveRaceUpdates.value) return null
 
-    // Find the next upcoming race
-    const now = Date.now()
-    const upcomingRaces = store.races
+  // Find the next upcoming race
+  const now = Date.now()
+  const upcomingRaces = store.races
       .filter(r => r.advertised_start_ms > now)
       .sort((a, b) => a.advertised_start_ms - b.advertised_start_ms)
 
@@ -263,10 +265,10 @@
       locale.value = savedLocale
     }
 
-    // Listen for game mode dialog request
-    window.addEventListener('show-game-mode-dialog', handleGameModeDialog);
+    // Listen for game mode dialog request using eventManager
+    eventManager.addEventListener(window, 'show-game-mode-dialog', handleGameModeDialog);
 
-    // Listen for win celebration events
+    // Listen for win celebration events using eventManager
     const handleWinCelebration = (event: Event) => {
       const customEvent = event as CustomEvent < {
         winAmount: number
@@ -281,12 +283,12 @@
       window.dispatchEvent(celebrationEvent);
     };
 
-    window.addEventListener('win-celebration', handleWinCelebration);
+    eventManager.addEventListener(window, 'win-celebration', handleWinCelebration);
 
     // Start polling and ticking intervals
     store.startLoops()
     // Initial fetch with a small delay to allow UI to render first
-    setTimeout(() => {
+    timerManager.setTimeout(() => {
       store.fetchRaces().catch(error => {
         console.error('Error during initial fetch:', error)
       })
@@ -305,6 +307,8 @@
   // Clean up
   onUnmounted(() => {
     store.stopLoops()
+    // Remove all event listeners registered with eventManager
+    eventManager.removeAllListeners()
   })
 </script>
 

@@ -1,6 +1,7 @@
 // src/composables/useAnimationEffects.ts
 import { ref, computed } from 'vue'
 import { useBetsStore } from '../stores/bets'
+import { timerManager } from '../utils/timerManager'
 
 export function useAnimationEffects() {
   const betsStore = useBetsStore()
@@ -15,7 +16,7 @@ export function useAnimationEffects() {
     showConfetti.value = true
     
     // Hide confetti after 3 seconds
-    setTimeout(() => {
+    timerManager.setTimeout(() => {
       showConfetti.value = false
     }, 3000)
   }
@@ -27,7 +28,7 @@ export function useAnimationEffects() {
     showConfetti.value = true
     
     // Hide celebrations after 3 seconds
-    setTimeout(() => {
+    timerManager.setTimeout(() => {
       showWinCelebration.value = false
       showConfetti.value = false
     }, 3000)
@@ -39,7 +40,7 @@ export function useAnimationEffects() {
     element.classList.add('flash', `flash-${color}`)
     
     // Remove class after animation completes
-    setTimeout(() => {
+    timerManager.setTimeout(() => {
       element.classList.remove('flash', `flash-${color}`)
     }, 1000)
   }

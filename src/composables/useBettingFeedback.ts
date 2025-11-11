@@ -1,5 +1,6 @@
 // src/composables/useBettingFeedback.ts
 import { ref } from 'vue'
+import { timerManager } from '../utils/timerManager'
 
 export function useBettingFeedback() {
   // Audio context for playing sounds
@@ -68,7 +69,7 @@ export function useBettingFeedback() {
     element.classList.add('flash', `flash-${color}`)
     
     // Remove class after animation completes
-    setTimeout(() => {
+    timerManager.setTimeout(() => {
       element.classList.remove('flash', `flash-${color}`)
     }, 1000)
   }
@@ -90,18 +91,18 @@ export function useBettingFeedback() {
     document.body.appendChild(toast)
     
     // Animate in
-    setTimeout(() => {
+    timerManager.setTimeout(() => {
       toast.style.opacity = '1'
       toast.style.transform = 'translateX(0)'
     }, 10)
     
     // Remove after delay
-    setTimeout(() => {
+    timerManager.setTimeout(() => {
       toast.style.opacity = '0'
       toast.style.transform = 'translateX(100%)'
       
       // Remove element after animation
-      setTimeout(() => {
+      timerManager.setTimeout(() => {
         if (toast.parentNode) {
           toast.parentNode.removeChild(toast)
         }

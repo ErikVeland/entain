@@ -1,5 +1,6 @@
 import { ref, Ref } from 'vue'
 import { updateOdds, getSimulatedRunners } from './useOddsSimulation'
+import { timerManager } from '../utils/timerManager'
 
 // Global store for tracking which races are in countdown status
 const countdownRaces = ref<Set<string>>(new Set())
@@ -27,7 +28,7 @@ const startOddsUpdates = (raceId: string) => {
   stopOddsUpdates(raceId)
   
   // Start new interval for odds updates
-  const intervalId = window.setInterval(() => {
+  const intervalId = timerManager.setInterval(() => {
     // Only update if race is still in countdown status
     if (countdownRaces.value.has(raceId)) {
       // console.log('Updating odds for race:', raceId);
@@ -46,7 +47,7 @@ const stopOddsUpdates = (raceId: string) => {
   const intervalId = updateIntervals.get(raceId)
   if (intervalId) {
     // console.log('Clearing interval for race:', raceId, 'with interval ID:', intervalId);
-    clearInterval(intervalId)
+    timerManager.clearTimer(intervalId)
     updateIntervals.delete(raceId)
     // console.log('Stopped odds updates for race:', raceId);
   }
@@ -87,7 +88,7 @@ const updateRaceOdds = (raceId: string) => {
 // Clean up all intervals
 export const cleanupOddsUpdater = () => {
   updateIntervals.forEach((intervalId, raceId) => {
-    clearInterval(intervalId)
+    timerManager.clearTimer(intervalId)
   })
   updateIntervals.clear()
   countdownRaces.value.clear()

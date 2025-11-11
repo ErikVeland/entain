@@ -1,4 +1,5 @@
 import { ref, Ref, onUnmounted } from 'vue'
+import { timerManager } from '../utils/timerManager'
 
 interface UseCountdownReturn {
   formattedTime: Ref<string>
@@ -37,8 +38,8 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
     formattedTime.value = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`
   }
 
-  // Set up interval to update the countdown
-  const intervalId = setInterval(() => {
+  // Set up interval to update the countdown using timerManager
+  const timerId = timerManager.setInterval(() => {
     const now = Date.now()
     const timeDiff = startTimeMs - now
     
@@ -82,9 +83,7 @@ export function useCountdown(startTimeMs: number): UseCountdownReturn {
 
   // Function to stop the interval
   const stop = () => {
-    if (intervalId) {
-      clearInterval(intervalId)
-    }
+    timerManager.clearTimer(timerId)
   }
 
   // Clean up interval when component is unmounted

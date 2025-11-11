@@ -1,5 +1,6 @@
 import { ref, computed, watch } from 'vue'
 import { type RaceSummary } from '../stores/races'
+import { timerManager } from '../utils/timerManager'
 
 interface ExpiringRace {
   race: RaceSummary
@@ -23,7 +24,7 @@ export function useRaceExpiration(races: RaceSummary[]) {
       
       // Clear expired races after animation
       if (removedRaceIds.length > 0) {
-        setTimeout(() => {
+        timerManager.setTimeout(() => {
           expiringRaces.value.clear()
         }, 1000)
       }

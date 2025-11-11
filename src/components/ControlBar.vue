@@ -108,6 +108,7 @@
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRacesStore, CATEGORY_IDS } from '../stores/races'
+import { timerManager } from '../utils/timerManager'
 
 const { t } = useI18n()
 const store = useRacesStore()
@@ -121,9 +122,9 @@ const localSortOrder = ref(store.sortOrder)
 let searchDebounce: number | null = null
 const updateSearchQuery = () => {
   if (searchDebounce) {
-    clearTimeout(searchDebounce)
+    timerManager.clearTimer(searchDebounce)
   }
-  searchDebounce = window.setTimeout(() => {
+  searchDebounce = timerManager.setTimeout(() => {
     store.setSearchQuery(localSearchQuery.value)
   }, 300)
 }

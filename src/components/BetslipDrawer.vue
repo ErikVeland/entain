@@ -4,6 +4,7 @@ import { useBettingLogic } from '../composables/useBettingLogic'
 import { useBetsStore } from '../stores/bets'
 import { useRacesStore } from '../stores/races'
 import { useBettingFeedback } from '../composables/useBettingFeedback'
+import { eventManager } from '../utils/eventManager'
 import BetslipTabsSection from './betslip/BetslipTabsSection.vue'
 import BetslipContentSection from './betslip/BetslipContentSection.vue'
 import PendingBetsContentSection from './betslip/PendingBetsContentSection.vue'
@@ -390,24 +391,30 @@ const handleOpenBetslip = (event: CustomEvent) => {
   toggleDrawer()
 }
 
+// Store event listener IDs for cleanup
+const eventListenerIds = ref<number[]>([])
+
 // Lifecycle
 onMounted(() => {
   console.log('BetslipDrawer mounted, setting up event listeners');
   checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
-  window.addEventListener('keydown', handleEscape)
-  window.addEventListener('keydown', trapFocus)
-  window.addEventListener('open-betslip', handleOpenBetslip as EventListener)
+  eventListenerIds.value.push(
+    eventManager.addEventListener(window, 'resize', checkScreenSize),
+    eventManager.addEventListener(window, 'keydown', handleEscape),
+    eventManager.addEventListener(window, 'keydown', trapFocus),
+    eventManager.addEventListener(window, 'open-betslip', handleOpenBetslip as EventListener)
+  )
   
   // Initialize audio for betting feedback
   initAudio()
 })
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkScreenSize)
-  window.removeEventListener('keydown', handleEscape)
-  window.removeEventListener('keydown', trapFocus)
-  window.removeEventListener('open-betslip', handleOpenBetslip as EventListener)
+  // Remove all event listeners
+  eventListenerIds.value.forEach(id => {
+    eventManager.removeEventListener(id)
+  })
+  eventListenerIds.value = []
 })
 
 // Expose methods for parent components

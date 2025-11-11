@@ -2,6 +2,7 @@
 import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { useCountdown } from '../composables/useCountdown'
 import { CATEGORY_IDS } from '../stores/races'
+import { timerManager } from '../utils/timerManager'
 
 const props = defineProps<{
   meetingName: string
@@ -48,14 +49,14 @@ const startFlashing = () => {
   if (flashInterval.value) return
 
   // Alternate between red and original color every 500ms
-  flashInterval.value = window.setInterval(() => {
+  flashInterval.value = timerManager.setInterval(() => {
     isFlashingRed.value = !isFlashingRed.value
-  }, 500) as unknown as number
+  }, 500)
 }
 
 const stopFlashing = () => {
   if (flashInterval.value) {
-    clearInterval(flashInterval.value)
+    timerManager.clearTimer(flashInterval.value)
     flashInterval.value = null
   }
   isFlashingRed.value = false
@@ -161,7 +162,7 @@ const getCountdownClass = () => {
 // Clean up intervals
 onUnmounted(() => {
   if (flashInterval.value) {
-    clearInterval(flashInterval.value)
+    timerManager.clearTimer(flashInterval.value)
     flashInterval.value = null
   }
 })
