@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useBetsStore } from './bets'
 import { getSimulatedRunners } from '../composables/useOddsSimulation'
 import { timerManager } from '../utils/timerManager'
+import { persistenceManager } from '../utils/persistenceManager'
 
 /**
  * Category IDs as specified by the task brief.
@@ -108,6 +109,7 @@ export const useRacesStore = defineStore('races', {
     _tickHandle: null as number | null,
     _pollHandle: null as number | null
   }),
+  
   getters: {
     /**
      * Active races filtered by selected categories and not expired.
@@ -195,7 +197,81 @@ export const useRacesStore = defineStore('races', {
       return grouped
     }
   },
+  
   actions: {
+    /**
+     * Initialize store with persisted state
+     */
+    initFromPersistence(): void {
+      try {
+        // Define migration function for selectedCategories (v1 to v2)
+        const migrateSelectedCategories = (data: any): string[] => {
+          if (Array.isArray(data)) {
+            return data;
+          }
+          return [
+            CATEGORY_IDS.HORSE,
+            CATEGORY_IDS.GREYHOUND,
+            CATEGORY_IDS.HARNESS
+          ];
+        };
+
+        // Load persisted state for selected categories (v2 schema)
+        const persistedCategories = persistenceManager.load<string[]>(
+          'races:selectedCategories', 
+          2, 
+          migrateSelectedCategories
+        );
+        
+        if (persistedCategories) {
+          // Replace the Set with a new one created from the persisted array
+          this.selectedCategories = new Set(persistedCategories);
+        }
+
+        // Load persisted state for search and filter settings (v1 schema)
+        const persistedSettings = persistenceManager.load<{
+          searchQuery: string;
+          timeFilter: 'all' | 'next-hour' | 'next-2-hours' | 'next-4-hours';
+          sortOrder: 'time-asc' | 'time-desc' | 'name-asc' | 'name-desc';
+        }>('races:settings', 1);
+        
+        if (persistedSettings) {
+          this.searchQuery = persistedSettings.searchQuery || '';
+          this.timeFilter = persistedSettings.timeFilter || 'all';
+          this.sortOrder = persistedSettings.sortOrder || 'time-asc';
+        }
+      } catch (error) {
+        console.warn('Failed to initialize races store from persistence:', error);
+      }
+    },
+
+    /**
+     * Persist selected categories to localStorage
+     */
+    persistSelectedCategories(): void {
+      try {
+        persistenceManager.save('races:selectedCategories', Array.from(this.selectedCategories), 2);
+      } catch (error) {
+        console.warn('Failed to persist selected categories:', error);
+      }
+    },
+
+    /**
+     * Persist search and filter settings to localStorage
+     */
+    persistSettings(): void {
+      try {
+        const settings = {
+          searchQuery: this.searchQuery,
+          timeFilter: this.timeFilter,
+          sortOrder: this.sortOrder
+        };
+        persistenceManager.save('races:settings', settings, 1);
+      } catch (error) {
+        console.warn('Failed to persist settings:', error);
+      }
+    },
+
     /**
      * Fetch races from the Neds endpoint, normalize, and merge.
      * Keeps a bounded list (e.g., last 50) to avoid unbounded growth.
@@ -312,6 +388,8 @@ export const useRacesStore = defineStore('races', {
       } else {
         this.selectedCategories.add(categoryId)
       }
+      // Persist the change
+      this.persistSelectedCategories();
     },
 
     /**
@@ -319,6 +397,8 @@ export const useRacesStore = defineStore('races', {
      */
     setSearchQuery(query: string): void {
       this.searchQuery = query
+      // Persist the change
+      this.persistSettings();
     },
 
     /**
@@ -326,6 +406,8 @@ export const useRacesStore = defineStore('races', {
      */
     setTimeFilter(filter: 'all' | 'next-hour' | 'next-2-hours' | 'next-4-hours'): void {
       this.timeFilter = filter
+      // Persist the change
+      this.persistSettings();
     },
 
     /**
@@ -333,6 +415,8 @@ export const useRacesStore = defineStore('races', {
      */
     setSortOrder(order: 'time-asc' | 'time-desc' | 'name-asc' | 'name-desc'): void {
       this.sortOrder = order
+      // Persist the change
+      this.persistSettings();
     },
 
     /**
@@ -441,6 +525,10 @@ export const useRacesStore = defineStore('races', {
       this.cache.clear()
       this.loadState = 'idle'
       this.errorMessage = ''
+      
+      // Persist the reset state
+      this.persistSelectedCategories();
+      this.persistSettings();
     }
   }
 })

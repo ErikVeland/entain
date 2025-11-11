@@ -813,7 +813,8 @@ export class BettingEngine {
 
 	private unlockFunds(stake: number) {
 		this.locked -= stake
-		this.balance += stake
+		// For losing bets, the stake is unlocked but not returned to balance
+		// Only winning bets add to the balance through the credit method
 	}
 
 	private credit(amount: number) {

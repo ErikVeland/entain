@@ -8,6 +8,8 @@ import type {
   RaceResult
 } from './types'
 
+export type { Settlement }
+
 export interface BettingService {
   placeBet(bet: BetPlacement): Promise<string>
   cancelBet(betId: string): Promise<boolean>

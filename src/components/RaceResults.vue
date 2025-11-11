@@ -17,7 +17,7 @@
     
     <div v-if="userWon" class="bg-success bg-opacity-20 rounded-lg p-3">
       <div class="text-success font-medium">Congratulations!</div>
-      <div class="text-text-base">You won ${{ winnings.toFixed(2) }} on your bet!</div>
+      <div class="text-text-base">You won ${{ (winnings / 100).toFixed(2) }} on your bet!</div>
     </div>
     
     <div v-else-if="hasBets" class="bg-danger bg-opacity-20 rounded-lg p-3">
@@ -45,8 +45,17 @@ const props = defineProps<{
 
 const betsStore = useBetsStore()
 
-const pendingBets = computed(() => betsStore.engine.getPendingBetsForRace(props.raceId))
+// Use the simulation adapter to get pending bets
+const pendingBets = computed(() => {
+  if (betsStore.service && 'getPendingBetsForRace' in betsStore.service) {
+    // @ts-ignore
+    return betsStore.service.getPendingBetsForRace(props.raceId)
+  }
+  return []
+})
+
 const hasBets = computed(() => pendingBets.value.length > 0)
+
 const userWon = computed(() => {
   if (!props.raceResult || pendingBets.value.length === 0) return false
   

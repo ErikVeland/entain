@@ -53,15 +53,17 @@ const isMobile = ref(false)
 // Track which bets are being placed with animation
 const placingBets = ref<Record<string, boolean>>({})
 
-// Bet history state
-const betHistory = ref<any[]>([])
-
 // Computed
 const pendingBets = computed(() => {
   // This should return the pending bets from the store
   // Since we can't directly access the engine, we'll return an empty array for now
   // This would need to be implemented properly in the store
   return []
+})
+
+// Get bet history from the store
+const betHistory = computed(() => {
+  return betsStore.getBetHistory()
 })
 
 const activeSelections = computed(() => betslipSelections.value)
@@ -167,14 +169,14 @@ const handleUpdateStake = (selectionId: string, stake: number) => {
 }
 
 const handleRemoveSelection = (selectionId: string) => {
-  betslipSelections.value = betslipSelections.value.filter(s => s.id === selectionId)
+  betslipSelections.value = betslipSelections.value.filter(s => s.id !== selectionId)
 }
 
 const clearSelections = () => {
   betslipSelections.value = []
 }
 
-const placeBets = () => {
+const placeBets = async () => {
   console.log('BetslipDrawer: placeBets called with selections', betslipSelections.value);
   
   if (betslipSelections.value.length === 0 || !hasValidStakes.value) {
@@ -278,8 +280,8 @@ const placeBets = () => {
   
   // Add placed bets to history after a delay
   setTimeout(() => {
-    betHistory.value = [...betHistory.value, ...placedBets]
-    console.log('BetslipDrawer: Updated bet history with', placedBets.length, 'new bets');
+    // This is now handled by the store when settling races
+    console.log('BetslipDrawer: Bet history is now managed by the store');
   }, betslipSelections.value.length * 200 + 1000)
   
   // Show success message
@@ -300,7 +302,7 @@ const toggleDrawer = () => {
   if (isOpen.value) {
     // Focus the first focusable element when opening
     setTimeout(() => {
-      const firstFocusable = document.querySelector('.fixed inset-0 z-40 button') as HTMLElement
+      const firstFocusable = document.querySelector('.fixed.inset-0.z-40 button') as HTMLElement
       if (firstFocusable) {
         firstFocusable.focus()
       }
@@ -324,29 +326,31 @@ const checkScreenSize = () => {
 }
 
 // Handle escape key
-const handleEscape = (e: KeyboardEvent) => {
-  if (e.key === 'Escape' && isOpen.value) {
+const handleEscape = (e: Event) => {
+  const keyboardEvent = e as KeyboardEvent
+  if (keyboardEvent.key === 'Escape' && isOpen.value) {
     closeDrawer()
   }
 }
 
 // Focus trap
-const trapFocus = (e: KeyboardEvent) => {
+const trapFocus = (e: Event) => {
   if (!isOpen.value) return
   
-  const focusableElements = document.querySelectorAll(
-    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-  )
-  
-  const firstElement = focusableElements[0] as HTMLElement
-  const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
-  
-  if (e.key === 'Tab') {
-    if (e.shiftKey && document.activeElement === firstElement) {
-      e.preventDefault()
+  const keyboardEvent = e as KeyboardEvent
+  if (keyboardEvent.key === 'Tab') {
+    const focusableElements = document.querySelectorAll(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    )
+    
+    const firstElement = focusableElements[0] as HTMLElement
+    const lastElement = focusableElements[focusableElements.length - 1] as HTMLElement
+    
+    if (keyboardEvent.shiftKey && document.activeElement === firstElement) {
+      keyboardEvent.preventDefault()
       lastElement.focus()
-    } else if (!e.shiftKey && document.activeElement === lastElement) {
-      e.preventDefault()
+    } else if (!keyboardEvent.shiftKey && document.activeElement === lastElement) {
+      keyboardEvent.preventDefault()
       firstElement.focus()
     }
   }
@@ -388,7 +392,13 @@ const handleOpenBetslip = (event: CustomEvent) => {
   
   // Open the drawer
   console.log('Opening betslip drawer');
-  toggleDrawer()
+  isOpen.value = true
+}
+
+// Handle opening betslip without adding a bet (e.g., when clicking balance)
+const openBetslip = () => {
+  console.log('Opening betslip drawer without adding selection');
+  isOpen.value = true
 }
 
 // Store event listener IDs for cleanup
@@ -420,7 +430,8 @@ onUnmounted(() => {
 // Expose methods for parent components
 defineExpose({
   toggleDrawer,
-  closeDrawer
+  closeDrawer,
+  openBetslip
 })
 </script>
 

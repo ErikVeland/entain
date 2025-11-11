@@ -19,26 +19,26 @@ describe('useBettingLogic', () => {
     expect(bankroll.value).toEqual(store.bankroll)
   })
 
-  it('places and cancels bets correctly', () => {
+  it('places and cancels bets correctly', async () => {
     const betsStore = useBetsStore()
     const { placeBet, cancelBet } = useBettingLogic()
     
     // Mock the store methods
-    const mockPlaceBet = vi.fn().mockReturnValue('bet1')
-    const mockCancelBet = vi.fn().mockReturnValue(true)
+    const mockPlaceBet = vi.fn().mockResolvedValue('bet1')
+    const mockCancelBet = vi.fn().mockResolvedValue(true)
     
-    betsStore.placeBet = mockPlaceBet
-    betsStore.cancelBet = mockCancelBet
+    betsStore.placeBet = mockPlaceBet as any
+    betsStore.cancelBet = mockCancelBet as any
     
     // Place a bet
-    const result = placeBet('race1', 'runner1', 100, 2.5)
+    const result = await placeBet('race1', 'runner1', 100, 2.5)
     
     // Check that the bet was placed
     expect(result).toBe('bet1')
-    expect(mockPlaceBet).toHaveBeenCalledWith('race1', 'runner1', 100, 2.5)
+    expect(mockPlaceBet).toHaveBeenCalledWith('race1', 'runner1', 100, 2.5, undefined, undefined, undefined, undefined, undefined)
     
     // Cancel a bet
-    const cancelResult = cancelBet('bet1')
+    const cancelResult = await cancelBet('bet1')
     
     // Check that the bet was cancelled
     expect(cancelResult).toBe(true)

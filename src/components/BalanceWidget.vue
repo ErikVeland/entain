@@ -1,7 +1,14 @@
 <template>
-  <div class="relative" @mouseenter="showTooltip = true" @mouseleave="showTooltip = false">
+  <div 
+    class="relative" 
+    @mouseenter="handleMouseEnter" 
+    @mouseleave="handleMouseLeave"
+  >
     <!-- Balance display as rounded pill -->
-    <div class="flex items-center bg-surface-sunken rounded-full px-4 py-2 border-2 border-surface">
+    <div 
+      class="flex items-center bg-surface-sunken rounded-full px-4 py-2 border-2 border-surface cursor-pointer"
+      @click="openBetslip"
+    >
       <span class="text-text-muted text-sm font-medium">Credits:</span>
       <span class="font-medium text-text-base ml-2">${{ (availableBalance / 100).toFixed(2) }}</span>
     </div>
@@ -9,9 +16,11 @@
     <!-- Tooltip -->
     <div 
       v-if="showTooltip"
-      class="absolute right-0 mt-2 w-64 bg-surface-raised rounded-lg shadow-lg z-10 border border-surface p-4"
+      class="absolute right-0 mt-1 w-64 bg-surface-raised rounded-lg shadow-lg z-10 border border-surface p-4"
       role="tooltip"
       aria-label="Balance details"
+      @mouseenter="handleTooltipMouseEnter"
+      @mouseleave="handleTooltipMouseLeave"
     >
       <div class="space-y-2">
         <div class="flex justify-between text-sm">
@@ -26,13 +35,22 @@
           <span class="text-text-muted">Total</span>
           <span class="text-text-base">${{ (totalBalance / 100).toFixed(2) }}</span>
         </div>
+        <!-- Add clickable item to open betslip -->
+        <div class="pt-2 border-t border-surface">
+          <button 
+            @click="openBetslip"
+            class="w-full text-left text-sm text-brand-primary hover:underline focus:outline-none"
+          >
+            Open Betslip
+          </button>
+        </div>
       </div>
     </div>
     
     <!-- Dropdown (click to open) -->
     <div 
       v-if="showDropdown"
-      class="absolute right-0 mt-2 w-64 bg-surface-raised rounded-lg shadow-lg z-10 border border-surface"
+      class="absolute right-0 mt-1 w-64 bg-surface-raised rounded-lg shadow-lg z-10 border border-surface"
       role="dialog"
       aria-label="Transaction history"
       aria-modal="true"
@@ -54,47 +72,75 @@
           <span class="text-text-muted">Total</span>
           <span class="text-text-base">${{ (totalBalance / 100).toFixed(2) }}</span>
         </div>
+        <!-- Add clickable item to open betslip -->
+        <div class="pt-2 border-t border-surface">
+          <button 
+            @click="openBetslip"
+            class="w-full text-left text-sm text-brand-primary hover:underline focus:outline-none"
+          >
+            Open Betslip
+          </button>
+        </div>
       </div>
-      
-      
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import { useVirtualCurrency } from '../composables/useVirtualCurrency'
-import { eventManager } from '../utils/eventManager'
 
 const { availableBalance, totalBalance, lockedBalance } = useVirtualCurrency()
 
 const showDropdown = ref(false)
 const showTooltip = ref(false)
+const tooltipTimeout = ref<number | null>(null)
+
+const handleMouseEnter = () => {
+  // Clear any existing timeout
+  if (tooltipTimeout.value) {
+    clearTimeout(tooltipTimeout.value)
+  }
+  
+  // Show tooltip immediately
+  showTooltip.value = true
+}
+
+const handleMouseLeave = () => {
+  // Set a small delay before hiding the tooltip
+  // This gives users time to move their mouse to the tooltip
+  tooltipTimeout.value = window.setTimeout(() => {
+    showTooltip.value = false
+  }, 300) // 300ms delay
+}
+
+const handleTooltipMouseEnter = () => {
+  // Clear the timeout if user moves mouse over the tooltip
+  if (tooltipTimeout.value) {
+    clearTimeout(tooltipTimeout.value)
+  }
+  showTooltip.value = true
+}
+
+const handleTooltipMouseLeave = () => {
+  // Hide tooltip when mouse leaves the tooltip
+  showTooltip.value = false
+}
 
 const toggleDropdown = () => {
   showDropdown.value = !showDropdown.value
 }
 
-// Close dropdown when clicking outside
-// Store event listener ID for cleanup
-const eventListenerId = ref<number | null>(null)
-
-// Close dropdown when clicking outside
-onMounted(() => {
-  eventListenerId.value = eventManager.addEventListener(document, 'click', (event) => {
-    const dropdown = document.querySelector('.relative')
-    if (dropdown && !dropdown.contains(event.target as Node)) {
-      showDropdown.value = false
-    }
-  })
-})
-
-// Clean up event listener
-onUnmounted(() => {
-  if (eventListenerId.value) {
-    eventManager.removeEventListener(eventListenerId.value)
-  }
-})
+// Open betslip when clicking on the balance
+const openBetslip = () => {
+  // Dispatch a custom event to open the betslip
+  const event = new CustomEvent('open-betslip-without-selection')
+  window.dispatchEvent(event)
+  
+  // Close dropdown/tooltip after opening betslip
+  showDropdown.value = false
+  showTooltip.value = false
+}
 </script>
 
 <style scoped>

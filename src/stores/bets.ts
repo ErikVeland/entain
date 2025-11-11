@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { SimulationBettingAdapter, ApiBettingAdapter } from '../adapters'
-import type { BettingService } from '../core/betting'
+import type { BettingService, Settlement } from '../core/betting'
 import type { Bankroll } from '../core/types'
+import { persistenceManager } from '../utils/persistenceManager'
 
 interface BetsState {
   showGame: boolean
@@ -9,6 +10,8 @@ interface BetsState {
   showGameOver: boolean
   lastWonBetId: string | null
   service: BettingService | null
+  _bankroll: Bankroll | null
+  betHistory: any[] // Add bet history to store state
 }
 
 export const useBetsStore = defineStore('bets', {
@@ -18,7 +21,9 @@ export const useBetsStore = defineStore('bets', {
     showGameOver: false,
     lastWonBetId: null,
     // We'll store the service instance directly in state
-    service: null
+    service: null,
+    _bankroll: null,
+    betHistory: [] // Initialize bet history
   }),
   
   getters: {
@@ -35,6 +40,41 @@ export const useBetsStore = defineStore('bets', {
   },
   
   actions: {
+    /**
+     * Initialize store with persisted state
+     */
+    initFromPersistence(): void {
+      try {
+        // Load persisted state for game mode settings (v1 schema)
+        const persistedSettings = persistenceManager.load<{
+          showGame: boolean;
+          useSimulatedData: boolean;
+        }>('bets:settings', 1);
+        
+        if (persistedSettings) {
+          this.showGame = persistedSettings.showGame || false;
+          this.useSimulatedData = persistedSettings.useSimulatedData || false;
+        }
+      } catch (error) {
+        console.warn('Failed to initialize bets store from persistence:', error);
+      }
+    },
+
+    /**
+     * Persist game mode settings to localStorage
+     */
+    persistSettings(): void {
+      try {
+        const settings = {
+          showGame: this.showGame,
+          useSimulatedData: this.useSimulatedData
+        };
+        persistenceManager.save('bets:settings', settings, 1);
+      } catch (error) {
+        console.warn('Failed to persist settings:', error);
+      }
+    },
+
     // Initialize the betting service based on mode
     initializeService() {
       if (this.showGame && this.useSimulatedData) {
@@ -48,12 +88,16 @@ export const useBetsStore = defineStore('bets', {
     setShowGame(show: boolean) {
       this.showGame = show
       this.initializeService()
+      // Persist the change
+      this.persistSettings();
     },
     
     // Add action to toggle data mode
     setUseSimulatedData(useSimulated: boolean) {
       this.useSimulatedData = useSimulated
       this.initializeService()
+      // Persist the change
+      this.persistSettings();
     },
     
     // Method to add welcome credits (for restarting the game)
@@ -70,16 +114,20 @@ export const useBetsStore = defineStore('bets', {
       this.showGameOver = bankroll.balance <= 0
     },
     
-    placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: string) {
+    async placeBet(raceId: string, runnerId: string, stake: number, odds: number | 'SP', advertisedStartMs?: number, meetingName?: string, raceNumber?: number, runnerName?: string, categoryId?: string) {
       if (!this.service) {
         this.initializeService()
+      }
+      
+      if (!this.service) {
+        throw new Error('Betting service not initialized')
       }
       
       try {
         console.log('BetsStore: Placing bet with parameters', { raceId, runnerId, stake, odds, advertisedStartMs, meetingName, raceNumber, runnerName, categoryId });
         
         // In the new abstraction, we need to pass a complete BetPlacement object
-        const result = this.service.placeBet({
+        const result = await this.service.placeBet({
           raceId,
           runnerId,
           stake,
@@ -101,11 +149,17 @@ export const useBetsStore = defineStore('bets', {
       }
     },
     
-    cancelBet(betId: string) {
-      if (!this.service) return false
+    async cancelBet(betId: string) {
+      if (!this.service) {
+        this.initializeService()
+      }
+      
+      if (!this.service) {
+        return false
+      }
       
       try {
-        const result = this.service.cancelBet(betId)
+        const result = await this.service.cancelBet(betId)
         // Check if player is now bankrupt after cancelling the bet
         this.checkGameOver()
         return result
@@ -115,20 +169,29 @@ export const useBetsStore = defineStore('bets', {
       }
     },
     
-    settleRace(raceId: string, placings: string[]) {
-      if (!this.service) return []
+    async settleRace(raceId: string, placings: string[]) {
+      if (!this.service) {
+        this.initializeService()
+      }
+      
+      if (!this.service) {
+        return []
+      }
       
       try {
-        const settlements = this.service.settleRace({
+        const settlements = await this.service.settleRace({
           raceId,
           placings
         })
         
         // Track the last won bet for animations
-        const winningSettlement = settlements.find((s: any) => s.result === 'WON')
+        const winningSettlement = settlements.find((s: Settlement) => s.result === 'WON')
         if (winningSettlement) {
           this.lastWonBetId = winningSettlement.betId
         }
+        
+        // Add settlements to bet history
+        this.betHistory = [...this.betHistory, ...settlements]
         
         // Check if player is now bankrupt after settling the race
         this.checkGameOver()
@@ -140,11 +203,25 @@ export const useBetsStore = defineStore('bets', {
       }
     },
     
+    // Add method to get bet history
+    getBetHistory() {
+      return this.betHistory
+    },
+    
+    // Add method to clear bet history
+    clearBetHistory() {
+      this.betHistory = []
+    },
+    
     // Add reset method to reset the engine
     reset() {
       try {
+        this.showGame = false
+        this.useSimulatedData = false
         this.initializeService()
         this.showGameOver = false
+        // Persist the reset state
+        this.persistSettings();
       } catch (error) {
         console.error('Error resetting engine:', error)
         throw error

@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { type SimulationController } from '../game/simulatedRace'
+import { persistenceManager } from '../utils/persistenceManager'
 
 // Commentary state tracking
 export type GapCategory = 'neck-and-neck' | 'narrow' | 'clear' | 'none'
@@ -118,6 +119,39 @@ export const useSimulationStore = defineStore('simulation', {
   },
   
   actions: {
+    /**
+     * Initialize store with persisted state
+     */
+    initFromPersistence(): void {
+      try {
+        // Load persisted state for speed multipliers (v1 schema)
+        const persistedSpeedMultipliers = persistenceManager.load<Record<string, number>>('simulation:speedMultipliers', 1);
+        
+        if (persistedSpeedMultipliers) {
+          // Convert the record back to a Map
+          this.speedMultipliers = new Map(Object.entries(persistedSpeedMultipliers));
+        }
+      } catch (error) {
+        console.warn('Failed to initialize simulation store from persistence:', error);
+      }
+    },
+
+    /**
+     * Persist speed multipliers to localStorage
+     */
+    persistSpeedMultipliers(): void {
+      try {
+        // Convert Map to Record for persistence
+        const speedMultipliersRecord: Record<string, number> = {};
+        for (const [raceId, multiplier] of this.speedMultipliers) {
+          speedMultipliersRecord[raceId] = multiplier;
+        }
+        persistenceManager.save('simulation:speedMultipliers', speedMultipliersRecord, 1);
+      } catch (error) {
+        console.warn('Failed to persist speed multipliers:', error);
+      }
+    },
+
     addSimulationController(raceId: string, controller: SimulationController) {
       this.controllers.set(raceId, controller)
       this.raceStatus.set(raceId, 'pending')
@@ -269,6 +303,8 @@ export const useSimulationStore = defineStore('simulation', {
     
     setSpeedMultiplier(raceId: string, multiplier: number) {
       this.speedMultipliers.set(raceId, multiplier)
+      // Persist the change
+      this.persistSpeedMultipliers();
     },
     
     updateRaceProgress(raceId: string, progress: {
@@ -300,6 +336,9 @@ export const useSimulationStore = defineStore('simulation', {
         clearTimeout(timer)
         this.cleanupTimers.delete(raceId)
       }
+      
+      // Persist the change
+      this.persistSpeedMultipliers();
     },
     
     resetAllSimulations() {
@@ -313,6 +352,7 @@ export const useSimulationStore = defineStore('simulation', {
         clearTimeout(timer)
       }
       
+      // Clear all simulation state
       this.controllers.clear()
       this.activeRaces.clear()
       this.raceStatus.clear()
@@ -321,6 +361,9 @@ export const useSimulationStore = defineStore('simulation', {
       this.commentaryState.clear()
       this.displayState.clear()
       this.cleanupTimers.clear()
+      
+      // Persist the reset state
+      this.persistSpeedMultipliers();
     }
   }
 })

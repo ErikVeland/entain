@@ -435,40 +435,46 @@ const initializeRaceSimulation = () => {
         // Emit race finished event
         emit('race-finished')
 
-        // Settle any bets for this race
-        const settlements = betsStore.settleRace(props.race.id, { placings: result.placings })
+        // Settle any bets for this race (without await since this is an event handler)
+        betsStore.settleRace(props.race.id, result.placings).then(settlements => {
+          // Determine if user has bets and winning bets
+          const hasUserBets = settlements && settlements.length > 0
+          const hasWinningBets = settlements ? settlements.some(s => s.result === 'WON') : false
+          
+          // Start results display timer
+          simulationStore.startResultsDisplay(props.race.id, hasUserBets, hasWinningBets)
+          
+          // Check if user won any bets and trigger celebration animation
+          if (hasWinningBets && settlements) {
+            const winningSettlements = settlements.filter(s => s.result === 'WON')
+            // Trigger win celebration
+            const event = new CustomEvent('win-celebration', {
+              detail: {
+                winAmount: winningSettlements.reduce((sum, s) => sum + s.payout, 0)
+              }
+            })
+            window.dispatchEvent(event)
+          }
 
-        // Determine if user has bets and winning bets
-        const hasUserBets = settlements && settlements.length > 0
-        const hasWinningBets = settlements ? settlements.some(s => s.result === 'WON') : false
-        
-        // Start results display timer
-        simulationStore.startResultsDisplay(props.race.id, hasUserBets, hasWinningBets)
-        
-        // Check if user won any bets and trigger celebration animation
-        if (hasWinningBets && settlements) {
-          const winningSettlements = settlements.filter(s => s.result === 'WON')
-          // Trigger win celebration
-          const event = new CustomEvent('win-celebration', {
+          // Dispatch race finish event for live ticker with finish commentary
+          const finishEvent = new CustomEvent('race-finish', {
             detail: {
-              winAmount: winningSettlements.reduce((sum, s) => sum + s.payout, 0)
+              raceId: props.race.id,
+              message: finishMessage,
+              winner: winnerRunner ? { id: winnerRunner.id, name: winnerRunner.name } : null,
+              userBets: betsStore.getPendingBetsForRace(props.race.id),
+              meetingName: props.race.meeting_name,
+              raceNumber: props.race.race_number
             }
-          })
-          window.dispatchEvent(event)
-        }
-
-        // Dispatch race finish event for live ticker with finish commentary
-        const finishEvent = new CustomEvent('race-finish', {
-          detail: {
-            raceId: props.race.id,
-            message: finishMessage,
-            winner: winnerRunner ? { id: winnerRunner.id, name: winnerRunner.name } : null,
-            userBets: betsStore.getPendingBetsForRace(props.race.id),
-            meetingName: props.race.meeting_name,
-            raceNumber: props.race.race_number
+          });
+          window.dispatchEvent(finishEvent);
+        }).catch(err => {
+          error.value = err instanceof Error ? err.message : String(err)
+          // Only log critical errors
+          if (err instanceof Error && err.message.includes('finish')) {
+            console.error('Critical error settling race:', err)
           }
         });
-        window.dispatchEvent(finishEvent);
       } catch (err) {
         error.value = err instanceof Error ? err.message : String(err)
         // Only log critical errors

@@ -1,35 +1,42 @@
 // src/composables/useBettingLogic.ts
 import { computed, ref } from 'vue'
 import { useBetsStore } from '../stores/bets'
-import type { BetSelection } from '../stores/bets'
 
 export function useBettingLogic() {
   const betsStore = useBetsStore()
   
-  // Active bets
-  const activeBets = computed(() => betsStore.engine.listBets())
+  // Active bets (placeholder - would need to be implemented based on actual service)
+  const activeBets = computed(() => [])
   
-  // Total stake of all active bets
-  const totalStake = computed(() => {
-    return betsStore.engine.listBets().reduce((sum, bet) => sum + bet.stake, 0)
-  })
+  // Total stake of all active bets (placeholder)
+  const totalStake = computed(() => 0)
   
   // Bankroll information
   const bankroll = computed(() => betsStore.bankroll)
   
   // Place a bet
-  const placeBet = (raceId: string, runnerId: string, amount: number, odds: number | 'SP') => {
-    return betsStore.placeBet(raceId, runnerId, amount, odds)
+  const placeBet = async (raceId: string, runnerId: string, amount: number, odds: number | 'SP') => {
+    return await betsStore.placeBet(raceId, runnerId, amount, odds)
   }
   
   // Cancel a bet
-  const cancelBet = (betId: string) => {
-    return betsStore.cancelBet(betId)
+  const cancelBet = async (betId: string) => {
+    return await betsStore.cancelBet(betId)
   }
   
   // Settle a race
-  const settleRace = (raceId: string, result: { placings: string[] }) => {
-    betsStore.settleRace(raceId, result)
+  const settleRace = async (raceId: string, result: { placings: string[] }) => {
+    return await betsStore.settleRace(raceId, result.placings)
+  }
+  
+  // Get bet history
+  const getBetHistory = computed(() => {
+    return betsStore.getBetHistory()
+  })
+  
+  // Clear bet history
+  const clearBetHistory = () => {
+    betsStore.clearBetHistory()
   }
   
   // Calculate estimated return for a bet (simplified)
@@ -68,11 +75,13 @@ export function useBettingLogic() {
     activeBets,
     totalStake,
     bankroll,
+    getBetHistory,
     
     // Actions
     placeBet,
     cancelBet,
     settleRace,
+    clearBetHistory,
     calculateEstimatedReturn,
     
     // Validation

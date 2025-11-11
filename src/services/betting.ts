@@ -47,8 +47,16 @@ class BettingService {
   }
 
   getPendingBetsForRace(raceId: string): any[] {
-    // This would need to be implemented properly in the store
+    // Access the service directly to get pending bets
+    if (this.store.service && 'getPendingBetsForRace' in this.store.service) {
+      // @ts-ignore
+      return this.store.service.getPendingBetsForRace(raceId)
+    }
     return []
+  }
+  
+  getBetHistory(): any[] {
+    return this.store.getBetHistory()
   }
 }
 
